@@ -1,0 +1,39 @@
+﻿Set Default Project
+
+Make sure the default project is InventoryManagement.Core before running commands.
+
+1. Create Migration
+  .NET CLI
+
+  dotnet ef migrations add <MigrationName> --project InventoryManagement.Core/InventoryManagement.Core.csproj --startup-project InventoryManagement/InventoryManagement.csproj --context InventoryDbContext
+
+  Package Manager Console
+
+  Add-Migration <MigrationName> -Context InventoryDbContext -Project InventoryManagement.Core -StartupProject InventoryManagement
+
+
+2. Update Database (apply latest migration)
+  .NET CLI
+
+  dotnet ef database update --project InventoryManagement.Core/InventoryManagement.Core.csproj --startup-project InventoryManagement/InventoryManagement.csproj --context InventoryDbContext
+
+  Package Manager Console (PMC)
+
+  Update-Database -Context InventoryDbContext -Project InventoryManagement.Core -StartupProject InventoryManagement
+
+3. Update Database to a Specific Migration
+  .NET CLI
+
+  dotnet ef database update <MigrationName> --project InventoryManagement.Core/InventoryManagement.Core.csproj --startup-project InventoryManagement/InventoryManagement.csproj --context InventoryDbContext
+
+  Package Manager Console (PMC)
+
+  Update-Database <MigrationName> -Context InventoryDbContext -Project InventoryManagement.Core -StartupProject InventoryManagement
+
+4. Remove Last Migration (Rollback before applying)
+   .NET CLI
+   dotnet ef migrations remove --project InventoryManagement.Core/InventoryManagement.Core.csproj --startup-project InventoryManagement/InventoryManagement.csproj --context InventoryDbContext
+
+   Package Manager Console (PMC)
+
+   Remove-Migration -Context InventoryDbContext -Project InventoryManagement.Core -StartupProject InventoryManagement
