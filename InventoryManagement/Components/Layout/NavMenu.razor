@@ -1,0 +1,77 @@
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">Inventory Management</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <Icon Name="IconName.HouseDoorFill" /> Home
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <div class="nav-link text-white fw-bold">
+                <Icon Name="IconName.Building" /> Master Data
+            </div>
+        </div>
+
+        <div class="nav-item px-3 ms-3">
+            <NavLink class="nav-link" href="companies/ship-to">
+                <Icon Name="IconName.Truck" /> Ship To Companies
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3 ms-3">
+            <NavLink class="nav-link" href="companies/make-to">
+                <Icon Name="IconName.Tools" /> Make Companies
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3 ms-3">
+            <NavLink class="nav-link" href="companies/bill-to">
+                <Icon Name="IconName.Receipt" /> Bill To Companies
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3 ms-3">
+            <NavLink class="nav-link" href="categories">
+                <Icon Name="IconName.Tags" /> Categories
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3 ms-3">
+            <NavLink class="nav-link" href="products">
+                <Icon Name="IconName.Box" /> Products
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <div class="nav-link text-white fw-bold">
+                <Icon Name="IconName.ClipboardData" /> Inventory Management
+            </div>
+        </div>
+
+        <div class="nav-item px-3 ms-3">
+            <NavLink class="nav-link" href="inward">
+                <Icon Name="IconName.ArrowDownCircle" /> Inward
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3 ms-3">
+            <NavLink class="nav-link" href="outward">
+                <Icon Name="IconName.ArrowUpCircle" /> Outward
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3 ms-3">
+            <NavLink class="nav-link" href="sale-returns">
+                <Icon Name="IconName.ArrowReturnLeft" /> Sales Return
+            </NavLink>
+        </div>
+    </nav>
+</div>

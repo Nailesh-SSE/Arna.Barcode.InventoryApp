@@ -1,0 +1,197 @@
+@page "/companies/ship-to"
+@inject ICompanyService CompanyService
+@inject NavigationManager Navigation
+
+<PageTitle>Ship To Companies</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><Icon Name="IconName.Truck" /> Ship To Companies</h3>
+        </div>
+        <div class="col-auto">
+            <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                <Icon Name="IconName.Plus" /> Add New
+            </Button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <Spinner Type="SpinnerType.Border" />
+        </div>
+    }
+    else
+    {
+        <Grid TItem="Company"
+              Class="table table-hover table-bordered table-striped"
+              DataProvider="CompaniesDataProvider"
+              AllowPaging="true"
+              PageSize="10"
+              Responsive="true">
+
+            <GridColumn TItem="Company" HeaderText="ID" PropertyName="Id">
+                @context.Id
+            </GridColumn>
+
+            <GridColumn TItem="Company" HeaderText="Code" PropertyName="Code">
+                @context.Code
+            </GridColumn>
+
+            <GridColumn TItem="Company" HeaderText="Name" PropertyName="Name">
+                @context.Name
+            </GridColumn>
+
+            <GridColumn TItem="Company" HeaderText="Status" PropertyName="IsActive">
+                @if (context.IsActive)
+                {
+                    <Badge Color="BadgeColor.Success">Active</Badge>
+                }
+                else
+                {
+                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                }
+            </GridColumn>
+
+            <GridColumn TItem="Company" HeaderText="Actions">
+                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                    <Icon Name="IconName.PencilSquare" /> Edit
+                </Button>
+                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCompany(context.Id)">
+                    <Icon Name="IconName.Trash" /> Delete
+                </Button>
+            </GridColumn>
+        </Grid>
+    }
+</div>
+
+<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+    <BodyTemplate>
+        <EditForm Model="company" OnValidSubmit="SaveCompany">
+            <DataAnnotationsValidator />
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Code <span class="text-danger">*</span></label>
+                    <InputText class="form-control" @bind-Value="company.Code" />
+                    <ValidationMessage For="@(() => company.Code)" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                    <InputText class="form-control" @bind-Value="company.Name" />
+                    <ValidationMessage For="@(() => company.Name)" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <InputCheckbox @bind-Value="company.IsActive" /> Active
+            </div>
+
+            <div class="text-end">
+                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+
+@code {
+    private Modal modal = default!;
+    private List<Company> companies = new();
+    private Company company = new();
+    private bool isLoading = true;
+    private string modalTitle = "Add Ship To Company";
+    private bool isEditMode = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCompanies();
+    }
+
+    private async Task LoadCompanies()
+    {
+        isLoading = true;
+        companies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
+        isLoading = false;
+    }
+
+    private async Task<GridDataProviderResult<Company>> CompaniesDataProvider(GridDataProviderRequest<Company> request)
+    {
+        if (companies == null || !companies.Any())
+            return await Task.FromResult(new GridDataProviderResult<Company> { Data = new List<Company>(), TotalCount = 0 });
+
+        return await Task.FromResult(new GridDataProviderResult<Company> { Data = companies, TotalCount = companies.Count });
+    }
+
+    private void ShowAddModal()
+    {
+        modalTitle = "Add Ship To Company";
+        isEditMode = false;
+        company = new Company { CompanyType = CompanyType.ShipTo, IsActive = true };
+        modal.ShowAsync();
+    }
+
+    private void ShowEditModal(Company editCompany)
+    {
+        modalTitle = "Edit Ship To Company";
+        isEditMode = true;
+        company = new Company
+        {
+            Id = editCompany.Id,
+            Code = editCompany.Code,
+            Name = editCompany.Name,
+            CompanyType = CompanyType.ShipTo,
+            IsActive = editCompany.IsActive
+        };
+        modal.ShowAsync();
+    }
+
+    private async Task SaveCompany()
+    {
+        try
+        {
+            company.CompanyType = CompanyType.ShipTo;
+            
+            if (isEditMode)
+            {
+                await CompanyService.UpdateAsync(company);
+                // Toast notification removed
+            }
+            else
+            {
+                await CompanyService.AddAsync(company);
+                // Toast notification removed
+            }
+
+            await HideModal();
+            await LoadCompanies();
+        }
+        catch (Exception ex)
+        {
+            // Toast notification removed
+        }
+    }
+
+    private async Task DeleteCompany(int id)
+    {
+        try
+        {
+            await CompanyService.DeleteAsync(id);
+            // Toast notification removed
+            await LoadCompanies();
+        }
+        catch (Exception ex)
+        {
+            // Toast notification removed
+        }
+    }
+
+    private async Task HideModal()
+    {
+        await modal.HideAsync();
+    }
+
+}

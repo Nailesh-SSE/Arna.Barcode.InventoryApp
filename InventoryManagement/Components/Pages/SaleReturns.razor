@@ -1,0 +1,271 @@
+@page "/sale-returns"
+@inject ISaleReturnService SaleReturnService
+@inject ICompanyService CompanyService
+
+<PageTitle>Sales Return Management</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><Icon Name="IconName.ArrowReturnLeft" /> Sales Return Management</h3>
+        </div>
+        <div class="col-auto">
+            <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                <Icon Name="IconName.Plus" /> Add New Return
+            </Button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <Spinner Type="SpinnerType.Border" />
+        </div>
+    }
+    else
+    {
+        <Grid TItem="SaleReturn"
+              Class="table table-hover table-bordered table-striped"
+              DataProvider="SaleReturnsDataProvider"
+              AllowFiltering="true"
+              AllowPaging="true"
+              PageSize="10"
+              AllowSorting="true"
+              Responsive="true">
+
+            <GridColumn TItem="SaleReturn" HeaderText="ID" PropertyName="Id">
+                @context.Id
+            </GridColumn>
+
+            <GridColumn TItem="SaleReturn" HeaderText="Return No" PropertyName="ReturnNo">
+                @context.ReturnNo
+            </GridColumn>
+
+            <GridColumn TItem="SaleReturn" HeaderText="Return Date" PropertyName="ReturnDate">
+                @context.ReturnDate.ToString("dd/MM/yyyy")
+            </GridColumn>
+
+            <GridColumn TItem="SaleReturn" HeaderText="Bill To Company" PropertyName="BillToCompanyId">
+                @(context.BillToCompany?.Name ?? "N/A")
+            </GridColumn>
+
+            <GridColumn TItem="SaleReturn" HeaderText="Return Type" PropertyName="ReturnType">
+                @context.ReturnType.ToString()
+            </GridColumn>
+
+            <GridColumn TItem="SaleReturn" HeaderText="Barcode No" PropertyName="BarcodeNo">
+                @context.BarcodeNo
+            </GridColumn>
+
+            <GridColumn TItem="SaleReturn" HeaderText="Status" PropertyName="IsActive">
+                @if (context.IsActive)
+                {
+                    <Badge Color="BadgeColor.Success">Active</Badge>
+                }
+                else
+                {
+                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                }
+            </GridColumn>
+
+            <GridColumn TItem="SaleReturn" HeaderText="Actions">
+                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                    <Icon Name="IconName.PencilSquare" /> Edit
+                </Button>
+                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteSaleReturn(context.Id)">
+                    <Icon Name="IconName.Trash" /> Delete
+                </Button>
+            </GridColumn>
+        </Grid>
+    }
+</div>
+
+<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+    <BodyTemplate>
+        <EditForm Model="saleReturn" OnValidSubmit="SaveSaleReturn">
+            <DataAnnotationsValidator />
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Return No <span class="text-danger">*</span></label>
+                    <InputText class="form-control" @bind-Value="saleReturn.ReturnNo" />
+                    <ValidationMessage For="@(() => saleReturn.ReturnNo)" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Return Date <span class="text-danger">*</span></label>
+                    <InputDate class="form-control" @bind-Value="saleReturn.ReturnDate" />
+                    <ValidationMessage For="@(() => saleReturn.ReturnDate)" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
+                    <InputSelect class="form-select" @bind-Value="saleReturn.BillToCompanyId">
+                        <option value="0">-- Select Company --</option>
+                        @foreach (var company in billCompanies)
+                        {
+                            <option value="@company.Id">@company.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => saleReturn.BillToCompanyId)" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Return Type <span class="text-danger">*</span></label>
+                    <InputSelect class="form-select" @bind-Value="saleReturn.ReturnType">
+                        <option value="@ReturnType.Defective">Defective</option>
+                        <option value="@ReturnType.Excess">Excess</option>
+                        <option value="@ReturnType.Damaged">Damaged</option>
+                        <option value="@ReturnType.Other">Other</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => saleReturn.ReturnType)" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Barcode No <span class="text-danger">*</span></label>
+                    <InputText class="form-control" @bind-Value="saleReturn.BarcodeNo" />
+                    <ValidationMessage For="@(() => saleReturn.BarcodeNo)" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Quantity <span class="text-danger">*</span></label>
+                    <InputNumber class="form-control" @bind-Value="saleReturn.Quantity" />
+                    <ValidationMessage For="@(() => saleReturn.Quantity)" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Reason</label>
+                <InputTextArea class="form-control" rows="3" @bind-Value="saleReturn.Reason" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Remarks</label>
+                <InputTextArea class="form-control" rows="2" @bind-Value="saleReturn.Remarks" />
+            </div>
+
+            <div class="mb-3">
+                <InputCheckbox @bind-Value="saleReturn.IsActive" /> Active
+            </div>
+
+            <div class="text-end">
+                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+
+@code {
+    private Modal modal = default!;
+    private List<SaleReturn> saleReturns = new();
+    private List<Company> billCompanies = new();
+    private SaleReturn saleReturn = new();
+    private bool isLoading = true;
+    private string modalTitle = "Add Sales Return";
+    private bool isEditMode = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        saleReturns = (await SaleReturnService.GetAllAsync()).ToList();
+        billCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
+        isLoading = false;
+    }
+
+    private async Task<GridDataProviderResult<SaleReturn>> SaleReturnsDataProvider(GridDataProviderRequest<SaleReturn> request)
+    {
+        if (saleReturns == null || !saleReturns.Any())
+            return await Task.FromResult(new GridDataProviderResult<SaleReturn> { Data = new List<SaleReturn>(), TotalCount = 0 });
+
+        return await Task.FromResult(new GridDataProviderResult<SaleReturn> { Data = saleReturns, TotalCount = saleReturns.Count });
+    }
+
+    private void ShowAddModal()
+    {
+        modalTitle = "Add Sales Return";
+        isEditMode = false;
+        saleReturn = new SaleReturn 
+        { 
+            ReturnDate = DateTime.Now, 
+            IsActive = true,
+            ReturnType = ReturnType.Defective,
+            Quantity = 1
+        };
+        modal.ShowAsync();
+    }
+
+    private void ShowEditModal(SaleReturn editSaleReturn)
+    {
+        modalTitle = "Edit Sales Return";
+        isEditMode = true;
+        saleReturn = new SaleReturn
+        {
+            Id = editSaleReturn.Id,
+            ReturnNo = editSaleReturn.ReturnNo,
+            ReturnDate = editSaleReturn.ReturnDate,
+            BillToCompanyId = editSaleReturn.BillToCompanyId,
+            ReturnType = editSaleReturn.ReturnType,
+            BarcodeNo = editSaleReturn.BarcodeNo,
+            Quantity = editSaleReturn.Quantity,
+            Reason = editSaleReturn.Reason,
+            Remarks = editSaleReturn.Remarks,
+            IsActive = editSaleReturn.IsActive
+        };
+        modal.ShowAsync();
+    }
+
+    private async Task SaveSaleReturn()
+    {
+        try
+        {
+            if (isEditMode)
+            {
+                await SaleReturnService.UpdateAsync(saleReturn);
+                // Toast notification removed
+            }
+            else
+            {
+                await SaleReturnService.AddAsync(saleReturn);
+                // Toast notification removed
+            }
+
+            await HideModal();
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            // Toast notification removed
+        }
+    }
+
+    private async Task DeleteSaleReturn(int id)
+    {
+        try
+        {
+            await SaleReturnService.DeleteAsync(id);
+            // Toast notification removed
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            // Toast notification removed
+        }
+    }
+
+    private async Task HideModal()
+    {
+        await modal.HideAsync();
+    }
+
+}

@@ -1,0 +1,234 @@
+@page "/products"
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+
+<PageTitle>Products</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><Icon Name="IconName.Box" /> Products</h3>
+        </div>
+        <div class="col-auto">
+            <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                <Icon Name="IconName.Plus" /> Add New
+            </Button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <Spinner Type="SpinnerType.Border" />
+        </div>
+    }
+    else
+    {
+        <Grid TItem="Product"
+              Class="table table-hover table-bordered table-striped"
+              DataProvider="ProductsDataProvider"
+              AllowFiltering="true"
+              AllowPaging="true"
+              PageSize="10"
+              AllowSorting="true"
+              Responsive="true">
+
+            <GridColumn TItem="Product" HeaderText="ID" PropertyName="Id">
+                @context.Id
+            </GridColumn>
+
+            <GridColumn TItem="Product" HeaderText="SKU" PropertyName="SKU">
+                @context.SKU
+            </GridColumn>
+
+            <GridColumn TItem="Product" HeaderText="Name" PropertyName="Name">
+                @context.Name
+            </GridColumn>
+
+            <GridColumn TItem="Product" HeaderText="Category" PropertyName="CategoryId">
+                @(context.Category?.Name ?? "N/A")
+            </GridColumn>
+
+            <GridColumn TItem="Product" HeaderText="Unit" PropertyName="Unit">
+                @context.Unit
+            </GridColumn>
+
+            <GridColumn TItem="Product" HeaderText="Status" PropertyName="IsActive">
+                @if (context.IsActive)
+                {
+                    <Badge Color="BadgeColor.Success">Active</Badge>
+                }
+                else
+                {
+                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                }
+            </GridColumn>
+
+            <GridColumn TItem="Product" HeaderText="Actions">
+                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                    <Icon Name="IconName.PencilSquare" /> Edit
+                </Button>
+                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteProduct(context.Id)">
+                    <Icon Name="IconName.Trash" /> Delete
+                </Button>
+            </GridColumn>
+        </Grid>
+    }
+</div>
+
+<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+    <BodyTemplate>
+        <EditForm Model="product" OnValidSubmit="SaveProduct">
+            <DataAnnotationsValidator />
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">SKU <span class="text-danger">*</span></label>
+                    <InputText class="form-control" @bind-Value="product.SKU" />
+                    <ValidationMessage For="@(() => product.SKU)" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                    <InputText class="form-control" @bind-Value="product.Name" />
+                    <ValidationMessage For="@(() => product.Name)" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Category <span class="text-danger">*</span></label>
+                    <InputSelect class="form-select" @bind-Value="product.CategoryId">
+                        <option value="0">-- Select Category --</option>
+                        @foreach (var cat in categories)
+                        {
+                            <option value="@cat.Id">@cat.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => product.CategoryId)" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Unit <span class="text-danger">*</span></label>
+                    <InputText class="form-control" @bind-Value="product.Unit" placeholder="e.g., PCS, KG, LTR" />
+                    <ValidationMessage For="@(() => product.Unit)" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <InputTextArea class="form-control" rows="3" @bind-Value="product.Description" />
+            </div>
+
+            <div class="mb-3">
+                <InputCheckbox @bind-Value="product.IsActive" /> Active
+            </div>
+
+            <div class="text-end">
+                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+
+@code {
+    private Modal modal = default!;
+    private List<Product> products = new();
+    private List<Category> categories = new();
+    private Product product = new();
+    private bool isLoading = true;
+    private string modalTitle = "Add Product";
+    private bool isEditMode = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        products = (await ProductService.GetAllAsync()).ToList();
+        categories = (await CategoryService.GetAllAsync()).ToList();
+        isLoading = false;
+    }
+
+    private async Task<GridDataProviderResult<Product>> ProductsDataProvider(GridDataProviderRequest<Product> request)
+    {
+        if (products == null || !products.Any())
+            return await Task.FromResult(new GridDataProviderResult<Product> { Data = new List<Product>(), TotalCount = 0 });
+
+        return await Task.FromResult(new GridDataProviderResult<Product> { Data = products, TotalCount = products.Count });
+    }
+
+    private void ShowAddModal()
+    {
+        modalTitle = "Add Product";
+        isEditMode = false;
+        product = new Product { IsActive = true };
+        modal.ShowAsync();
+    }
+
+    private void ShowEditModal(Product editProduct)
+    {
+        modalTitle = "Edit Product";
+        isEditMode = true;
+        product = new Product
+        {
+            Id = editProduct.Id,
+            SKU = editProduct.SKU,
+            Name = editProduct.Name,
+            Description = editProduct.Description,
+            CategoryId = editProduct.CategoryId,
+            Unit = editProduct.Unit,
+            IsActive = editProduct.IsActive
+        };
+        modal.ShowAsync();
+    }
+
+    private async Task SaveProduct()
+    {
+        try
+        {
+            if (isEditMode)
+            {
+                await ProductService.UpdateAsync(product);
+                // Toast notification removed
+            }
+            else
+            {
+                await ProductService.AddAsync(product);
+                // Toast notification removed
+            }
+
+            await HideModal();
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            // Toast notification removed
+        }
+    }
+
+    private async Task DeleteProduct(int id)
+    {
+        try
+        {
+            await ProductService.DeleteAsync(id);
+            // Toast notification removed
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            // Toast notification removed
+        }
+    }
+
+    private async Task HideModal()
+    {
+        await modal.HideAsync();
+    }
+
+}

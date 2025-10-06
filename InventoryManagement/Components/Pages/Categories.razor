@@ -1,0 +1,210 @@
+@page "/categories"
+@inject ICategoryService CategoryService
+
+<PageTitle>Categories</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><Icon Name="IconName.Tags" /> Categories</h3>
+        </div>
+        <div class="col-auto">
+            <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                <Icon Name="IconName.Plus" /> Add New
+            </Button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <Spinner Type="SpinnerType.Border" />
+        </div>
+    }
+    else
+    {
+        <Grid TItem="Category"
+              Class="table table-hover table-bordered table-striped"
+              DataProvider="CategoriesDataProvider"
+              AllowFiltering="true"
+              AllowPaging="true"
+              PageSize="10"
+              AllowSorting="true"
+              Responsive="true">
+
+            <GridColumn TItem="Category" HeaderText="ID" PropertyName="Id">
+                @context.Id
+            </GridColumn>
+
+            <GridColumn TItem="Category" HeaderText="Name" PropertyName="Name">
+                @context.Name
+            </GridColumn>
+
+            <GridColumn TItem="Category" HeaderText="Description" PropertyName="Description">
+                @context.Description
+            </GridColumn>
+
+            <GridColumn TItem="Category" HeaderText="Parent Category" PropertyName="ParentCategoryId">
+                @(context.ParentCategory?.Name ?? "N/A")
+            </GridColumn>
+
+            <GridColumn TItem="Category" HeaderText="Status" PropertyName="IsActive">
+                @if (context.IsActive)
+                {
+                    <Badge Color="BadgeColor.Success">Active</Badge>
+                }
+                else
+                {
+                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                }
+            </GridColumn>
+
+            <GridColumn TItem="Category" HeaderText="Actions">
+                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                    <Icon Name="IconName.PencilSquare" /> Edit
+                </Button>
+                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCategory(context.Id)">
+                    <Icon Name="IconName.Trash" /> Delete
+                </Button>
+            </GridColumn>
+        </Grid>
+    }
+</div>
+
+<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+    <BodyTemplate>
+        <EditForm Model="category" OnValidSubmit="SaveCategory">
+            <DataAnnotationsValidator />
+            
+            <div class="mb-3">
+                <label class="form-label">Name <span class="text-danger">*</span></label>
+                <InputText class="form-control" @bind-Value="category.Name" />
+                <ValidationMessage For="@(() => category.Name)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <InputTextArea class="form-control" rows="3" @bind-Value="category.Description" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Parent Category</label>
+                <InputSelect class="form-select" @bind-Value="category.ParentCategoryId">
+                    <option value="">-- Select Parent Category --</option>
+                    @foreach (var cat in parentCategories)
+                    {
+                        <option value="@cat.Id">@cat.Name</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="mb-3">
+                <InputCheckbox @bind-Value="category.IsActive" /> Active
+            </div>
+
+            <div class="text-end">
+                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+
+@code {
+    private Modal modal = default!;
+    private List<Category> categories = new();
+    private List<Category> parentCategories = new();
+    private Category category = new();
+    private bool isLoading = true;
+    private string modalTitle = "Add Category";
+    private bool isEditMode = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        isLoading = true;
+        categories = (await CategoryService.GetAllAsync()).ToList();
+        parentCategories = categories.Where(c => c.ParentCategoryId == null).ToList();
+        isLoading = false;
+    }
+
+    private async Task<GridDataProviderResult<Category>> CategoriesDataProvider(GridDataProviderRequest<Category> request)
+    {
+        if (categories == null || !categories.Any())
+            return await Task.FromResult(new GridDataProviderResult<Category> { Data = new List<Category>(), TotalCount = 0 });
+
+        return await Task.FromResult(new GridDataProviderResult<Category> { Data = categories, TotalCount = categories.Count });
+    }
+
+    private void ShowAddModal()
+    {
+        modalTitle = "Add Category";
+        isEditMode = false;
+        category = new Category { IsActive = true };
+        modal.ShowAsync();
+    }
+
+    private void ShowEditModal(Category editCategory)
+    {
+        modalTitle = "Edit Category";
+        isEditMode = true;
+        category = new Category
+        {
+            Id = editCategory.Id,
+            Name = editCategory.Name,
+            Description = editCategory.Description,
+            ParentCategoryId = editCategory.ParentCategoryId,
+            IsActive = editCategory.IsActive
+        };
+        modal.ShowAsync();
+    }
+
+    private async Task SaveCategory()
+    {
+        try
+        {
+            if (isEditMode)
+            {
+                await CategoryService.UpdateAsync(category);
+                // Toast notification removed
+            }
+            else
+            {
+                await CategoryService.AddAsync(category);
+                // Toast notification removed
+            }
+
+            await HideModal();
+            await LoadCategories();
+        }
+        catch (Exception ex)
+        {
+            // Toast notification removed
+        }
+    }
+
+    private async Task DeleteCategory(int id)
+    {
+        try
+        {
+            await CategoryService.DeleteAsync(id);
+            // Toast notification removed
+            await LoadCategories();
+        }
+        catch (Exception ex)
+        {
+            // Toast notification removed
+        }
+    }
+
+    private async Task HideModal()
+    {
+        await modal.HideAsync();
+    }
+
+}

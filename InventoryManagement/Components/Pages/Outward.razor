@@ -1,0 +1,326 @@
+@* @page "/outward"
+@inject IOutwardService OutwardService
+@inject ICompanyService CompanyService
+@inject IInwardService InwardService
+
+<PageTitle>Outward Management</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><Icon Name="IconName.ArrowUpCircle" /> Outward Management</h3>
+        </div>
+        <div class="col-auto">
+            <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                <Icon Name="IconName.Plus" /> Add New Outward
+            </Button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <Spinner Type="SpinnerType.Border" />
+        </div>
+    }
+    else
+    {
+        <Grid TItem="Core.Entities.Outward"
+              Class="table table-hover table-bordered table-striped"
+              DataProvider="OutwardsDataProvider"
+              AllowFiltering="true"
+              AllowPaging="true"
+              PageSize="10"
+              AllowSorting="true"
+              Responsive="true">
+
+            <GridColumn TItem="Core.Entities.Outward" HeaderText="ID" PropertyName="Id">
+                @context.Id
+            </GridColumn>
+
+            <GridColumn TItem="Core.Entities.Outward" HeaderText="Outward No" PropertyName="OutwardNo">
+                @context.OutwardNo
+            </GridColumn>
+
+            <GridColumn TItem="Core.Entities.Outward" HeaderText="Outward Date" PropertyName="OutwardDate">
+                @context.OutwardDate.ToString("dd/MM/yyyy")
+            </GridColumn>
+
+            <GridColumn TItem="Core.Entities.Outward" HeaderText="Bill To Company" PropertyName="BillToCompanyId">
+                @(context.BillToCompany?.Name ?? "N/A")
+            </GridColumn>
+
+            <GridColumn TItem="Core.Entities.Outward" HeaderText="Invoice No" PropertyName="InvoiceNo">
+                @context.InvoiceNo
+            </GridColumn>
+
+            <GridColumn TItem="Core.Entities.Outward" HeaderText="Status" PropertyName="IsActive">
+                @if (context.IsActive)
+                {
+                    <Badge Color="BadgeColor.Success">Active</Badge>
+                }
+                else
+                {
+                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                }
+            </GridColumn>
+
+            <GridColumn TItem="Core.Entities.Outward" HeaderText="Actions">
+                <Button Color="ButtonColor.Info" Size="ButtonSize.Small" @onclick="() => ViewDetails(context.Id)">
+                    <Icon Name="IconName.Eye" /> View
+                </Button>
+                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                    <Icon Name="IconName.PencilSquare" /> Edit
+                </Button>
+                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteOutward(context.Id)">
+                    <Icon Name="IconName.Trash" /> Delete
+                </Button>
+            </GridColumn>
+        </Grid>
+    }
+</div>
+
+<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.ExtraLarge">
+    <BodyTemplate>
+        <EditForm Model="outward" OnValidSubmit="SaveOutward">
+            <DataAnnotationsValidator />
+            
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Outward No <span class="text-danger">*</span></label>
+                    <InputText class="form-control" @bind-Value="outward.OutwardNo" />
+                    <ValidationMessage For="@(() => outward.OutwardNo)" />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Outward Date <span class="text-danger">*</span></label>
+                    <InputDate class="form-control" @bind-Value="outward.OutwardDate" />
+                    <ValidationMessage For="@(() => outward.OutwardDate)" />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
+                    <InputSelect class="form-select" @bind-Value="outward.BillToCompanyId">
+                        <option value="0">-- Select Company --</option>
+                        @foreach (var company in billCompanies)
+                        {
+                            <option value="@company.Id">@company.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => outward.BillToCompanyId)" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Invoice No</label>
+                    <InputText class="form-control" @bind-Value="outward.InvoiceNo" />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Invoice Date</label>
+                    <InputDate class="form-control" @bind-Value="outward.InvoiceDate" />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Challan No</label>
+                    <InputText class="form-control" @bind-Value="outward.ChallanNo" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Remarks</label>
+                <InputTextArea class="form-control" rows="2" @bind-Value="outward.Remarks" />
+            </div>
+
+            <div class="mb-3">
+                <InputCheckbox @bind-Value="outward.IsActive" /> Active
+            </div>
+
+            <hr />
+
+            <h5>Outward Items</h5>
+            <div class="mb-3">
+                <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="AddOutwardDetail">
+                    <Icon Name="IconName.Plus" /> Add Item
+                </Button>
+            </div>
+
+            @if (outwardDetails.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead>
+                            <tr>
+                                <th>Barcode No</th>
+                                <th>Quantity</th>
+                                <th>Unit</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < outwardDetails.Count; i++)
+                            {
+                                var index = i;
+                                var item = outwardDetails[index];
+                                <tr>
+                                    <td>
+                                        <InputText class="form-control form-control-sm" @bind-Value="item.BarcodeNo" placeholder="Enter barcode" />
+                                    </td>
+                                    <td>
+                                        <InputNumber class="form-control form-control-sm" @bind-Value="item.Quantity" />
+                                    </td>
+                                    <td>
+                                        <InputText class="form-control form-control-sm" @bind-Value="item.Unit" />
+                                    </td>
+                                    <td>
+                                        <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => RemoveOutwardDetail(index)">
+                                            <Icon Name="IconName.Trash" />
+                                        </Button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            <div class="text-end mt-3">
+                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+
+@code {
+    private Modal modal = default!;
+    private List<Core.Entities.Outward> outwards = new();
+    private List<Company> billCompanies = new();
+    private Core.Entities.Outward outward = new();
+    private List<Core.Entities.OutwardDetail> outwardDetails = new();
+    private bool isLoading = true;
+    private string modalTitle = "Add Outward";
+    private bool isEditMode = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        outwards = (await OutwardService.GetAllAsync()).ToList();
+        billCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
+        isLoading = false;
+    }
+
+    private async Task<GridDataProviderResult<Core.Entities.Outward>> OutwardsDataProvider(GridDataProviderRequest<Core.Entities.Outward> request)
+    {
+        if (outwards == null || !outwards.Any())
+            return await Task.FromResult(new GridDataProviderResult<Core.Entities.Outward> { Data = new List<Outward>(), TotalCount = 0 });
+
+        return await Task.FromResult(new GridDataProviderResult<Core.Entities.Outward> { Data = outwards, TotalCount = outwards.Count });
+    }
+
+    private void ShowAddModal()
+    {
+        modalTitle = "Add Outward";
+        isEditMode = false;
+        outward = new Core.Entities.Outward { OutwardDate = DateTime.Now, IsActive = true };
+        outwardDetails = new List<OutwardDetail>();
+        modal.ShowAsync();
+    }
+
+    private async Task ShowEditModal(Outward editOutward)
+    {
+        modalTitle = "Edit Outward";
+        isEditMode = true;
+        outward = new Core.Entities.Outward
+        {
+            Id = editOutward.Id,
+            OutwardNo = editOutward.OutwardNo,
+            OutwardDate = editOutward.OutwardDate,
+            BillToCompanyId = editOutward.BillToCompanyId,
+            InvoiceNo = editOutward.InvoiceNo,
+            InvoiceDate = editOutward.InvoiceDate,
+            ChallanNo = editOutward.ChallanNo,
+            Remarks = editOutward.Remarks,
+            IsActive = editOutward.IsActive
+        };
+        
+        var details = await OutwardService.GetOutwardDetailsByOutwardIdAsync(editOutward.Id);
+        outwardDetails = details.ToList();
+        
+        modal.ShowAsync();
+    }
+
+    private void AddOutwardDetail()
+    {
+        outwardDetails.Add(new Core.Entities.OutwardDetail { Unit = "PCS", Quantity = 1 });
+    }
+
+    private void RemoveOutwardDetail(int index)
+    {
+        outwardDetails.RemoveAt(index);
+    }
+
+    private async Task SaveOutward()
+    {
+        try
+        {
+            if (!outwardDetails.Any())
+            {
+                // Toast notification removed
+                return;
+            }
+
+            outward.OutwardDetails = outwardDetails;
+
+            if (isEditMode)
+            {
+                await OutwardService.UpdateAsync(outward);
+                // Toast notification removed
+            }
+            else
+            {
+                await OutwardService.AddAsync(outward);
+                // Toast notification removed
+            }
+
+            await HideModal();
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            // Toast notification removed
+        }
+    }
+
+    private async Task DeleteOutward(int id)
+    {
+        try
+        {
+            await OutwardService.DeleteAsync(id);
+            // Toast notification removed
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            // Toast notification removed
+        }
+    }
+
+    private void ViewDetails(int id)
+    {
+        // Toast notification removed
+    }
+
+    private async Task HideModal()
+    {
+        await modal.HideAsync();
+    }
+
+} *@

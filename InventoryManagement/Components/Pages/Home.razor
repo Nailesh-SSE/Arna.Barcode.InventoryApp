@@ -1,0 +1,130 @@
+@page "/"
+@attribute [AllowAnonymous]
+
+<PageTitle>Home - Inventory Management</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="jumbotron bg-light p-5 rounded">
+                <h1 class="display-4">
+                    <Icon Name="IconName.HouseDoorFill" /> Welcome to Inventory Management System
+                </h1>
+                <p class="lead">Manage your inventory efficiently with our comprehensive system</p>
+                <hr class="my-4">
+                <p>Track inward and outward movements, manage products, categories, and companies all in one place.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <Card>
+                <CardBody>
+                    <h5 class="card-title">
+                        <Icon Name="IconName.Building" Color="IconColor.Primary" Size="IconSize.x2" />
+                        Master Data
+                    </h5>
+                    <p class="card-text">Manage companies, categories, and products</p>
+                    <ul class="list-unstyled">
+                        <li><Icon Name="IconName.ChevronRight" /> Ship To Companies</li>
+                        <li><Icon Name="IconName.ChevronRight" /> Make Companies</li>
+                        <li><Icon Name="IconName.ChevronRight" /> Bill To Companies</li>
+                        <li><Icon Name="IconName.ChevronRight" /> Categories</li>
+                        <li><Icon Name="IconName.ChevronRight" /> Products</li>
+                    </ul>
+                </CardBody>
+            </Card>
+        </div>
+
+        <div class="col-md-4">
+            <Card>
+                <CardBody>
+                    <h5 class="card-title">
+                        <Icon Name="IconName.ArrowDownCircle" Color="IconColor.Success" Size="IconSize.x2" />
+                        Inward Management
+                    </h5>
+                    <p class="card-text">Track incoming inventory and shipments</p>
+                    <ul class="list-unstyled">
+                        <li><Icon Name="IconName.ChevronRight" /> Record new inward entries</li>
+                        <li><Icon Name="IconName.ChevronRight" /> Manage inward items</li>
+                        <li><Icon Name="IconName.ChevronRight" /> Generate barcodes</li>
+                        <li><Icon Name="IconName.ChevronRight" /> Track shipments</li>
+                    </ul>
+                    <Button Color="ButtonColor.Success" To="/inward" Class="mt-2">
+                        Go to Inward
+                    </Button>
+                </CardBody>
+            </Card>
+        </div>
+
+        <div class="col-md-4">
+            <Card>
+                <CardBody>
+                    <h5 class="card-title">
+                        <Icon Name="IconName.ArrowUpCircle" Color="IconColor.Warning" Size="IconSize.x2" />
+                        Outward Management
+                    </h5>
+                    <p class="card-text">Manage outgoing inventory and deliveries</p>
+                    <ul class="list-unstyled">
+                        <li><Icon Name="IconName.ChevronRight" /> Create outward entries</li>
+                        <li><Icon Name="IconName.ChevronRight" /> Track deliveries</li>
+                        <li><Icon Name="IconName.ChevronRight" /> Manage invoices</li>
+                        <li><Icon Name="IconName.ChevronRight" /> Generate challans</li>
+                    </ul>
+                    <Button Color="ButtonColor.Warning" To="/outward" Class="mt-2">
+                        Go to Outward
+                    </Button>
+                </CardBody>
+            </Card>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-md-6">
+            <Card>
+                <CardBody>
+                    <h5 class="card-title">
+                        <Icon Name="IconName.ArrowReturnLeft" Color="IconColor.Danger" Size="IconSize.x2" />
+                        Sales Return
+                    </h5>
+                    <p class="card-text">Handle product returns and manage return reasons</p>
+                    <ul class="list-unstyled">
+                        <li><Icon Name="IconName.ChevronRight" /> Process returns</li>
+                        <li><Icon Name="IconName.ChevronRight" /> Track return reasons</li>
+                        <li><Icon Name="IconName.ChevronRight" /> Manage defective items</li>
+                    </ul>
+                    <Button Color="ButtonColor.Danger" To="/sale-returns" Class="mt-2">
+                        Go to Sales Return
+                    </Button>
+                </CardBody>
+            </Card>
+        </div>
+
+        <div class="col-md-6">
+            <Card>
+                <CardBody>
+                    <h5 class="card-title">
+                        <Icon Name="IconName.InfoCircle" Color="IconColor.Info" Size="IconSize.x2" />
+                        Quick Stats
+                    </h5>
+                    <p class="card-text">System overview and statistics</p>
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h3 class="text-primary">0</h3>
+                            <small>Total Products</small>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="text-success">0</h3>
+                            <small>Inward Entries</small>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="text-warning">0</h3>
+                            <small>Outward Entries</small>
+                        </div>
+                    </div>
+                </CardBody>
+            </Card>
+        </div>
+    </div>
+</div>

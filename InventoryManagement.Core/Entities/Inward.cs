@@ -1,0 +1,34 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace InventoryManagement.Core.Entities;
+
+public class Inward : Common
+{
+    [Key]
+    public int Id { get; set; }
+
+    [Required]
+    [StringLength(50)]
+    public string InwardNo { get; set; } = string.Empty;
+
+    [Required]
+    public DateTime InwardDate { get; set; } = DateTime.UtcNow.Date;
+
+    [Required]
+    public int ShipMentCompanyId { get; set; }
+
+    [StringLength(50)]
+    public string? InvoiceNo { get; set; }
+
+    public DateTime? InvoiceDate { get; set; }
+
+    [StringLength(50)]
+    public string? ChallanNo { get; set; }
+
+    [StringLength(500)]
+    public string? Remarks { get; set; }
+
+    public virtual Company ShipMentCompany { get; set; } = null!;
+    public virtual ICollection<InwardItem> InwardItems { get; set; } = new List<InwardItem>();
+    public virtual ICollection<InwardBarcodeItem> InwardBarcodeItems { get; set; } = new List<InwardBarcodeItem>();
+}
