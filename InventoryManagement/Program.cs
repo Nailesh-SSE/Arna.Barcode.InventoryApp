@@ -1,9 +1,9 @@
 using InventoryManagement.Components;
+using InventoryManagement.Core;
 using InventoryManagement.Core.Data;
-using InventoryManagement.Core.Interfaces;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services;
-using InventoryManagement.Services.Services;
+using InventoryManagement.Services.Interfaces;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 

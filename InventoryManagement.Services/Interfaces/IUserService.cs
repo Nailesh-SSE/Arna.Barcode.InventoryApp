@@ -1,7 +1,6 @@
 using InventoryManagement.Core.Entities;
 
-namespace InventoryManagement.Core.Interfaces;
-
+namespace InventoryManagement.Services.Interfaces;
 public interface IUserService
 {
     Task<bool> AuthenticateAsync(string username, string password);

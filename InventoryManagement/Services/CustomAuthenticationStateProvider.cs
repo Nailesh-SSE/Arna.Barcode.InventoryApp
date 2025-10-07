@@ -1,8 +1,8 @@
-using System.Security.Claims;
-using InventoryManagement.Core.Interfaces;
+using InventoryManagement.Services.Interfaces;
 using Microsoft.AspNetCore.Components.Authorization;
+using System.Security.Claims;
 
-namespace InventoryManagement.Services;
+namespace InventoryManagement.Core;
 
 public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 {

@@ -1,8 +1,9 @@
 using InventoryManagement.Core.Entities;
 using InventoryManagement.Core.Enums;
-using InventoryManagement.Core.Interfaces;
+using InventoryManagement.Infrastructure.Repositories;
+using InventoryManagement.Services.Interfaces;
 
-namespace InventoryManagement.Services.Services;
+namespace InventoryManagement.Services;
 
 public class CompanyService : ICompanyService
 {

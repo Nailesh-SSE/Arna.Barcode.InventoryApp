@@ -1,7 +1,9 @@
 using InventoryManagement.Core.Entities;
-using InventoryManagement.Core.Interfaces;
+using InventoryManagement.Infrastructure.Repositories;
+using InventoryManagement.Services.Interfaces;
+using InventoryManagement.Services.Models;
 
-namespace InventoryManagement.Services.Services;
+namespace InventoryManagement.Services;
 
 public class CategoryService : ICategoryService
 {
@@ -12,10 +14,27 @@ public class CategoryService : ICategoryService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<IEnumerable<Category>> GetAllCategoriesAsync()
+    public async Task<IEnumerable<CategoryModel>> GetAllCategoriesAsync()
     {
         var categoryRepository = _unitOfWork.GetRepository<Category>();
-        return await categoryRepository.FindAsync(c => !c.IsDeleted);
+        var categoryModelRepository = _unitOfWork.GetRepository<CategoryModel>();
+        var entities= await categoryRepository.FindAsync(c => !c.IsDeleted);
+
+        var categorymodels= entities.Select(c => new CategoryModel
+        {
+            Id = c.Id,
+            Name = c.Name,
+            Description = c.Description,
+            ParentCategoryId = c.ParentCategoryId,
+            ParentCategoryName = c.ParentCategoryName,
+            CreatedBy = c.CreatedBy,
+            CreatedOn = c.CreatedOn,
+            UpdatedBy = c.UpdatedBy,
+            UpdatedOn = c.UpdatedOn,
+            IsActive = c.IsActive,
+            IsDeleted = c.IsDeleted
+        }).ToList();
+        return categorymodels;
     }
 
     public async Task<IEnumerable<Category>> GetRootCategoriesAsync()
@@ -46,6 +65,15 @@ public class CategoryService : ICategoryService
             if (category.ParentCategoryId.HasValue)
             {
                 var parentCategory = await GetCategoryByIdAsync(category.ParentCategoryId.Value);
+                //var category = new Category();
+                //category.Name = categorymodel.Name;
+                //category.Id = categorymodel.Id;
+                //category.Description = categorymodel.Description;
+                //category.ParentCategoryId=categorymodel.ParentCategoryId;
+                //category.ParentCategoryName = categorymodel.ParentCategoryName;
+                ////category.ParentCategory = categorymodel.ParentCategory;
+                ////category.SubCategories = categorymodel.SubCategories;
+                //category.Products = categorymodel.Products;
                 if (parentCategory != null)
                 {
                     category.ParentCategoryName = parentCategory.Name;

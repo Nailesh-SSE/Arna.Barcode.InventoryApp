@@ -1,6 +1,6 @@
 using InventoryManagement.Core.Entities;
 
-namespace InventoryManagement.Core.Interfaces;
+namespace InventoryManagement.Services.Interfaces;
 
 public interface IProductService
 {
@@ -11,10 +11,5 @@ public interface IProductService
     Task<bool> DeleteProductAsync(int id);
     Task<bool> IsSkuUniqueAsync(string sku, int? excludeId = null);
     Task<IEnumerable<Product>> GetProductsByCategoryAsync(int categoryId);
-    
-    // Simplified method names for UI
-    Task<IEnumerable<Product>> GetAllAsync() => GetAllProductsAsync();
-    Task AddAsync(Product product) => CreateProductAsync(product).ContinueWith(t => { });
-    Task UpdateAsync(Product product) => UpdateProductAsync(product).ContinueWith(t => { });
-    Task DeleteAsync(int id) => DeleteProductAsync(id).ContinueWith(t => { });
+  
 }

@@ -1,4 +1,5 @@
-@page "/categories"
+@* @page "/categories"
+
 @inject ICategoryService CategoryService
 
 <PageTitle>Categories</PageTitle>
@@ -23,30 +24,30 @@
     }
     else
     {
-        <Grid TItem="Category"
+        <Grid TItem="CategoryModel"
               Class="table table-hover table-bordered table-striped"
               DataProvider="CategoriesDataProvider"
               AllowPaging="true"
               PageSize="10"
               Responsive="true">
 
-            <GridColumn TItem="Category" HeaderText="ID" PropertyName="Id">
+            <GridColumn TItem="CategoryModel" HeaderText="ID" PropertyName="Id">
                 @context.Id
             </GridColumn>
 
-            <GridColumn TItem="Category" HeaderText="Name" PropertyName="Name">
+            <GridColumn TItem="CategoryModel" HeaderText="Name" PropertyName="Name">
                 @context.Name
             </GridColumn>
 
-            <GridColumn TItem="Category" HeaderText="Description" PropertyName="Description">
+            <GridColumn TItem="CategoryModel" HeaderText="Description" PropertyName="Description">
                 @context.Description
             </GridColumn>
 
-            <GridColumn TItem="Category" HeaderText="Parent Category" PropertyName="ParentCategoryId">
+            <GridColumn TItem="CategoryModel" HeaderText="Parent Category" PropertyName="ParentCategoryId">
                 @(context.ParentCategory?.Name ?? "N/A")
             </GridColumn>
 
-            <GridColumn TItem="Category" HeaderText="Status" PropertyName="IsActive">
+            <GridColumn TItem="CategoryModel" HeaderText="Status" PropertyName="IsActive">
                 @if (context.IsActive)
                 {
                     <Badge Color="BadgeColor.Success">Active</Badge>
@@ -57,7 +58,7 @@
                 }
             </GridColumn>
 
-            <GridColumn TItem="Category" HeaderText="Actions">
+            <GridColumn TItem="CategoryModel" HeaderText="Actions">
                 <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                     <Icon Name="IconName.PencilSquare" /> Edit
                 </Button>
@@ -71,23 +72,23 @@
 
 <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
     <BodyTemplate>
-        <EditForm Model="category" OnValidSubmit="SaveCategory">
+        <EditForm Model="categoryModel" OnValidSubmit="SaveCategory">
             <DataAnnotationsValidator />
             
             <div class="mb-3">
                 <label class="form-label">Name <span class="text-danger">*</span></label>
-                <InputText class="form-control" @bind-Value="category.Name" />
-                <ValidationMessage For="@(() => category.Name)" />
+                <InputText class="form-control" @bind-Value="categoryModel.Name" />
+                <ValidationMessage For="@(() => categoryModel.Name)" />
             </div>
 
             <div class="mb-3">
                 <label class="form-label">Description</label>
-                <InputTextArea class="form-control" rows="3" @bind-Value="category.Description" />
+                <InputTextArea class="form-control" rows="3" @bind-Value="categoryModel.Description" />
             </div>
 
             <div class="mb-3">
                 <label class="form-label">Parent Category</label>
-                <InputSelect class="form-select" @bind-Value="category.ParentCategoryId">
+                <InputSelect class="form-select" @bind-Value="categoryModel.ParentCategoryId">
                     <option value="">-- Select Parent Category --</option>
                     @foreach (var cat in parentCategories)
                     {
@@ -97,7 +98,7 @@
             </div>
 
             <div class="mb-3">
-                <InputCheckbox @bind-Value="category.IsActive" /> Active
+                <InputCheckbox @bind-Value="categoryModel.IsActive" /> Active
             </div>
 
             <div class="text-end">
@@ -118,6 +119,10 @@
     private string modalTitle = "Add Category";
     private bool isEditMode = false;
 
+    private CategoryModel categoryModel = new();
+    private List<CategoryModel> categoriesModel = new();
+    private List<CategoryModel> parentCategoriesModels = new();
+
     protected override async Task OnInitializedAsync()
     {
         await LoadCategories();
@@ -126,17 +131,17 @@
     private async Task LoadCategories()
     {
         isLoading = true;
-        categories = (await CategoryService.GetAllAsync()).ToList();
+        categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
         parentCategories = categories.Where(c => c.ParentCategoryId == null).ToList();
         isLoading = false;
     }
 
-    private async Task<GridDataProviderResult<Category>> CategoriesDataProvider(GridDataProviderRequest<Category> request)
+    private async Task<GridDataProviderResult<CategoryModel>> CategoriesDataProvider(GridDataProviderRequest<CategoryModel> request)
     {
-        if (categories == null || !categories.Any())
-            return await Task.FromResult(new GridDataProviderResult<Category> { Data = new List<Category>(), TotalCount = 0 });
+        if (categoriesModel == null || !categoriesModel.Any())
+            return await Task.FromResult(new GridDataProviderResult<CategoryModel> { Data = new List<CategoryModel>(), TotalCount = 0 });
 
-        return await Task.FromResult(new GridDataProviderResult<Category> { Data = categories, TotalCount = categories.Count });
+        return await Task.FromResult(new GridDataProviderResult<CategoryModel> { Data = categoriesModel, TotalCount = categoriesModel.Count });
     }
 
     private void ShowAddModal()
@@ -147,11 +152,11 @@
         modal.ShowAsync();
     }
 
-    private void ShowEditModal(Category editCategory)
+    private void ShowEditModal(CategoryModel editCategory)
     {
         modalTitle = "Edit Category";
         isEditMode = true;
-        category = new Category
+        categoryModel = new CategoryModel
         {
             Id = editCategory.Id,
             Name = editCategory.Name,
@@ -168,12 +173,12 @@
         {
             if (isEditMode)
             {
-                await CategoryService.UpdateAsync(category);
+                await CategoryService.UpdateCategoryAsync(category);
                 // Toast notification removed
             }
             else
             {
-                await CategoryService.AddAsync(category);
+                await CategoryService.CreateCategoryAsync(category);
                 // Toast notification removed
             }
 
@@ -190,7 +195,7 @@
     {
         try
         {
-            await CategoryService.DeleteAsync(id);
+            await CategoryService.DeleteCategoryAsync(id);
             // Toast notification removed
             await LoadCategories();
         }
@@ -205,4 +210,4 @@
         await modal.HideAsync();
     }
 
-}
+} *@
