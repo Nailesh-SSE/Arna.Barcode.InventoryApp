@@ -1,4 +1,5 @@
-@* @page "/products"
+@page "/products"
+@inject IJSRuntime JS
 @inject IProductService ProductService
 @inject ICategoryService CategoryService
 
@@ -24,34 +25,38 @@
     }
     else
     {
-        <Grid TItem="Product"
+        <Grid TItem="ProductModel"
+            @ref=productGrid
               Class="table table-hover table-bordered table-striped"
               DataProvider="ProductsDataProvider"
               AllowPaging="true"
               PageSize="10"
-              Responsive="true">
+              Responsive="true"> 
 
-            <GridColumn TItem="Product" HeaderText="ID" PropertyName="Id">
-                @context.Id
+            <GridColumn TItem="ProductModel" HeaderText="ID" PropertyName="Id">
+                @{
+                    var index = products.IndexOf(context)+1;
+                }
+                @index
             </GridColumn>
 
-            <GridColumn TItem="Product" HeaderText="SKU" PropertyName="SKU">
+            <GridColumn TItem="ProductModel" HeaderText="SKU" PropertyName="SKU">
                 @context.SKU
             </GridColumn>
 
-            <GridColumn TItem="Product" HeaderText="Name" PropertyName="Name">
+            <GridColumn TItem="ProductModel" HeaderText="Name" PropertyName="Name">
                 @context.Name
             </GridColumn>
 
-            <GridColumn TItem="Product" HeaderText="Category" PropertyName="CategoryId">
-                @(context.Category?.Name ?? "N/A")
-            </GridColumn>
+            <GridColumn TItem="ProductModel" HeaderText="Category" PropertyName="CategoryId">
+                @(categories.FirstOrDefault(c => c.Id == context.CategoryId)?.Name ?? "N/A")
+            </GridColumn> 
 
-            <GridColumn TItem="Product" HeaderText="Unit" PropertyName="Unit">
+            <GridColumn TItem="ProductModel" HeaderText="Unit" PropertyName="Unit">
                 @context.Unit
             </GridColumn>
 
-            <GridColumn TItem="Product" HeaderText="Status" PropertyName="IsActive">
+            <GridColumn TItem="ProductModel" HeaderText="Status" PropertyName="IsActive">
                 @if (context.IsActive)
                 {
                     <Badge Color="BadgeColor.Success">Active</Badge>
@@ -62,7 +67,7 @@
                 }
             </GridColumn>
 
-            <GridColumn TItem="Product" HeaderText="Actions">
+            <GridColumn TItem="ProductModel" HeaderText="Actions">
                 <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                     <Icon Name="IconName.PencilSquare" /> Edit
                 </Button>
@@ -70,56 +75,56 @@
                     <Icon Name="IconName.Trash" /> Delete
                 </Button>
             </GridColumn>
-        </Grid>
+        </Grid> 
     }
 </div>
 
 <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
     <BodyTemplate>
-        <EditForm Model="product" OnValidSubmit="SaveProduct">
+        <EditForm EditContext="@editContext" OnValidSubmit="SaveProduct">
             <DataAnnotationsValidator />
             
             <div class="row">
-                <div class="col-md-6 mb-3">
+                @* <div class="col-md-6 mb-3">
                     <label class="form-label">SKU <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="product.SKU" />
-                    <ValidationMessage For="@(() => product.SKU)" />
-                </div>
+                    <InputText class="form-control" @bind-Value="productModel.SKU" />
+                    <ValidationMessage For="@(() => productModel.SKU)" />
+                </div> *@
 
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="product.Name" />
-                    <ValidationMessage For="@(() => product.Name)" />
+                    <InputText class="form-control" @bind-Value="productModel.Name" @oninput="ValidateProductAsync" />
+                    <ValidationMessage For="@(() => productModel.Name)" />
                 </div>
             </div>
 
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Category <span class="text-danger">*</span></label>
-                    <InputSelect class="form-select" @bind-Value="product.CategoryId">
+                    <InputSelect class="form-select" @bind-Value="productModel.CategoryId">
                         <option value="0">-- Select Category --</option>
                         @foreach (var cat in categories)
                         {
                             <option value="@cat.Id">@cat.Name</option>
                         }
                     </InputSelect>
-                    <ValidationMessage For="@(() => product.CategoryId)" />
+                    <ValidationMessage For="@(() => productModel.CategoryId)" />
                 </div>
 
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Unit <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="product.Unit" placeholder="e.g., PCS, KG, LTR" />
-                    <ValidationMessage For="@(() => product.Unit)" />
+                    <InputText class="form-control" @bind-Value="productModel.Unit" placeholder="e.g., PCS, KG, LTR" />
+                    <ValidationMessage For="@(() => productModel.Unit)" />
                 </div>
             </div>
 
             <div class="mb-3">
                 <label class="form-label">Description</label>
-                <InputTextArea class="form-control" rows="3" @bind-Value="product.Description" />
+                <InputTextArea class="form-control" rows="3" @bind-Value="productModel.Description" />
             </div>
 
             <div class="mb-3">
-                <InputCheckbox @bind-Value="product.IsActive" /> Active
+                <InputCheckbox @bind-Value="productModel.IsActive" /> Active
             </div>
 
             <div class="text-end">
@@ -133,13 +138,16 @@
 
 @code {
     private Modal modal = default!;
-    private List<Product> products = new();
-    private List<Category> categories = new();
-    private Product product = new();
+    private List<ProductModel> products = new();
+    private List<CategoryModel> categories = new();
+    private ProductModel productModel = new();
+    private Grid<ProductModel> productGrid;
     private bool isLoading = true;
     private string modalTitle = "Add Product";
     private bool isEditMode = false;
-
+    private EditContext editContext;
+    private ValidationMessageStore messageStore;
+    private CancellationTokenSource _validationCts;
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
@@ -148,32 +156,92 @@
     private async Task LoadData()
     {
         isLoading = true;
-        products = (await ProductService.GetAllAsync()).ToList();
-        categories = (await CategoryService.GetAllAsync()).ToList();
+        products = (await ProductService.GetAllProductsAsync()).ToList();
+        categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
+        editContext = new EditContext(productModel);
+        messageStore = new ValidationMessageStore(editContext);
+        AttachValidationHandlers();
         isLoading = false;
     }
+    private void AttachValidationHandlers()
+    {
+        editContext.OnFieldChanged += async (sender, args) =>
+        {
+            await ValidateProductAsync();
+            editContext.NotifyValidationStateChanged();
+        };
+    }
+    private async Task ValidateProductAsync()
+    {
+        _validationCts?.Cancel(); // cancel previous validation
+        _validationCts = new CancellationTokenSource();
+        var token = _validationCts.Token;
 
-    private async Task<GridDataProviderResult<Product>> ProductsDataProvider(GridDataProviderRequest<Product> request)
+        try
+        {
+            await Task.Delay(100, token); // wait for typing to stop
+            messageStore.Clear();
+
+            bool isNameUnique = await ProductService.IsProductNameUniqueAsync(productModel.Name, productModel.Id);
+
+            if (!isNameUnique)
+            {
+                messageStore.Add(() => productModel.Name, "Product name already exists.");
+            }
+
+            editContext.NotifyValidationStateChanged();
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignore cancelled validation
+        }
+    }
+    private async Task<GridDataProviderResult<ProductModel>> ProductsDataProvider(GridDataProviderRequest<ProductModel> request)
     {
         if (products == null || !products.Any())
-            return await Task.FromResult(new GridDataProviderResult<Product> { Data = new List<Product>(), TotalCount = 0 });
+            return await Task.FromResult(new GridDataProviderResult<ProductModel> { Data = new List<ProductModel>(), TotalCount = 0 });
 
-        return await Task.FromResult(new GridDataProviderResult<Product> { Data = products, TotalCount = products.Count });
+
+        return await Task.FromResult(new GridDataProviderResult<ProductModel> { Data = products, TotalCount = products.Count });
     }
+
+
+    private async Task<string> GetNextSKUAsync()
+    {
+
+        var lastProduct = await ProductService.GetLastProductAsync();
+        int nextNumber = 1001; // Starting SKU number
+
+        if (lastProduct != null && !string.IsNullOrWhiteSpace(lastProduct.SKU))
+        {
+
+            var parts = lastProduct.SKU.Split('-');
+            if (parts.Length == 2 && int.TryParse(parts[1], out int lastNumber))
+            {
+                nextNumber = lastNumber + 1;
+            }
+        }
+
+        return $"{nextNumber}";
+    }
+
 
     private void ShowAddModal()
     {
         modalTitle = "Add Product";
         isEditMode = false;
-        product = new Product { IsActive = true };
+        productModel = new ProductModel { IsActive = true };
+        editContext = new EditContext(productModel);
+        messageStore = new ValidationMessageStore(editContext);
+        AttachValidationHandlers();
         modal.ShowAsync();
     }
 
-    private void ShowEditModal(Product editProduct)
+    private void ShowEditModal(ProductModel editProduct)
     {
         modalTitle = "Edit Product";
         isEditMode = true;
-        product = new Product
+        productModel = new ProductModel
         {
             Id = editProduct.Id,
             SKU = editProduct.SKU,
@@ -183,6 +251,9 @@
             Unit = editProduct.Unit,
             IsActive = editProduct.IsActive
         };
+        editContext = new EditContext(productModel);
+        messageStore = new ValidationMessageStore(editContext);
+        AttachValidationHandlers();
         modal.ShowAsync();
     }
 
@@ -190,19 +261,24 @@
     {
         try
         {
+            await ValidateProductAsync();
             if (isEditMode)
             {
-                await ProductService.UpdateAsync(product);
-                // Toast notification removed
+                await ProductService.UpdateProductAsync(productModel);
             }
             else
             {
-                await ProductService.AddAsync(product);
-                // Toast notification removed
+                if (string.IsNullOrWhiteSpace(productModel.SKU))
+                {
+                    var lastnumber = await GetNextSKUAsync();
+                    productModel.SKU = productModel.Name + "-" + lastnumber;
+                }
+                 await ProductService.CreateProductAsync(productModel);
             }
-
+            
             await HideModal();
             await LoadData();
+            productGrid.RefreshDataAsync();
         }
         catch (Exception ex)
         {
@@ -214,14 +290,23 @@
     {
         try
         {
-            await ProductService.DeleteAsync(id);
+            bool confirmed = await JS.InvokeAsync<bool>("confirm", "Do you really want to delete this category?");
+
+            if (!confirmed)
+            {
+                return;
+            }
+            await ProductService.DeleteProductAsync(id);
             // Toast notification removed
             await LoadData();
+            productGrid.RefreshDataAsync();
+
         }
         catch (Exception ex)
         {
             // Toast notification removed
         }
+
     }
 
     private async Task HideModal()
@@ -229,4 +314,4 @@
         await modal.HideAsync();
     }
 
-} *@
+}

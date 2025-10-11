@@ -1,6 +1,8 @@
 using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
+using InventoryManagement.Services.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagement.Services;
 
@@ -13,34 +15,91 @@ public class ProductService : IProductService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<IEnumerable<Product>> GetAllProductsAsync()
+    public async Task<List<ProductModel>> GetAllProductsAsync()
     {
         var productRepository = _unitOfWork.GetRepository<Product>();
-        return await productRepository.FindAsync(p => !p.IsDeleted);
+        var products = await productRepository.FindAsync(p => !p.IsDeleted);
+
+        var getallproducts = products.Select(p => new ProductModel
+        {
+            Id = p.Id,
+            Name = p.Name,
+            SKU = p.SKU,
+            Description = p.Description,
+            CategoryId = p.CategoryId,
+            CategoryName = p.CategoryName,
+            CreatedBy = p.CreatedBy,
+            CreatedOn = p.CreatedOn,
+            UpdatedBy = p.UpdatedBy,
+            UpdatedOn = p.UpdatedOn,
+            IsActive = p.IsActive,
+            IsDeleted = p.IsDeleted,
+            Unit=p.Unit
+        }).ToList();
+
+        return getallproducts;
     }
 
-    public async Task<Product?> GetProductByIdAsync(int id)
+    public async Task<ProductModel?> GetProductByIdAsync(int id)
     {
         var productRepository = _unitOfWork.GetRepository<Product>();
-        return await productRepository.GetByIdAsync(id);
+        var product = await productRepository.GetByIdAsync(id);
+
+        var getproductbyid=new ProductModel
+        {
+            Id = product.Id,
+            Name = product.Name,
+            SKU = product.SKU,
+            Description = product.Description,
+            CategoryId = product.CategoryId,
+            CategoryName = product.CategoryName,
+            CreatedBy = product.CreatedBy,
+            CreatedOn = product.CreatedOn,
+            UpdatedBy = product.UpdatedBy,
+            UpdatedOn = product.UpdatedOn,
+            IsActive = product.IsActive,
+            IsDeleted = product.IsDeleted
+        };
+        return getproductbyid;
     }
 
-    public async Task<bool> CreateProductAsync(Product product)
+    public async Task<bool> CreateProductAsync(ProductModel productModel)
     {
         try
         {
-            if (!await IsSkuUniqueAsync(product.SKU))
+            if (!await IsSkuUniqueAsync(productModel.SKU))
+                return false;
+
+            if (!await IsProductNameUniqueAsync(productModel.Name, productModel.Id))
                 return false;
 
             var categoryRepository = _unitOfWork.GetRepository<Category>();
-            var category = await categoryRepository.GetByIdAsync(product.CategoryId);
+            var category = await categoryRepository.GetByIdAsync(productModel.CategoryId);
             if (category != null)
             {
-                product.CategoryName = category.Name;
+                productModel.CategoryName = category.Name;
+            }
+            else
+            {
+
+                return false; // Invalid CategoryId
             }
 
+                var createdProduct = new Product
+                {
+                    Name = productModel.Name,
+                    SKU = productModel.SKU,
+                    Description = productModel.Description,
+                    CategoryId = productModel.CategoryId,
+                    CategoryName = productModel.CategoryName,
+                    CreatedBy = productModel.CreatedBy,
+                    CreatedOn = productModel.CreatedOn,
+                    IsActive = productModel.IsActive,
+                    IsDeleted = productModel.IsDeleted
+                };
+
             var productRepository = _unitOfWork.GetRepository<Product>();
-            await productRepository.AddAsync(product);
+            await productRepository.AddAsync(createdProduct);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -50,22 +109,44 @@ public class ProductService : IProductService
         }
     }
 
-    public async Task<bool> UpdateProductAsync(Product product)
+    public async Task<bool> UpdateProductAsync(ProductModel productModel)
     {
         try
         {
-            if (!await IsSkuUniqueAsync(product.SKU, product.Id))
+            if (!await IsSkuUniqueAsync(productModel.SKU, productModel.Id))
+                return false;
+
+            if (!await IsProductNameUniqueAsync(productModel.Name, productModel.Id))
                 return false;
 
             var categoryRepository = _unitOfWork.GetRepository<Category>();
-            var category = await categoryRepository.GetByIdAsync(product.CategoryId);
+            var category = await categoryRepository.GetByIdAsync(productModel.CategoryId);
             if (category != null)
             {
-                product.CategoryName = category.Name;
+                productModel.CategoryName = category.Name;
+            }
+            else
+            {
+                return false;
             }
 
+            var ProductRepository = _unitOfWork.GetRepository<Product>();
+            var existingProduct = await ProductRepository.GetByIdAsync(productModel.Id);
+
+
+            existingProduct.Name = productModel.Name;
+            existingProduct.SKU = productModel.SKU;
+            existingProduct.Description = productModel.Description;
+            existingProduct.CategoryId = productModel.CategoryId;
+            existingProduct.CategoryName = productModel.CategoryName;
+            existingProduct.UpdatedBy = productModel.UpdatedBy;
+            existingProduct.UpdatedOn = productModel.UpdatedOn;
+            existingProduct.IsActive = productModel.IsActive;
+            existingProduct.IsDeleted = productModel.IsDeleted;
+            existingProduct.Unit = productModel.Unit;
+
             var productRepository = _unitOfWork.GetRepository<Product>();
-            productRepository.UpdateAsync(product);
+            productRepository.UpdateAsync(existingProduct);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -113,10 +194,61 @@ public class ProductService : IProductService
 
         return !products.Any();
     }
-
-    public async Task<IEnumerable<Product>> GetProductsByCategoryAsync(int categoryId)
+    public async Task<bool> IsProductNameUniqueAsync(string name, int? excludeId = null)
     {
         var productRepository = _unitOfWork.GetRepository<Product>();
-        return await productRepository.FindAsync(p => p.CategoryId == categoryId && !p.IsDeleted);
+        var products = await productRepository.FindAsync(p => p.Name == name && !p.IsDeleted);
+
+        if (excludeId.HasValue)
+            products = products.Where(p => p.Id != excludeId.Value);
+
+        return !products.Any();
+    }
+
+    public async Task<List<ProductModel>> GetProductsByCategoryAsync(int categoryId)
+    {
+        var productRepository = _unitOfWork.GetRepository<Product>();
+        var products = await productRepository.FindAsync(p => p.CategoryId == categoryId && !p.IsDeleted);
+
+        var getproductsbycategory = products.Select(p => new ProductModel
+        {
+            Id = p.Id,
+            Name = p.Name,
+            SKU = p.SKU,
+            Description = p.Description,
+            CategoryId = p.CategoryId,
+            CategoryName = p.CategoryName,
+            CreatedBy = p.CreatedBy,
+            CreatedOn = p.CreatedOn,
+            UpdatedBy = p.UpdatedBy,
+            UpdatedOn = p.UpdatedOn,
+            IsActive = p.IsActive,
+            IsDeleted = p.IsDeleted
+        }).ToList();
+        return getproductsbycategory;
+    }
+    public async Task<ProductModel> GetLastProductAsync()
+    {
+        var productRepository = _unitOfWork.GetRepository<Product>();
+        var lastProduct= (await productRepository.FindAsync(p => !p.IsDeleted))
+                                .OrderByDescending(p => p.Id)
+                                .FirstOrDefault();
+
+        var LastproductModel = new ProductModel
+        {
+            Id = lastProduct.Id,
+            Name = lastProduct.Name,
+            SKU = lastProduct.SKU,
+            Description = lastProduct.Description,
+            CategoryId = lastProduct.CategoryId,
+            CategoryName = lastProduct.CategoryName,
+            CreatedBy = lastProduct.CreatedBy,
+            CreatedOn = lastProduct.CreatedOn,
+            UpdatedBy = lastProduct.UpdatedBy,
+            UpdatedOn = lastProduct.UpdatedOn,
+            IsActive = lastProduct.IsActive,
+            IsDeleted = lastProduct.IsDeleted
+        };
+        return LastproductModel;
     }
 }
