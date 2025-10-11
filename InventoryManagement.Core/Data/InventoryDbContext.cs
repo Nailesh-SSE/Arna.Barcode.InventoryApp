@@ -25,7 +25,10 @@ public class InventoryDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-    
+        modelBuilder.Entity<Company>()
+            .Property(c => c.SerialNumber)
+            .HasConversion<int>();
+
         // Configure relationships
         modelBuilder.Entity<UsersInRole>()
             .HasOne(uir => uir.User)
@@ -46,7 +49,7 @@ public class InventoryDbContext : DbContext
         modelBuilder.Entity<Company>()
             .Property(c => c.CompanyType)
             .HasConversion<int>();
-
+  
         modelBuilder.Entity<Category>()
             .HasOne(c => c.ParentCategory)
             .WithMany(c => c.SubCategories)

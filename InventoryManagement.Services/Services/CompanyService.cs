@@ -2,6 +2,10 @@ using InventoryManagement.Core.Entities;
 using InventoryManagement.Core.Enums;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
+using InventoryManagement.Services.Models;
+using System.Collections.Immutable;
+using System.Reflection.Metadata.Ecma335;
+using System.Threading.Tasks.Sources;
 
 namespace InventoryManagement.Services;
 
@@ -14,16 +18,37 @@ public class CompanyService : ICompanyService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<IEnumerable<Company>> GetAllCompaniesAsync()
+    public async Task<List<CompanyModel>> GetAllCompaniesAsync()
     {
         var companyRepository = _unitOfWork.GetRepository<Company>();
-        return await companyRepository.FindAsync(c => !c.IsDeleted);
+        var entities = await companyRepository.FindAsync(c => !c.IsDeleted);
+        var model = entities.Select(c => new CompanyModel
+        {
+            Id = c.Id,
+            Name = c.Name,
+            Code = c.Code,
+            CompanyType = c.CompanyType,
+            IsActive = c.IsActive,
+            Remark = c.Remark
+
+        }).ToList();
+        return model;
     }
 
-    public async Task<IEnumerable<Company>> GetCompaniesByTypeAsync(CompanyType type)
+    public async Task<List<CompanyModel>> GetCompaniesByTypeAsync(CompanyType type)
     {
         var companyRepository = _unitOfWork.GetRepository<Company>();
-        return await companyRepository.FindAsync(c => c.CompanyType == type && !c.IsDeleted);
+        var entities = await companyRepository.FindAsync(c => c.CompanyType == type && !c.IsDeleted);
+        var model = entities.Select(c => new CompanyModel
+        {
+            Id = c.Id,
+            Name = c.Name,
+            Code = c.Code,
+            CompanyType = c.CompanyType,
+            Remark = c.Remark,
+            IsActive=c.IsActive
+        }).ToList();
+        return model;
     }
 
     public async Task<Company?> GetCompanyByIdAsync(int id)
@@ -32,33 +57,54 @@ public class CompanyService : ICompanyService
         return await companyRepository.GetByIdAsync(id);
     }
 
-    public async Task<bool> CreateCompanyAsync(Company company)
+    public async Task<bool> CreateCompanyAsync(CompanyModel companyModel)
     {
         try
         {
-            if (!await IsCompanyCodeUniqueAsync(company.Code))
-                return false;
-
             var companyRepository = _unitOfWork.GetRepository<Company>();
-            await companyRepository.AddAsync(company);
+            await GenerateCompanyCodeAndSquenceNumberAsync(companyModel);
+
+            var entity = new Company
+            {
+                Id = companyModel.Id,
+                Code = companyModel.Code,
+                Name = companyModel.Name,
+                IsActive = companyModel.IsActive,
+                CompanyType = companyModel.CompanyType,
+                SerialNumber = companyModel.SerialNumber,
+                Remark=companyModel.Remark
+            };
+
+
+            await companyRepository.AddAsync(entity);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
-        catch
+        catch (Exception ex)
         {
             return false;
         }
     }
 
-    public async Task<bool> UpdateCompanyAsync(Company company)
+    public async Task<bool> UpdateCompanyAsync(CompanyModel companyModel)
     {
         try
         {
-            if (!await IsCompanyCodeUniqueAsync(company.Code, company.Id))
+            if (!await IsCompanyCodeUniqueAsync(companyModel.Code, companyModel.Id))
                 return false;
 
             var companyRepository = _unitOfWork.GetRepository<Company>();
-            companyRepository.UpdateAsync(company);
+            var entity = await companyRepository.GetByIdAsync(companyModel.Id);
+
+            entity.Code = companyModel.Code;
+            entity.Name = companyModel.Name;
+            entity.CompanyType = companyModel.CompanyType;
+            entity.Id = companyModel.Id;
+            entity.IsActive = companyModel.IsActive;
+            entity.IsDeleted = false;
+            entity.Remark = companyModel.Remark;
+
+            companyRepository.UpdateAsync(entity);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -88,14 +134,33 @@ public class CompanyService : ICompanyService
         }
     }
 
-    public async Task<bool> IsCompanyCodeUniqueAsync(string code, int? excludeId = null)
+    public async Task<bool> IsCompanyCodeUniqueAsync(string code, int? Id = null)
     {
         var companyRepository = _unitOfWork.GetRepository<Company>();
         var companies = await companyRepository.FindAsync(c => c.Code == code && !c.IsDeleted);
-        
-        if (excludeId.HasValue)
-            companies = companies.Where(c => c.Id != excludeId.Value);
+
+        if (Id.HasValue)
+            companies = companies.Where(c => c.Id != Id.Value);
 
         return !companies.Any();
+    }
+    public async Task<bool> IsCompanyNameUniqueAsync(string Name, int? Id = null)
+    {
+        var companyRepository = _unitOfWork.GetRepository<Company>();
+        var companies = await companyRepository.FindAsync(c => c.Name == Name && !c.IsDeleted);
+
+        if (Id.HasValue)
+        {
+            companies = companies.Where(c => c.Id != Id.Value);
+        }
+        return !companies.Any();
+    }
+    public async Task GenerateCompanyCodeAndSquenceNumberAsync(CompanyModel model)
+    {
+        var companyRepository = _unitOfWork.GetRepository<Company>();
+        var companies = await companyRepository.GetAllAsync();
+        var company = companies.Where(a => a.IsActive && !a.IsDeleted).OrderByDescending(a => a.Id).FirstOrDefault();
+        model.SerialNumber = company != null ? company.SerialNumber + 1 : 0;
+        model.Code = model.Name + "-" + model.SerialNumber;
     }
 }

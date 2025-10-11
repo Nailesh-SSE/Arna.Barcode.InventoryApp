@@ -4,7 +4,7 @@ using InventoryManagement.Core.Enums;
 
 namespace InventoryManagement.Core.Entities;
 
-public class Company : Common
+public class Company : Common 
 {
     [Key]
     public int Id { get; set; }
@@ -22,4 +22,8 @@ public class Company : Common
 
     [NotMapped]
     public string TypeName => CompanyType.ToString();
+
+    public int SerialNumber { get; set; }
+    [StringLength(1000)]
+    public string? Remark { get; set; }
 }
