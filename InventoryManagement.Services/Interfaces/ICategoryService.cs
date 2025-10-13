@@ -4,12 +4,12 @@ using InventoryManagement.Services.Models;
 namespace InventoryManagement.Services.Interfaces;
 public interface ICategoryService
 {
-    Task<IEnumerable<CategoryModel>> GetAllCategoriesAsync();
-    Task<IEnumerable<Category>> GetRootCategoriesAsync();
-    Task<IEnumerable<Category>> GetSubCategoriesAsync(int parentId);
-    Task<Category?> GetCategoryByIdAsync(int id);
-    Task<bool> CreateCategoryAsync(Category category);
-    Task<bool> UpdateCategoryAsync(Category category);
+    Task<List<CategoryModel>> GetAllCategoriesAsync();
+    Task<List<CategoryModel>> GetRootCategoriesAsync();
+    Task<List<CategoryModel>> GetSubCategoriesAsync(int parentId);
+    Task<CategoryModel?> GetCategoryByIdAsync(int id);
+    Task<bool> CreateCategoryAsync(CategoryModel category);
+    Task<bool> UpdateCategoryAsync(CategoryModel category);
     Task<bool> DeleteCategoryAsync(int id);
     Task<bool> IsCategoryNameUniqueAsync(string name, int? excludeId = null);
  }

@@ -18,7 +18,8 @@ public class Product : Common
     [StringLength(50)]
     public string SKU { get; set; } = string.Empty;
 
-    [Required]
+    [Required(ErrorMessage ="Category is required")]
+    [Range(1, int.MaxValue, ErrorMessage = "Please select a category")]
     public int CategoryId { get; set; }
 
     [StringLength(100)]

@@ -1,5 +1,5 @@
-@* @page "/categories"
-
+@page "/categories"
+@inject IJSRuntime JS
 @inject ICategoryService CategoryService
 
 <PageTitle>Categories</PageTitle>
@@ -25,14 +25,20 @@
     else
     {
         <Grid TItem="CategoryModel"
+              @ref="categoryGrid"
               Class="table table-hover table-bordered table-striped"
               DataProvider="CategoriesDataProvider"
               AllowPaging="true"
               PageSize="10"
               Responsive="true">
+              
 
             <GridColumn TItem="CategoryModel" HeaderText="ID" PropertyName="Id">
-                @context.Id
+                @{
+                    var index = categoryList.IndexOf(context) + 1;
+                }
+                @index
+               
             </GridColumn>
 
             <GridColumn TItem="CategoryModel" HeaderText="Name" PropertyName="Name">
@@ -41,10 +47,6 @@
 
             <GridColumn TItem="CategoryModel" HeaderText="Description" PropertyName="Description">
                 @context.Description
-            </GridColumn>
-
-            <GridColumn TItem="CategoryModel" HeaderText="Parent Category" PropertyName="ParentCategoryId">
-                @(context.ParentCategory?.Name ?? "N/A")
             </GridColumn>
 
             <GridColumn TItem="CategoryModel" HeaderText="Status" PropertyName="IsActive">
@@ -70,9 +72,9 @@
     }
 </div>
 
-<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+ <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
     <BodyTemplate>
-        <EditForm Model="categoryModel" OnValidSubmit="SaveCategory">
+        <EditForm EditContext="editContext" OnValidSubmit="SaveCategory">
             <DataAnnotationsValidator />
             
             <div class="mb-3">
@@ -90,7 +92,7 @@
                 <label class="form-label">Parent Category</label>
                 <InputSelect class="form-select" @bind-Value="categoryModel.ParentCategoryId">
                     <option value="">-- Select Parent Category --</option>
-                    @foreach (var cat in parentCategories)
+                    @foreach (var cat in parentCategoryList)
                     {
                         <option value="@cat.Id">@cat.Name</option>
                     }
@@ -107,22 +109,21 @@
             </div>
         </EditForm>
     </BodyTemplate>
-</Modal>
+</Modal> 
 
 
 @code {
     private Modal modal = default!;
-    private List<Category> categories = new();
-    private List<Category> parentCategories = new();
-    private Category category = new();
     private bool isLoading = true;
     private string modalTitle = "Add Category";
     private bool isEditMode = false;
-
+    private Grid<CategoryModel> categoryGrid;
     private CategoryModel categoryModel = new();
-    private List<CategoryModel> categoriesModel = new();
-    private List<CategoryModel> parentCategoriesModels = new();
-
+    private List<CategoryModel> categoryList = new();
+    private List<CategoryModel> parentCategoryList = new();
+    private EditContext editContext;
+    private ValidationMessageStore messageStore;
+    private CancellationTokenSource _validationCts;
     protected override async Task OnInitializedAsync()
     {
         await LoadCategories();
@@ -131,24 +132,65 @@
     private async Task LoadCategories()
     {
         isLoading = true;
-        categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
-        parentCategories = categories.Where(c => c.ParentCategoryId == null).ToList();
+        categoryList = (await CategoryService.GetAllCategoriesAsync()).ToList();
+        parentCategoryList = categoryList.Where(c => c.ParentCategoryId == null).ToList();
+        editContext=new EditContext(categoryModel);
+        messageStore = new ValidationMessageStore(editContext);
+        AttachValidationHandlers();
         isLoading = false;
+    }
+
+    private void AttachValidationHandlers()
+    {
+        editContext.OnFieldChanged += async (sender, args) =>
+        {
+            await ValidateCAtegoryAsync();
+            editContext.NotifyValidationStateChanged();
+        };
+    }
+
+    private async Task ValidateCAtegoryAsync()
+    {
+        _validationCts?.Cancel(); // cancel previous validation
+        _validationCts = new CancellationTokenSource();
+        var token = _validationCts.Token;
+
+        try
+        {
+            await Task.Delay(100, token); // wait for typing to stop
+            messageStore.Clear();
+
+            bool isNameUnique = await CategoryService.IsCategoryNameUniqueAsync(categoryModel.Name, categoryModel.Id);
+
+            if (!isNameUnique)
+            {
+                messageStore.Add(() => categoryModel.Name, "Category name already exists.");
+            }
+
+            editContext.NotifyValidationStateChanged();
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignore cancelled validation
+        }
     }
 
     private async Task<GridDataProviderResult<CategoryModel>> CategoriesDataProvider(GridDataProviderRequest<CategoryModel> request)
     {
-        if (categoriesModel == null || !categoriesModel.Any())
+        if (categoryList == null || !categoryList.Any())
             return await Task.FromResult(new GridDataProviderResult<CategoryModel> { Data = new List<CategoryModel>(), TotalCount = 0 });
 
-        return await Task.FromResult(new GridDataProviderResult<CategoryModel> { Data = categoriesModel, TotalCount = categoriesModel.Count });
+        return await Task.FromResult(new GridDataProviderResult<CategoryModel> { Data = categoryList, TotalCount = categoryList.Count });
     }
 
     private void ShowAddModal()
     {
         modalTitle = "Add Category";
         isEditMode = false;
-        category = new Category { IsActive = true };
+        categoryModel = new CategoryModel { IsActive = true };
+        editContext = new EditContext(categoryModel);
+        messageStore = new ValidationMessageStore(editContext);
+        AttachValidationHandlers();
         modal.ShowAsync();
     }
 
@@ -164,6 +206,9 @@
             ParentCategoryId = editCategory.ParentCategoryId,
             IsActive = editCategory.IsActive
         };
+        editContext = new EditContext(categoryModel);
+        messageStore = new ValidationMessageStore(editContext);
+        AttachValidationHandlers();
         modal.ShowAsync();
     }
 
@@ -171,37 +216,47 @@
     {
         try
         {
+            await ValidateCAtegoryAsync();
             if (isEditMode)
             {
-                await CategoryService.UpdateCategoryAsync(category);
-                // Toast notification removed
+                await CategoryService.UpdateCategoryAsync(categoryModel);
+
             }
             else
             {
-                await CategoryService.CreateCategoryAsync(category);
-                // Toast notification removed
+
+                await CategoryService.CreateCategoryAsync(categoryModel);
+          
             }
 
             await HideModal();
             await LoadCategories();
+            await categoryGrid.RefreshDataAsync();
         }
         catch (Exception ex)
         {
-            // Toast notification removed
+
         }
     }
-
+     
     private async Task DeleteCategory(int id)
     {
         try
         {
+            bool confirmed = await JS.InvokeAsync<bool>("confirm", "Do you want to delete this category?");
+
+            if (!confirmed)
+            {
+                return;
+            }
             await CategoryService.DeleteCategoryAsync(id);
-            // Toast notification removed
+   
             await LoadCategories();
+            await categoryGrid.RefreshDataAsync();
         }
         catch (Exception ex)
         {
-            // Toast notification removed
+
         }
     }
 
@@ -210,4 +265,4 @@
         await modal.HideAsync();
     }
 
-} *@
+}
