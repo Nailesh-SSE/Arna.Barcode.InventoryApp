@@ -35,5 +35,7 @@ namespace InventoryManagement.Services.Models;
     public int MakeCompanyId { get; set; }
     [StringLength(100)]
     public string MakeCompany { get; set; } = string.Empty;
+    
+    public int SerialNumber { get; set; }
 }
 

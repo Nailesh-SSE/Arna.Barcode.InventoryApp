@@ -10,8 +10,7 @@ public interface IProductService
     Task<bool> UpdateProductAsync(ProductModel productModel);
     Task<bool> DeleteProductAsync(int id);
     Task<bool> IsSkuUniqueAsync(string sku, int? excludeId = null);
-    Task<bool> IsProductNameUniqueAsync(string name, int? excludeId = null);
-    Task<ProductModel> GetLastProductAsync();
+    Task<bool> IsProductNameUniqueAsync(string name,int companyId ,int? excludeId = null);
     Task<List<ProductModel>> GetProductsByCategoryAsync(int categoryId);
   
 }

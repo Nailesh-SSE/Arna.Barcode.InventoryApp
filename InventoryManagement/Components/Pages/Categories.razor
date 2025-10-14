@@ -33,12 +33,8 @@
               Responsive="true">
               
 
-            <GridColumn TItem="CategoryModel" HeaderText="ID" PropertyName="Id">
-                @{
-                    var index = categoryList.IndexOf(context) + 1;
-                }
-                @index
-               
+            <GridColumn TItem="CategoryModel" HeaderText="No">
+                   @(categoryList.IndexOf(context) + 1)
             </GridColumn>
 
             <GridColumn TItem="CategoryModel" HeaderText="Name" PropertyName="Name">
@@ -79,7 +75,7 @@
             
             <div class="mb-3">
                 <label class="form-label">Name <span class="text-danger">*</span></label>
-                <InputText class="form-control" @bind-Value="categoryModel.Name" />
+                <InputText class="form-control" @bind-Value="categoryModel.Name" @oninput="(e)=>HandleNameChangeAsync(e.Value?.ToString())" />
                 <ValidationMessage For="@(() => categoryModel.Name)" />
             </div>
 
@@ -134,45 +130,13 @@
         isLoading = true;
         categoryList = (await CategoryService.GetAllCategoriesAsync()).ToList();
         parentCategoryList = categoryList.Where(c => c.ParentCategoryId == null).ToList();
-        editContext=new EditContext(categoryModel);
-        messageStore = new ValidationMessageStore(editContext);
-        AttachValidationHandlers();
+        InitializeEditContext();
         isLoading = false;
     }
-
-    private void AttachValidationHandlers()
+    private void InitializeEditContext()
     {
-        editContext.OnFieldChanged += async (sender, args) =>
-        {
-            await ValidateCAtegoryAsync();
-            editContext.NotifyValidationStateChanged();
-        };
-    }
-
-    private async Task ValidateCAtegoryAsync()
-    {
-        _validationCts?.Cancel(); // cancel previous validation
-        _validationCts = new CancellationTokenSource();
-        var token = _validationCts.Token;
-
-        try
-        {
-            await Task.Delay(100, token); // wait for typing to stop
-            messageStore.Clear();
-
-            bool isNameUnique = await CategoryService.IsCategoryNameUniqueAsync(categoryModel.Name, categoryModel.Id);
-
-            if (!isNameUnique)
-            {
-                messageStore.Add(() => categoryModel.Name, "Category name already exists.");
-            }
-
-            editContext.NotifyValidationStateChanged();
-        }
-        catch (TaskCanceledException)
-        {
-            // Ignore cancelled validation
-        }
+        editContext = new EditContext(categoryModel);
+        messageStore = new ValidationMessageStore(editContext);
     }
 
     private async Task<GridDataProviderResult<CategoryModel>> CategoriesDataProvider(GridDataProviderRequest<CategoryModel> request)
@@ -188,9 +152,7 @@
         modalTitle = "Add Category";
         isEditMode = false;
         categoryModel = new CategoryModel { IsActive = true };
-        editContext = new EditContext(categoryModel);
-        messageStore = new ValidationMessageStore(editContext);
-        AttachValidationHandlers();
+        InitializeEditContext();
         modal.ShowAsync();
     }
 
@@ -204,29 +166,29 @@
             Name = editCategory.Name,
             Description = editCategory.Description,
             ParentCategoryId = editCategory.ParentCategoryId,
-            IsActive = editCategory.IsActive
+            IsActive = editCategory.IsActive,
+            SerialNumber=editCategory.SerialNumber
         };
-        editContext = new EditContext(categoryModel);
-        messageStore = new ValidationMessageStore(editContext);
-        AttachValidationHandlers();
-        modal.ShowAsync();
+        InitializeEditContext();
+        modal?.ShowAsync();
     }
 
     private async Task SaveCategory()
     {
         try
         {
-            await ValidateCAtegoryAsync();
+            if(!editContext.Validate()) return;
+            await ValidateNameAsync();
+            await ValidateDuplicateNameAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
             if (isEditMode)
             {
                 await CategoryService.UpdateCategoryAsync(categoryModel);
-
             }
             else
             {
-
-                await CategoryService.CreateCategoryAsync(categoryModel);
-          
+                await CategoryService.CreateCategoryAsync(categoryModel);          
             }
 
             await HideModal();
@@ -235,7 +197,6 @@
         }
         catch (Exception ex)
         {
-
         }
     }
      
@@ -244,19 +205,15 @@
         try
         {
             bool confirmed = await JS.InvokeAsync<bool>("confirm", "Do you want to delete this category?");
-
             if (!confirmed)
-            {
                 return;
-            }
+
             await CategoryService.DeleteCategoryAsync(id);
-   
             await LoadCategories();
             await categoryGrid.RefreshDataAsync();
         }
         catch (Exception ex)
         {
-
         }
     }
 
@@ -264,5 +221,35 @@
     {
         await modal.HideAsync();
     }
-
+    private async Task ValidateDuplicateNameAsync()
+    {
+        messageStore.Clear();
+        bool isNameUnique = await CategoryService.IsCategoryNameUniqueAsync(categoryModel.Name, categoryModel.Id);
+        if (!isNameUnique)
+        {
+            messageStore.Add(() => categoryModel.Name, "Category name already exists.");
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+    private async Task ValidateNameAsync()
+    {
+        messageStore.Clear();
+        if (string.IsNullOrWhiteSpace(categoryModel.Name))
+        {
+            messageStore.Add(() => categoryModel.Name, "Name is required.");
+            editContext.NotifyValidationStateChanged();
+        }
+        
+    }
+    private async Task HandleNameChangeAsync(string newValue)
+    {
+        categoryModel.Name = newValue;
+        try
+        {
+            await ValidateNameAsync();
+        }
+        catch (Exception ex)
+        {
+        }
+    }
 }

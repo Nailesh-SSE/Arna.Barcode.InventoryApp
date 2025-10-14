@@ -8,17 +8,17 @@ public class Category : Common
     public int Id { get; set; }
 
     [Required(ErrorMessage = "Category name is required")]
-    [StringLength(100,ErrorMessage ="Maximum 100 characters are allowed")]
+    [StringLength(100)]
     public string Name { get; set; } = string.Empty;
 
-    [StringLength(500, ErrorMessage = "Maximum 500 characters are allowed")]
+    [StringLength(500)]
     public string Description { get; set; } = string.Empty;
 
     public int? ParentCategoryId { get; set; }
 
-    [StringLength(100, ErrorMessage = "Maximum 100 characters are allowed")]
+    [StringLength(100)]
     public string? ParentCategoryName { get; set; }
-
+    public int SerialNumber { get; set; }
     public virtual Category? ParentCategory { get; set; }
     public virtual ICollection<Category> SubCategories { get; set; } = new List<Category>();
     public virtual ICollection<Product> Products { get; set; } = new List<Product>();

@@ -59,6 +59,9 @@ namespace InventoryManagement.Core.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("SerialNumber")
+                        .HasColumnType("int");
+
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
 
@@ -121,7 +124,8 @@ namespace InventoryManagement.Core.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("Companies");
                 });
@@ -467,6 +471,9 @@ namespace InventoryManagement.Core.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("SerialNumber")
+                        .HasColumnType("int");
 
                     b.Property<string>("Unit")
                         .IsRequired()

@@ -109,8 +109,8 @@ public class CategoryService : ICategoryService
         {
             if (!await IsCategoryNameUniqueAsync(categoryModel.Name))
                 return false;
-
-            if (categoryModel.ParentCategoryId.HasValue)
+            await GenrateSerialNumberAsync(categoryModel);
+            if (categoryModel.ParentCategoryId > 0)
             {
                 var parentCategory = await GetCategoryByIdAsync(categoryModel.ParentCategoryId.Value);
 
@@ -130,7 +130,8 @@ public class CategoryService : ICategoryService
                 UpdatedBy = categoryModel.UpdatedBy,
                 UpdatedOn = categoryModel.UpdatedOn,
                 IsActive = categoryModel.IsActive,
-                IsDeleted = categoryModel.IsDeleted
+                IsDeleted = categoryModel.IsDeleted,
+                SerialNumber = categoryModel.SerialNumber
             };
             var categoryRepository = _unitOfWork.GetRepository<Category>();
             await categoryRepository.AddAsync(createcategory);
@@ -155,7 +156,7 @@ public class CategoryService : ICategoryService
                 
                 return false;
 
-            if (categoryModel.ParentCategoryId.HasValue)
+            if (categoryModel.ParentCategoryId > 0)
             {
                 var parentCategory = await GetCategoryByIdAsync(categoryModel.ParentCategoryId.Value);
                 existingCategory.ParentCategoryName = parentCategory?.Name;
@@ -220,5 +221,12 @@ public class CategoryService : ICategoryService
             categories = categories.Where(c => c.Id != excludeId.Value);
 
         return !categories.Any();
+    }
+    public async Task GenrateSerialNumberAsync(CategoryModel model)
+    {
+        var categoryRepository = _unitOfWork.GetRepository<Category>();
+        var categories = await categoryRepository.GetAllAsync();
+        var category = categories.Where(a => a.IsActive && !a.IsDeleted).OrderByDescending(a => a.Id).FirstOrDefault();
+        model.SerialNumber = category != null ? category.SerialNumber + 1 : 0;
     }
 }

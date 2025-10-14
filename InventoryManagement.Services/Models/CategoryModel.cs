@@ -20,4 +20,6 @@ public class CategoryModel : CommonModel
     [StringLength(100, ErrorMessage = "Maximum 100 characters are allowed")]
     public string? ParentCategoryName { get; set; }
 
+    public int SerialNumber { get; set; }
+
 }

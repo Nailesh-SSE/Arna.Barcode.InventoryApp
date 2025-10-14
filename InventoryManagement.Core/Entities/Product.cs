@@ -19,24 +19,22 @@ public class Product : Common
     public string SKU { get; set; } = string.Empty;
 
     [Required(ErrorMessage ="Category is required")]
-    [Range(1, int.MaxValue, ErrorMessage = "Please select a category")]
     public int CategoryId { get; set; }
 
     [StringLength(100)]
     public string CategoryName { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Unit is required")]
-    [Range(1, int.MaxValue, ErrorMessage = "Please select a unit")]
     public int UnitId { get;  set; }
 
     [StringLength(20)]
     public string Unit { get; set; }
     [Required(ErrorMessage = "Company is required")]
-    [Range(1, int.MaxValue, ErrorMessage = "Please select a Company")]
     public int MakeCompanyId { get; set; }
     [StringLength(100)]
     public string MakeCompany { get; set; } = string.Empty;
 
+    public int SerialNumber { get; set; }
     public virtual Category Category { get; set; } = null!;
     public virtual ICollection<InwardItem> InwardItems { get; set; } = new List<InwardItem>();
 }

@@ -98,12 +98,12 @@
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="productModel.Name" @oninput="ValidateProductAsync" />
+                    <InputText class="form-control" @bind-Value="productModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
                     <ValidationMessage For="@(() => productModel.Name)" />
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">MakeCompany <span class="text-danger">*</span></label>
-                    <InputSelect class="form-control" @bind-Value="productModel.MakeCompanyId">
+                    <InputSelect class="form-control" @bind-Value="productModel.MakeCompanyId" @onchange="HandleCompanyChangeAsync">
                         <option value="0">--Select MakeCompany-- </option>
                         @foreach (var company in companies)
                         {
@@ -192,51 +192,21 @@
     {
         await LoadData();
     }
-
+    private void InitializeEditContext()
+    {
+        editContext = new EditContext(productModel);
+        messageStore = new ValidationMessageStore(editContext);
+    }
     private async Task LoadData()
     {
         isLoading = true;
         products = (await ProductService.GetAllProductsAsync()).ToList();
         categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
         companies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo)).ToList();
-        editContext = new EditContext(productModel);
-        messageStore = new ValidationMessageStore(editContext);
-        AttachValidationHandlers();
+        InitializeEditContext();
         isLoading = false;
     }
-    private void AttachValidationHandlers()
-    {
-        editContext.OnFieldChanged += async (sender, args) =>
-        {
-            await ValidateProductAsync();
-            editContext.NotifyValidationStateChanged();
-        };
-    }
-    private async Task ValidateProductAsync()
-    {
-        _validationCts?.Cancel(); // cancel previous validation
-        _validationCts = new CancellationTokenSource();
-        var token = _validationCts.Token;
 
-        try
-        {
-            await Task.Delay(100, token); 
-            messageStore.Clear();
-
-            bool isNameUnique = await ProductService.IsProductNameUniqueAsync(productModel.Name, productModel.Id);
-
-            if (!isNameUnique)
-            {
-                messageStore.Add(() => productModel.Name, "Product name already exists.");
-            }
-
-            editContext.NotifyValidationStateChanged();
-        }
-        catch (TaskCanceledException)
-        {
-            // Ignore cancelled validation
-        }
-    }
     private async Task<GridDataProviderResult<ProductModel>> ProductsDataProvider(GridDataProviderRequest<ProductModel> request)
     {
         if (products == null || !products.Any())
@@ -247,26 +217,6 @@
     }
 
 
-    private async Task<string> GetNextSKUAsync()
-    {
-
-        var lastProduct = await ProductService.GetLastProductAsync();
-        int nextNumber = 1001; // Starting SKU number
-
-        if (lastProduct != null && !string.IsNullOrWhiteSpace(lastProduct.SKU))
-        {
-
-            var parts = lastProduct.SKU.Split('-');
-            if (parts.Length == 2 && int.TryParse(parts[1], out int lastNumber))
-            {
-                nextNumber = lastNumber + 1;
-            }
-        }
-
-        return $"{nextNumber}";
-    }
-
-
     private void ShowAddModal()
     {
         modalTitle = "Add Product";
@@ -274,7 +224,7 @@
         productModel = new ProductModel { IsActive = true };
         editContext = new EditContext(productModel);
         messageStore = new ValidationMessageStore(editContext);
-        AttachValidationHandlers();
+        InitializeEditContext();
         modal.ShowAsync();
     }
 
@@ -289,15 +239,17 @@
             Name = editProduct.Name.Trim().ToLowerInvariant(),
             Description = editProduct.Description,
             CategoryId = editProduct.CategoryId,
+            CategoryName=editProduct.CategoryName,
             Unit = editProduct.Unit,
             UnitId = editProduct.UnitId,
             IsActive = editProduct.IsActive,
             MakeCompanyId=editProduct.MakeCompanyId,
-            MakeCompany=editProduct.MakeCompany
+            MakeCompany=editProduct.MakeCompany,
+            SerialNumber=editProduct.SerialNumber
         };
         editContext = new EditContext(productModel);
         messageStore = new ValidationMessageStore(editContext);
-        AttachValidationHandlers();
+        InitializeEditContext();
         modal.ShowAsync();
     }
 
@@ -305,30 +257,30 @@
     {
         try
         {
-            await ValidateProductAsync();
+            if (!editContext.Validate()) return;
+            await ValidateNameAsync();
+            await ValidateDuplicateNameAsync();
+
+            if (editContext.GetValidationMessages().Any())
+                return;
             productModel.Unit = units.FirstOrDefault(u => u.Id == productModel.UnitId)?.Name ?? string.Empty;
             productModel.MakeCompany = companies.FirstOrDefault(m => m.Id == productModel.MakeCompanyId)?.Name ?? string.Empty;
+            productModel.CategoryName = categories.FirstOrDefault(c => c.Id == productModel.CategoryId)?.Name ?? string.Empty;
             if (isEditMode)
             {
                 await ProductService.UpdateProductAsync(productModel);
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(productModel.SKU))
-                {
-                    var lastnumber = await GetNextSKUAsync();
-                    productModel.SKU = productModel.Name + "-" + lastnumber;
-                }
-                 await ProductService.CreateProductAsync(productModel);
+                await ProductService.CreateProductAsync(productModel);
             }
-            
+
             await HideModal();
             await LoadData();
-            productGrid.RefreshDataAsync();
+            await productGrid.RefreshDataAsync();
         }
         catch (Exception ex)
         {
-            // Toast notification removed
         }
     }
 
@@ -343,16 +295,13 @@
                 return;
             }
             await ProductService.DeleteProductAsync(id);
-            // Toast notification removed
             await LoadData();
-            productGrid.RefreshDataAsync();
+            await productGrid.RefreshDataAsync();
 
         }
         catch (Exception ex)
         {
-            // Toast notification removed
         }
-
     }
 
     private async Task HideModal()
@@ -360,4 +309,55 @@
         await modal.HideAsync();
     }
 
+    private async Task ValidateNameAsync()
+    {
+        messageStore.Clear();
+        if (string.IsNullOrWhiteSpace(productModel.Name))
+        {
+            messageStore.Add(() => productModel.Name, "Product name is required.");
+        }
+        editContext.NotifyValidationStateChanged();
+    }
+    private async Task ValidateDuplicateNameAsync()
+    {
+        messageStore.Clear(() => productModel.Name);
+        if (!string.IsNullOrEmpty(productModel.Name))
+        {
+            var company = companies.FirstOrDefault(c => c.Id == productModel.MakeCompanyId);
+            var isProductNameUnique = await ProductService.IsProductNameUniqueAsync(productModel.Name,productModel.MakeCompanyId, productModel.Id);
+            if (!isProductNameUnique)
+            {
+                var companyName = company?.Name ?? "this company";
+                messageStore.Add(() => productModel.Name, $"Name is Already Exist in {companyName}");
+            }
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+    private async Task HandleNameChangeAsync(string newValue)
+    {
+        productModel.Name = newValue;
+        try
+        {
+            await ValidateNameAsync();
+        }
+        catch (Exception ex)
+        {
+        }
+    }
+    private async Task HandleCompanyChangeAsync(string companyName)
+    {
+        var selectedCompany = companies.FirstOrDefault(c => c.Name == companyName);
+
+        if (selectedCompany != null)
+        {
+            productModel.MakeCompanyId = selectedCompany.Id;
+            productModel.MakeCompany = selectedCompany.Name;
+            await ValidateDuplicateNameAsync();
+        }
+        else
+        {
+            productModel.MakeCompanyId = 0;
+            productModel.MakeCompany = string.Empty;
+        }
+    }
 }

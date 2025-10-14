@@ -19,7 +19,10 @@ public class ProductService : IProductService
     {
         var productRepository = _unitOfWork.GetRepository<Product>();
         var products = await productRepository.FindAsync(p => !p.IsDeleted);
-
+        if(products.Count() == 0)
+        {
+            return new List<ProductModel>();
+        }
         var getallproducts = products.Select(p => new ProductModel
         {
             Id = p.Id,
@@ -75,25 +78,19 @@ public class ProductService : IProductService
     {
         try
         {
+            
             if (!await IsSkuUniqueAsync(productModel.SKU))
                 return false;
 
-            if (!await IsProductNameUniqueAsync(productModel.Name, productModel.Id))
+            if (!await IsProductNameUniqueAsync(productModel.Name,productModel.MakeCompanyId ,productModel.Id))
                 return false;
 
             var categoryRepository = _unitOfWork.GetRepository<Category>();
             var category = await categoryRepository.GetByIdAsync(productModel.CategoryId);
-            if (category != null)
-            {
-                productModel.CategoryName = category.Name;
-            }
-            else
-            {
-
-                return false; // Invalid CategoryId
-            }
-
-                var createdProduct = new Product
+            if (category == null)
+                return false;
+            await GenerateProudctSkuAndSquenceNumberAsync(productModel);
+            var createdProduct = new Product
                 {
                     Name = productModel.Name,
                     SKU = productModel.SKU,
@@ -107,7 +104,8 @@ public class ProductService : IProductService
                     Unit = productModel.Unit,
                     UnitId = productModel.UnitId,
                     MakeCompany = productModel.MakeCompany,
-                    MakeCompanyId = productModel.MakeCompanyId
+                    MakeCompanyId = productModel.MakeCompanyId,
+                    SerialNumber= productModel.SerialNumber
                 };
 
             var productRepository = _unitOfWork.GetRepository<Product>();
@@ -133,14 +131,8 @@ public class ProductService : IProductService
 
             var categoryRepository = _unitOfWork.GetRepository<Category>();
             var category = await categoryRepository.GetByIdAsync(productModel.CategoryId);
-            if (category != null)
-            {
-                productModel.CategoryName = category.Name;
-            }
-            else
-            {
+            if (category == null)
                 return false;
-            }
 
             var ProductRepository = _unitOfWork.GetRepository<Product>();
             var existingProduct = await ProductRepository.GetByIdAsync(productModel.Id);
@@ -179,12 +171,11 @@ public class ProductService : IProductService
             var product = await productRepository.GetByIdAsync(id);
             if (product == null) return false;
 
-            // Check if product has any inward items
             var inwardItemRepository = _unitOfWork.GetRepository<InwardItem>();
             var hasInwardItems = await inwardItemRepository.FindAsync(ii => ii.ProductId == id && !ii.IsDeleted);
             if (hasInwardItems.Any())
             {
-                return false; // Cannot delete product with inward items
+                return false; 
             }
 
             product.IsDeleted = true;
@@ -209,10 +200,10 @@ public class ProductService : IProductService
 
         return !products.Any();
     }
-    public async Task<bool> IsProductNameUniqueAsync(string name, int? excludeId = null)
+    public async Task<bool> IsProductNameUniqueAsync(string name,int companyId ,int? excludeId = null)
     {
         var productRepository = _unitOfWork.GetRepository<Product>();
-        var products = await productRepository.FindAsync(p => p.Name == name && !p.IsDeleted);
+        var products = await productRepository.FindAsync(p => p.Name == name && p.MakeCompanyId==companyId &&!p.IsDeleted);
 
         if (excludeId.HasValue)
             products = products.Where(p => p.Id != excludeId.Value);
@@ -224,7 +215,10 @@ public class ProductService : IProductService
     {
         var productRepository = _unitOfWork.GetRepository<Product>();
         var products = await productRepository.FindAsync(p => p.CategoryId == categoryId && !p.IsDeleted);
-
+        if(products==null)
+        {
+            return new List<ProductModel>();
+        }
         var getproductsbycategory = products.Select(p => new ProductModel
         {
             Id = p.Id,
@@ -246,32 +240,13 @@ public class ProductService : IProductService
         }).ToList();
         return getproductsbycategory;
     }
-    public async Task<ProductModel> GetLastProductAsync()
-    {
-        var productRepository = _unitOfWork.GetRepository<Product>();
-        var lastProduct= (await productRepository.FindAsync(p => !p.IsDeleted))
-                                .OrderByDescending(p => p.Id)
-                                .FirstOrDefault();
 
-        var LastproductModel = new ProductModel
-        {
-            Id = lastProduct.Id,
-            Name = lastProduct.Name,
-            SKU = lastProduct.SKU,
-            Description = lastProduct.Description,
-            CategoryId = lastProduct.CategoryId,
-            CategoryName = lastProduct.CategoryName,
-            CreatedBy = lastProduct.CreatedBy,
-            CreatedOn = lastProduct.CreatedOn,
-            UpdatedBy = lastProduct.UpdatedBy,
-            UpdatedOn = lastProduct.UpdatedOn,
-            IsActive = lastProduct.IsActive,
-            IsDeleted = lastProduct.IsDeleted,
-            Unit = lastProduct.Unit,
-            UnitId = lastProduct.UnitId,
-            MakeCompany = lastProduct.MakeCompany,
-            MakeCompanyId = lastProduct.MakeCompanyId
-        };
-        return LastproductModel;
+    public async Task GenerateProudctSkuAndSquenceNumberAsync(ProductModel model)
+    {
+        var proudctRepository = _unitOfWork.GetRepository<Product>();
+        var proudcts = await proudctRepository.GetAllAsync();
+        var product = proudcts.Where(a => a.IsActive && !a.IsDeleted).OrderByDescending(a => a.Id).FirstOrDefault();
+        model.SerialNumber = product != null ? product.SerialNumber + 1 : 0;
+        model.SKU = model.Name + "-" + model.SerialNumber;
     }
 }
