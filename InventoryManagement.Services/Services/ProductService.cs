@@ -34,7 +34,11 @@ public class ProductService : IProductService
             UpdatedOn = p.UpdatedOn,
             IsActive = p.IsActive,
             IsDeleted = p.IsDeleted,
-            Unit=p.Unit
+            Unit=p.Unit,
+            UnitId = p.UnitId,
+            MakeCompanyId = p.MakeCompanyId,
+            MakeCompany = p.MakeCompany
+
         }).ToList();
 
         return getallproducts;
@@ -58,7 +62,11 @@ public class ProductService : IProductService
             UpdatedBy = product.UpdatedBy,
             UpdatedOn = product.UpdatedOn,
             IsActive = product.IsActive,
-            IsDeleted = product.IsDeleted
+            IsDeleted = product.IsDeleted,
+            Unit= product.Unit,
+            UnitId = product.UnitId,
+            MakeCompanyId = product.MakeCompanyId,
+            MakeCompany = product.MakeCompany
         };
         return getproductbyid;
     }
@@ -95,7 +103,11 @@ public class ProductService : IProductService
                     CreatedBy = productModel.CreatedBy,
                     CreatedOn = productModel.CreatedOn,
                     IsActive = productModel.IsActive,
-                    IsDeleted = productModel.IsDeleted
+                    IsDeleted = productModel.IsDeleted,
+                    Unit = productModel.Unit,
+                    UnitId = productModel.UnitId,
+                    MakeCompany = productModel.MakeCompany,
+                    MakeCompanyId = productModel.MakeCompanyId
                 };
 
             var productRepository = _unitOfWork.GetRepository<Product>();
@@ -144,6 +156,9 @@ public class ProductService : IProductService
             existingProduct.IsActive = productModel.IsActive;
             existingProduct.IsDeleted = productModel.IsDeleted;
             existingProduct.Unit = productModel.Unit;
+            existingProduct.UnitId = productModel.UnitId;
+            existingProduct.MakeCompany = productModel.MakeCompany;
+            existingProduct.MakeCompanyId = productModel.MakeCompanyId; 
 
             var productRepository = _unitOfWork.GetRepository<Product>();
             productRepository.UpdateAsync(existingProduct);
@@ -223,7 +238,11 @@ public class ProductService : IProductService
             UpdatedBy = p.UpdatedBy,
             UpdatedOn = p.UpdatedOn,
             IsActive = p.IsActive,
-            IsDeleted = p.IsDeleted
+            IsDeleted = p.IsDeleted,
+            Unit = p.Unit,
+            UnitId = p.UnitId,
+            MakeCompany = p.MakeCompany,
+            MakeCompanyId = p.MakeCompanyId
         }).ToList();
         return getproductsbycategory;
     }
@@ -247,7 +266,11 @@ public class ProductService : IProductService
             UpdatedBy = lastProduct.UpdatedBy,
             UpdatedOn = lastProduct.UpdatedOn,
             IsActive = lastProduct.IsActive,
-            IsDeleted = lastProduct.IsDeleted
+            IsDeleted = lastProduct.IsDeleted,
+            Unit = lastProduct.Unit,
+            UnitId = lastProduct.UnitId,
+            MakeCompany = lastProduct.MakeCompany,
+            MakeCompanyId = lastProduct.MakeCompanyId
         };
         return LastproductModel;
     }
