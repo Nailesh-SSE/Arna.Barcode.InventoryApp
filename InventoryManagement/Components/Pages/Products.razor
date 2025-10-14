@@ -1,7 +1,9 @@
 @page "/products"
+@using InventoryManagement.Core.Enums
 @inject IJSRuntime JS
 @inject IProductService ProductService
 @inject ICategoryService CategoryService
+@inject ICompanyService CompanyService
 
 <PageTitle>Products</PageTitle>
 
@@ -33,7 +35,7 @@
               PageSize="10"
               Responsive="true"> 
 
-            <GridColumn TItem="ProductModel" HeaderText="ID" PropertyName="Id">
+            <GridColumn TItem="ProductModel" HeaderText="Sequence" PropertyName="Id">
                 @{
                     var index = products.IndexOf(context)+1;
                 }
@@ -52,10 +54,19 @@
                 @(categories.FirstOrDefault(c => c.Id == context.CategoryId)?.Name ?? "N/A")
             </GridColumn> 
 
+            <GridColumn TItem="ProductModel" HeaderText="UnitId" PropertyName="UnitId">
+                @context.UnitId
+            </GridColumn>
+
             <GridColumn TItem="ProductModel" HeaderText="Unit" PropertyName="Unit">
                 @context.Unit
             </GridColumn>
-
+            <GridColumn TItem="ProductModel" HeaderText="MakeCompanyId" PropertyName="MakeCompanyId">
+                @context.MakeCompanyId
+            </GridColumn>
+            <GridColumn TItem="ProductModel" HeaderText="MakeCompany" PropertyName="MakeCompany">
+                @context.MakeCompany
+            </GridColumn>
             <GridColumn TItem="ProductModel" HeaderText="Status" PropertyName="IsActive">
                 @if (context.IsActive)
                 {
@@ -85,16 +96,23 @@
             <DataAnnotationsValidator />
             
             <div class="row">
-                @* <div class="col-md-6 mb-3">
-                    <label class="form-label">SKU <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="productModel.SKU" />
-                    <ValidationMessage For="@(() => productModel.SKU)" />
-                </div> *@
-
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Name <span class="text-danger">*</span></label>
                     <InputText class="form-control" @bind-Value="productModel.Name" @oninput="ValidateProductAsync" />
                     <ValidationMessage For="@(() => productModel.Name)" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">MakeCompany <span class="text-danger">*</span></label>
+                    <InputSelect class="form-control" @bind-Value="productModel.MakeCompanyId">
+                        <option value="0">--Select MakeCompany-- </option>
+                        @foreach (var company in companies)
+                        {
+                            <option value="@company.Id">@company.Name</option>
+                        }
+                        
+
+                    </InputSelect> 
+                    <ValidationMessage For="@(() => productModel.MakeCompanyId)" />
                 </div>
             </div>
 
@@ -113,8 +131,14 @@
 
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Unit <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="productModel.Unit" placeholder="e.g., PCS, KG, LTR" />
-                    <ValidationMessage For="@(() => productModel.Unit)" />
+                    <InputSelect class="form-control" @bind-Value="productModel.UnitId">
+                        <option value="0">--Select Unit-- </option>
+                        @foreach (var unit in units)
+                        {
+                            <option value="@unit.Id">@unit.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => productModel.UnitId)" />
                 </div>
             </div>
 
@@ -140,6 +164,7 @@
     private Modal modal = default!;
     private List<ProductModel> products = new();
     private List<CategoryModel> categories = new();
+    private List<CompanyModel> companies = new();
     private ProductModel productModel = new();
     private Grid<ProductModel> productGrid;
     private bool isLoading = true;
@@ -148,6 +173,21 @@
     private EditContext editContext;
     private ValidationMessageStore messageStore;
     private CancellationTokenSource _validationCts;
+
+    public class UnitModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+    }
+    private List<UnitModel> units = new()
+{
+    new UnitModel { Id = 1, Name = "PCS" },
+    new UnitModel { Id = 2, Name = "KG" },
+    new UnitModel { Id = 3, Name = "LTR" },
+    new UnitModel { Id = 4, Name = "BOX" },
+    new UnitModel { Id = 5, Name = "PACK" },
+    new UnitModel { Id = 6, Name = "MTR" }
+};
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
@@ -158,6 +198,7 @@
         isLoading = true;
         products = (await ProductService.GetAllProductsAsync()).ToList();
         categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
+        companies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo)).ToList();
         editContext = new EditContext(productModel);
         messageStore = new ValidationMessageStore(editContext);
         AttachValidationHandlers();
@@ -179,7 +220,7 @@
 
         try
         {
-            await Task.Delay(100, token); // wait for typing to stop
+            await Task.Delay(100, token); 
             messageStore.Clear();
 
             bool isNameUnique = await ProductService.IsProductNameUniqueAsync(productModel.Name, productModel.Id);
@@ -245,11 +286,14 @@
         {
             Id = editProduct.Id,
             SKU = editProduct.SKU,
-            Name = editProduct.Name,
+            Name = editProduct.Name.Trim().ToLowerInvariant(),
             Description = editProduct.Description,
             CategoryId = editProduct.CategoryId,
             Unit = editProduct.Unit,
-            IsActive = editProduct.IsActive
+            UnitId = editProduct.UnitId,
+            IsActive = editProduct.IsActive,
+            MakeCompanyId=editProduct.MakeCompanyId,
+            MakeCompany=editProduct.MakeCompany
         };
         editContext = new EditContext(productModel);
         messageStore = new ValidationMessageStore(editContext);
@@ -262,6 +306,8 @@
         try
         {
             await ValidateProductAsync();
+            productModel.Unit = units.FirstOrDefault(u => u.Id == productModel.UnitId)?.Name ?? string.Empty;
+            productModel.MakeCompany = companies.FirstOrDefault(m => m.Id == productModel.MakeCompanyId)?.Name ?? string.Empty;
             if (isEditMode)
             {
                 await ProductService.UpdateProductAsync(productModel);
