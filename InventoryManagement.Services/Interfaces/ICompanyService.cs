@@ -13,6 +13,6 @@ public interface ICompanyService
     Task<bool> UpdateCompanyAsync(CompanyModel companyModel);
     Task<bool> DeleteCompanyAsync(int id);
     Task<bool> IsCompanyCodeUniqueAsync(string code, int? excludeId = null);
-    Task<bool> IsCompanyNameUniqueAsync(string Name, int? excludeId = null);
+    Task<bool> IsCompanyNameUniqueAsync(string Name, CompanyType type, int? Id = null);
     Task GenerateCompanyCodeAndSquenceNumberAsync(CompanyModel companyModel);
 }

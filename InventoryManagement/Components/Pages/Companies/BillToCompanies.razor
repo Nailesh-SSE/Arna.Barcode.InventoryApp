@@ -32,17 +32,21 @@
               Responsive="true"
               @ref=billToCompanyGrid>
 
-            <GridColumn TItem="CompanyModel" HeaderText="Sequence" >
+            <GridColumn TItem="CompanyModel" HeaderText="No">
                 @(companyList.IndexOf(context) + 1)
+            </GridColumn>
+            <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name">
+                @context.Name
             </GridColumn>
 
             <GridColumn TItem="CompanyModel" HeaderText="Code" PropertyName="Code">
                 @context.Code
             </GridColumn>
 
-            <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name">
-                @context.Name
+            <GridColumn TItem="CompanyModel" HeaderText="Description" PropertyName="Remark">
+                @context.Remark
             </GridColumn>
+
             <GridColumn TItem="CompanyModel" HeaderText="Status" PropertyName="IsActive">
                 @if (context.IsActive)
                 {
@@ -115,20 +119,15 @@
     {
         editContext = new EditContext(companyModel);
         validationMessage = new ValidationMessageStore(editContext);
-
-        editContext.OnFieldChanged += async (sender, args) =>
-       {
-           editContext.Validate();
-           await CustomValidationAsync();
-           editContext.NotifyValidationStateChanged();
-       };
+       
     }
+    
     private async Task CustomValidationAsync()
     {
         validationMessage.Clear();
         if (!string.IsNullOrEmpty(companyModel.Name))
         {
-            bool isCompanyNameUnique = await CompanyService.IsCompanyNameUniqueAsync(companyModel.Name, companyModel.Id);
+            bool isCompanyNameUnique = await CompanyService.IsCompanyNameUniqueAsync(companyModel.Name, companyModel.CompanyType = CompanyType.BillTo, companyModel.Id);
 
             if (!isCompanyNameUnique)
             {
@@ -137,11 +136,12 @@
             editContext.NotifyValidationStateChanged();
         }
     }
+
     private async Task LoadCompanies()
     {
         isLoading = true;
         companyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
-        InitializeEditContextAsync();
+       
         isLoading = false;
     }
 
@@ -164,7 +164,6 @@
 
     private void ShowEditModal(CompanyModel editCompany)
     {
-        InitializeEditContextAsync();
         modalTitle = "Edit Bill To Company";
         isEditMode = true;
         companyModel = new CompanyModel
@@ -176,6 +175,8 @@
             IsActive = editCompany.IsActive,
             Remark=editCompany.Remark
         };
+        InitializeEditContextAsync();
+    
         modal.ShowAsync();
     }
 
@@ -183,8 +184,6 @@
     {
         try
         {
-            InitializeEditContextAsync();
-      
             companyModel.CompanyType = CompanyType.BillTo;
 
             if (isEditMode)
@@ -212,7 +211,7 @@
     {
         try
         {
-            InitializeEditContextAsync();
+           
             bool isConform = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
             if (isConform)
             {

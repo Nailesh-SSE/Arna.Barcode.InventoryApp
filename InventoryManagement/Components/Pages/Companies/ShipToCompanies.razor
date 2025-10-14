@@ -33,16 +33,20 @@
               Responsive="true"
               @ref=shipToCompanyGrid>
 
-            <GridColumn TItem="CompanyModel" HeaderText="Sequence" >
-                @(companyList.IndexOf(context) + 1)
+            <GridColumn TItem="CompanyModel" HeaderText="No">
+                @(companyList?.IndexOf(context) + 1)
+            </GridColumn>
+
+            <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name">
+                @context.Name
             </GridColumn>
 
             <GridColumn TItem="CompanyModel" HeaderText="Code" PropertyName="Code">
                 @context.Code
             </GridColumn>
 
-            <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name">
-                @context.Name
+            <GridColumn TItem="CompanyModel" HeaderText="Description" PropertyName="Remark">
+                @context.Remark
             </GridColumn>
 
             <GridColumn TItem="CompanyModel" HeaderText="Status" PropertyName="IsActive">
@@ -72,13 +76,12 @@
     <BodyTemplate>
         <EditForm EditContext="@editContext" OnValidSubmit="SaveCompany">
             <DataAnnotationsValidator />
-            
-            <div class="row">           
+
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="companyModel.Name" />  
+                    <InputText class="form-control" @bind-Value="companyModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
                     <ValidationMessage For="@(() => companyModel.Name)" />
-            
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Remark </label>
@@ -98,55 +101,36 @@
     </BodyTemplate>
 </Modal>
 
-
 @code {
-    private Modal modal = default!;
+    private Modal modal;
     private bool isLoading = true;
     private string modalTitle = "Add Ship To Company";
-    private bool isEditMode = false;
-    private CompanyModel companyModel = new();
+    private bool isEditMode;
+    private CompanyModel companyModel = new CompanyModel();
     private Grid<CompanyModel> shipToCompanyGrid;
-    private List<CompanyModel> companyList = new();
+    private List<CompanyModel> companyList = new List<CompanyModel>();
     private EditContext editContext;
     private ValidationMessageStore validationMessage;
+
+  
 
     protected override async Task OnInitializedAsync()
     {
         await LoadCompanies();
-        InitializeEditContextAsync();
     }
-    public void InitializeEditContextAsync()
+
+    private void InitializeEditContext()
     {
         editContext = new EditContext(companyModel);
         validationMessage = new ValidationMessageStore(editContext);
-
-        editContext.OnFieldChanged += async (sender, args) =>
-       {
-           editContext.Validate();
-           await CustomValidationAsync();            
-           editContext.NotifyValidationStateChanged();
-       };
     }
-    private async Task CustomValidationAsync()
-    {
 
-        validationMessage.Clear();
-        if (!string.IsNullOrEmpty(companyModel.Name))
-        {       
-            bool isCompanyNameUnique = await CompanyService.IsCompanyNameUniqueAsync(companyModel.Name, companyModel.Id);
+    //comp01
 
-            if (!isCompanyNameUnique)
-            {
-                validationMessage.Add(() => companyModel.Name, "Company is Already Exist");
-            }
-            editContext.NotifyValidationStateChanged();
-        }
-
-    }
     private async Task LoadCompanies()
     {
         isLoading = true;
-        companyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
+        companyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo))?.ToList() ?? new List<CompanyModel>();
         isLoading = false;
     }
 
@@ -163,15 +147,12 @@
         modalTitle = "Add Ship To Company";
         isEditMode = false;
         companyModel = new CompanyModel { CompanyType = CompanyType.ShipTo, IsActive = true };
-        InitializeEditContextAsync();     
-        modal.ShowAsync();
-
+        InitializeEditContext();
+        modal?.ShowAsync();
     }
 
     private void ShowEditModal(CompanyModel editCompany)
     {
-        InitializeEditContextAsync();
-
         modalTitle = "Edit Ship To Company";
         isEditMode = true;
         companyModel = new CompanyModel
@@ -183,61 +164,100 @@
             IsActive = editCompany.IsActive,
             Remark = editCompany.Remark
         };
-        modal.ShowAsync();
+        InitializeEditContext();
+        modal?.ShowAsync();
     }
 
     private async Task SaveCompany()
     {
         try
         {
-            InitializeEditContextAsync();          
-            await CustomValidationAsync();         
             companyModel.CompanyType = CompanyType.ShipTo;
+            if (!editContext.Validate()) return;
+
+            await ValidateNameAsync();
+            await ValidateDuplicateNameAsync();
+
+            if (editContext.GetValidationMessages().Any())
+                return;
 
             if (isEditMode)
-            {
                 await CompanyService.UpdateCompanyAsync(companyModel);
-                // Toast notification removed
-            }
             else
-            {            
                 await CompanyService.CreateCompanyAsync(companyModel);
-                // Toast notification removed
-            }
 
             await HideModal();
             await LoadCompanies();
-            await shipToCompanyGrid.RefreshDataAsync();
+            if (shipToCompanyGrid != null)
+                await shipToCompanyGrid.RefreshDataAsync();
         }
-        catch (Exception ex)
+        catch
         {
-            // Toast notification removed
+            // Exception handling omitted for brevity
         }
     }
-   
+
     private async Task DeleteCompany(int id)
     {
         try
         {
-            InitializeEditContextAsync();
-            bool isConform = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
+            var isConform = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
             if (isConform)
             {
                 await CompanyService.DeleteCompanyAsync(id);
                 await LoadCompanies();
-                await shipToCompanyGrid.RefreshDataAsync();
-            }     
-            // Toast notification removed        
+                if (shipToCompanyGrid != null)
+                 await shipToCompanyGrid.RefreshDataAsync();
+            }
         }
-        catch (Exception ex)
+        catch
         {
-            // Toast notification removed
+            // Exception handling omitted for brevity
         }
     }
 
     private async Task HideModal()
     {
-        await modal.HideAsync();
+        if (modal != null)
+            await modal.HideAsync();
     }
 
+    private async Task ValidateDuplicateNameAsync()
+    {
+        validationMessage.Clear();
+        if (!string.IsNullOrEmpty(companyModel.Name))
+        {
+            var isCompanyNameUnique = await CompanyService.IsCompanyNameUniqueAsync(companyModel.Name, companyModel.CompanyType = CompanyType.ShipTo, companyModel.Id);
+            if (!isCompanyNameUnique)
+            {
+                validationMessage.Add(() => companyModel.Name, "Name is Already Exist");
+            }
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+
+    private async Task ValidateNameAsync()
+    {
+        validationMessage.Clear();
+        if (string.IsNullOrWhiteSpace(companyModel.Name))
+        {
+            validationMessage.Add(() => companyModel.Name, "Company name is required");
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+
+    private async Task HandleNameChangeAsync(string newValue)
+    {
+        companyModel.Name = newValue;
+
+        try
+        {
+            await ValidateNameAsync();
+        }
+        catch (Exception ex)
+        {
+
+        }
+
+    }
 }

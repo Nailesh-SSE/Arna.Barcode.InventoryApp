@@ -46,7 +46,7 @@ public class CompanyService : ICompanyService
             Code = c.Code,
             CompanyType = c.CompanyType,
             Remark = c.Remark,
-            IsActive=c.IsActive
+            IsActive = c.IsActive
         }).ToList();
         return model;
     }
@@ -68,11 +68,11 @@ public class CompanyService : ICompanyService
             {
                 Id = companyModel.Id,
                 Code = companyModel.Code,
-                Name = companyModel.Name,
+                Name = companyModel.Name.Trim().ToLower(),
                 IsActive = companyModel.IsActive,
                 CompanyType = companyModel.CompanyType,
                 SerialNumber = companyModel.SerialNumber,
-                Remark=companyModel.Remark
+                Remark = companyModel.Remark
             };
 
 
@@ -97,7 +97,7 @@ public class CompanyService : ICompanyService
             var entity = await companyRepository.GetByIdAsync(companyModel.Id);
 
             entity.Code = companyModel.Code;
-            entity.Name = companyModel.Name;
+            entity.Name = companyModel.Name.Trim().ToLower();
             entity.CompanyType = companyModel.CompanyType;
             entity.Id = companyModel.Id;
             entity.IsActive = companyModel.IsActive;
@@ -144,15 +144,12 @@ public class CompanyService : ICompanyService
 
         return !companies.Any();
     }
-    public async Task<bool> IsCompanyNameUniqueAsync(string Name, int? Id = null)
+    public async Task<bool> IsCompanyNameUniqueAsync(string Name, CompanyType type, int? Id = null)
     {
         var companyRepository = _unitOfWork.GetRepository<Company>();
-        var companies = await companyRepository.FindAsync(c => c.Name == Name && !c.IsDeleted);
-
-        if (Id.HasValue)
-        {
-            companies = companies.Where(c => c.Id != Id.Value);
-        }
+        var companies = await companyRepository.FindAsync(c => c.Name.Trim().ToLower() == Name.Trim().ToLower() && c.CompanyType == type
+        && c.IsActive && !c.IsDeleted && c.Id != Id );
+     
         return !companies.Any();
     }
     public async Task GenerateCompanyCodeAndSquenceNumberAsync(CompanyModel model)
