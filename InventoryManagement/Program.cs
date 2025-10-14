@@ -1,56 +1,23 @@
-using InventoryManagement.Components;
-using InventoryManagement.Core.Data;
-using InventoryManagement.Core.Interfaces;
-using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services;
-using InventoryManagement.Services.Services;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.EntityFrameworkCore;
-
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+// --- Service Registration ---
+// 1. Add infrastructure services (Database, Storage, etc.)
+builder.Services.AddInfrastructureServices(builder.Configuration);
 
-// Configure Entity Framework with SQL Server
-builder.Services.AddDbContext<InventoryDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("ERP_Connection"),sqlOptions => sqlOptions.EnableRetryOnFailure()
-    ));
+// 2. Add application-specific services (Business Logic)
+builder.Services.AddApplicationServices();
 
-// Register repositories and services
-builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<ICompanyService, CompanyService>();
-builder.Services.AddScoped<ICategoryService, CategoryService>();
-builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddScoped<IInwardService, InwardService>();
-builder.Services.AddScoped<IOutwardService, OutwardService>();
-builder.Services.AddScoped<ISaleReturnService, SaleReturnService>();
+// 3. Add Authentication & Authorization services
+builder.Services.AddAuthenticationAndAuthorization();
 
-// Add authentication
-builder.Services.AddAuthorizationCore();
-builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
-builder.Services.AddCascadingAuthenticationState();
-
-// Add Blazor Bootstrap
+// 4. Add UI and Web specific services
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddBlazorBootstrap();
-
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    app.UseHsts();
-}
-
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-app.UseAntiforgery();
-
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+// --- Middleware & Endpoint Configuration ---
+app.ConfigureMiddlewarePipeline();
+app.MapApplicationEndpoints();
 
 app.Run();
