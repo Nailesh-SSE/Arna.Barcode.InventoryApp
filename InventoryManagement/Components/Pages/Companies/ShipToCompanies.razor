@@ -41,11 +41,7 @@
                 @context.Name
             </GridColumn>
 
-            <GridColumn TItem="CompanyModel" HeaderText="Code" PropertyName="Code">
-                @context.Code
-            </GridColumn>
-
-            <GridColumn TItem="CompanyModel" HeaderText="Description" PropertyName="Remark">
+            <GridColumn TItem="CompanyModel" HeaderText="Remark" PropertyName="Remark">
                 @context.Remark
             </GridColumn>
 
@@ -112,7 +108,7 @@
     private EditContext editContext;
     private ValidationMessageStore validationMessage;
 
-  
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -124,9 +120,6 @@
         editContext = new EditContext(companyModel);
         validationMessage = new ValidationMessageStore(editContext);
     }
-
-    //comp01
-
     private async Task LoadCompanies()
     {
         isLoading = true;
@@ -201,18 +194,18 @@
     {
         try
         {
-            var isConform = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
-            if (isConform)
+            var isConfirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
+            if (isConfirm)
             {
                 await CompanyService.DeleteCompanyAsync(id);
                 await LoadCompanies();
                 if (shipToCompanyGrid != null)
-                 await shipToCompanyGrid.RefreshDataAsync();
+                    await shipToCompanyGrid.RefreshDataAsync();
             }
         }
         catch
         {
-            // Exception handling omitted for brevity
+
         }
     }
 

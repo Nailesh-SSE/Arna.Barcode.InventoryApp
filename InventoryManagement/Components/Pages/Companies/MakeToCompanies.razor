@@ -1,5 +1,5 @@
- @page "/companies/make-to"
-@using InventoryManagement.Core.Enums
+@page "/companies/make-to"
+
 @inject ICompanyService CompanyService
 @inject IJSRuntime JS
 
@@ -41,11 +41,7 @@
                 @context.Name
             </GridColumn>
 
-            <GridColumn TItem="CompanyModel" HeaderText="Code" PropertyName="Code">
-                @context.Code
-            </GridColumn>
-
-            <GridColumn TItem="CompanyModel" HeaderText="Description" PropertyName="Remark">
+            <GridColumn TItem="CompanyModel" HeaderText="Remark" PropertyName="Remark">
                 @context.Remark
             </GridColumn>
 
@@ -76,11 +72,11 @@
     <BodyTemplate>
         <EditForm EditContext="@editContext" OnValidSubmit="SaveCompany">
             <DataAnnotationsValidator />
-            
-            <div class="row">          
+
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="companyModel.Name" />
+                    <InputText class="form-control" @bind-Value="companyModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
                     <ValidationMessage For="@(() => companyModel.Name)" />
                 </div>
                 <div class="col-md-6 mb-3">
@@ -112,37 +108,17 @@
     private List<CompanyModel> companyList = new();
     private Grid<CompanyModel> makeToCompanygrid;
     private EditContext editContext;
-    private ValidationMessageStore validationMessage; 
+    private ValidationMessageStore validationMessage;
     protected override async Task OnInitializedAsync()
     {
         await LoadCompanies();
-        InitializeEditContextAsync();
+
     }
     public void InitializeEditContextAsync()
     {
         editContext = new EditContext(companyModel);
         validationMessage = new ValidationMessageStore(editContext);
 
-        editContext.OnFieldChanged += async (sender, args) =>
-       {
-           editContext.Validate();
-           await CustomValidationAsync();
-           editContext.NotifyValidationStateChanged();
-       };
-    }
-    private async Task CustomValidationAsync()
-    {
-        validationMessage.Clear();
-        if (!string.IsNullOrEmpty(companyModel.Name))
-        {
-            bool isCompanyNameUnique = await CompanyService.IsCompanyNameUniqueAsync(companyModel.Name, companyModel.CompanyType = CompanyType.MakeTo, companyModel.Id);
-
-            if (!isCompanyNameUnique)
-            {
-                validationMessage.Add(() => companyModel.Name, "Company is Already Exist");
-            }
-            editContext.NotifyValidationStateChanged();
-        }
     }
     private async Task LoadCompanies()
     {
@@ -164,14 +140,12 @@
         modalTitle = "Add Make Company";
         isEditMode = false;
         companyModel = new CompanyModel { CompanyType = CompanyType.MakeTo, IsActive = true };
-
         InitializeEditContextAsync();
-        modal.ShowAsync();      
+        modal.ShowAsync();
     }
 
     private void ShowEditModal(CompanyModel editCompany)
     {
-        InitializeEditContextAsync();
         modalTitle = "Edit Make Company";
         isEditMode = true;
         companyModel = new CompanyModel
@@ -181,8 +155,9 @@
             Name = editCompany.Name,
             CompanyType = CompanyType.MakeTo,
             IsActive = editCompany.IsActive,
-            Remark= editCompany.Remark
+            Remark = editCompany.Remark
         };
+        InitializeEditContextAsync();
         modal.ShowAsync();
     }
 
@@ -190,18 +165,23 @@
     {
         try
         {
-           
+
             companyModel.CompanyType = CompanyType.MakeTo;
+            if (!editContext.Validate()) return;
+            await ValidateNameAsync();
+            await ValidateDuplicateNameAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
 
             if (isEditMode)
             {
                 await CompanyService.UpdateCompanyAsync(companyModel);
-                // Toast notification removed
+
             }
             else
             {
                 await CompanyService.CreateCompanyAsync(companyModel);
-                // Toast notification removed
+
             }
 
             await HideModal();
@@ -210,7 +190,7 @@
         }
         catch (Exception ex)
         {
-            // Toast notification removed
+
         }
     }
 
@@ -218,9 +198,9 @@
     {
         try
         {
-           
-            bool isConform = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
-            if (isConform)
+
+            bool isConfirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
+            if (isConfirm)
             {
                 await CompanyService.DeleteCompanyAsync(id);
                 await LoadCompanies();
@@ -229,7 +209,7 @@
         }
         catch (Exception ex)
         {
-            // Toast notification removed
+
         }
     }
 
@@ -237,5 +217,42 @@
     {
         await modal.HideAsync();
     }
-    
-} 
+    private async Task ValidateDuplicateNameAsync()
+    {
+        validationMessage.Clear();
+        if (!string.IsNullOrEmpty(companyModel.Name))
+        {
+            bool isCompanyNameUnique = await CompanyService.IsCompanyNameUniqueAsync(companyModel.Name, companyModel.CompanyType = CompanyType.MakeTo, companyModel.Id);
+
+            if (!isCompanyNameUnique)
+            {
+                validationMessage.Add(() => companyModel.Name, "Company is Already Exist");
+            }
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+    private async Task ValidateNameAsync()
+    {
+        validationMessage.Clear();
+        if (string.IsNullOrWhiteSpace(companyModel.Name))
+        {
+            validationMessage.Add(() => companyModel.Name, "Company name is required");
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+
+    private async Task HandleNameChangeAsync(string newValue)
+    {
+        companyModel.Name = newValue;
+
+        try
+        {
+            await ValidateNameAsync();
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
+
+}

@@ -1,4 +1,4 @@
- @page "/companies/bill-to"
+@page "/companies/bill-to"
 @inject ICompanyService CompanyService
 @inject IJSRuntime JS
 
@@ -39,11 +39,7 @@
                 @context.Name
             </GridColumn>
 
-            <GridColumn TItem="CompanyModel" HeaderText="Code" PropertyName="Code">
-                @context.Code
-            </GridColumn>
-
-            <GridColumn TItem="CompanyModel" HeaderText="Description" PropertyName="Remark">
+            <GridColumn TItem="CompanyModel" HeaderText="Remark" PropertyName="Remark">
                 @context.Remark
             </GridColumn>
 
@@ -74,13 +70,13 @@
     <BodyTemplate>
         <EditForm EditContext="@editContext" OnValidSubmit="SaveCompany">
             <DataAnnotationsValidator />
-            
-            <div class="row">       
+
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="companyModel.Name" />
+                    <InputText class="form-control" @bind-Value="companyModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
                     <ValidationMessage For="@(() => companyModel.Name)" />
-                </div>   
+                </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Remark </label>
                     <InputText class="form-control" @bind-Value="companyModel.Remark" />
@@ -113,35 +109,17 @@
     private ValidationMessageStore validationMessage;
     protected override async Task OnInitializedAsync()
     {
-        await LoadCompanies();   
+        await LoadCompanies();
     }
     public void InitializeEditContextAsync()
     {
         editContext = new EditContext(companyModel);
         validationMessage = new ValidationMessageStore(editContext);
-       
     }
-    
-    private async Task CustomValidationAsync()
-    {
-        validationMessage.Clear();
-        if (!string.IsNullOrEmpty(companyModel.Name))
-        {
-            bool isCompanyNameUnique = await CompanyService.IsCompanyNameUniqueAsync(companyModel.Name, companyModel.CompanyType = CompanyType.BillTo, companyModel.Id);
-
-            if (!isCompanyNameUnique)
-            {
-                validationMessage.Add(() => companyModel.Name, "Company is Already Exist");
-            }
-            editContext.NotifyValidationStateChanged();
-        }
-    }
-
     private async Task LoadCompanies()
     {
         isLoading = true;
         companyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
-       
         isLoading = false;
     }
 
@@ -159,7 +137,7 @@
         isEditMode = false;
         companyModel = new CompanyModel { CompanyType = CompanyType.BillTo, IsActive = true };
         InitializeEditContextAsync();
-        modal.ShowAsync();      
+        modal.ShowAsync();
     }
 
     private void ShowEditModal(CompanyModel editCompany)
@@ -173,10 +151,9 @@
             Name = editCompany.Name,
             CompanyType = CompanyType.BillTo,
             IsActive = editCompany.IsActive,
-            Remark=editCompany.Remark
+            Remark = editCompany.Remark
         };
         InitializeEditContextAsync();
-    
         modal.ShowAsync();
     }
 
@@ -185,25 +162,32 @@
         try
         {
             companyModel.CompanyType = CompanyType.BillTo;
+            if (!editContext.Validate()) return;
+
+            await ValidateNameAsync();
+            await ValidateDuplicateNameAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
 
             if (isEditMode)
             {
                 await CompanyService.UpdateCompanyAsync(companyModel);
-                // Toast notification removed
+
             }
             else
             {
                 await CompanyService.CreateCompanyAsync(companyModel);
-                // Toast notification removed
+
             }
 
             await HideModal();
             await LoadCompanies();
-            await billToCompanyGrid.RefreshDataAsync();
+            if (billToCompanyGrid != null)
+                await billToCompanyGrid.RefreshDataAsync();
         }
         catch (Exception ex)
         {
-            // Toast notification removed
+
         }
     }
 
@@ -211,9 +195,8 @@
     {
         try
         {
-           
-            bool isConform = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
-            if (isConform)
+            bool isConfirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
+            if (isConfirm)
             {
                 await CompanyService.DeleteCompanyAsync(id);
                 await LoadCompanies();
@@ -222,7 +205,7 @@
         }
         catch (Exception ex)
         {
-            // Toast notification removed
+
         }
     }
 
@@ -230,5 +213,40 @@
     {
         await modal.HideAsync();
     }
+    private async Task ValidateDuplicateNameAsync()
+    {
+        validationMessage.Clear();
+        if (!string.IsNullOrEmpty(companyModel.Name))
+        {
+            bool isCompanyNameUnique = await CompanyService.IsCompanyNameUniqueAsync(companyModel.Name, companyModel.CompanyType = CompanyType.BillTo, companyModel.Id);
 
-} 
+            if (!isCompanyNameUnique)
+            {
+                validationMessage.Add(() => companyModel.Name, "Company is Already Exist");
+            }
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+    private async Task ValidateNameAsync()
+    {
+        validationMessage.Clear();
+        if (string.IsNullOrWhiteSpace(companyModel.Name))
+        {
+            validationMessage.Add(() => companyModel.Name, "Company name is required");
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+
+    private async Task HandleNameChangeAsync(string newValue)
+    {
+        companyModel.Name = newValue;
+        try
+        {
+            await ValidateNameAsync();
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
+}
