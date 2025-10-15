@@ -153,7 +153,7 @@ public class ProductService : IProductService
             existingProduct.MakeCompanyId = productModel.MakeCompanyId; 
 
             var productRepository = _unitOfWork.GetRepository<Product>();
-            productRepository.UpdateAsync(existingProduct);
+            productRepository.Update(existingProduct);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -180,7 +180,7 @@ public class ProductService : IProductService
 
             product.IsDeleted = true;
             product.IsActive = false;
-            productRepository.UpdateAsync(product);
+            productRepository.Update(product);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }

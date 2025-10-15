@@ -174,7 +174,7 @@ public class CategoryService : ICategoryService
             existingCategory.IsActive = categoryModel.IsActive;
             existingCategory.IsDeleted = categoryModel.IsDeleted;
 
-            categoryRepository.UpdateAsync(existingCategory);
+            categoryRepository.Update(existingCategory);
             await _unitOfWork.SaveChangesAsync();
             return true;
 
@@ -202,7 +202,7 @@ public class CategoryService : ICategoryService
 
             category.IsDeleted = true;
             category.IsActive = false;
-            categoryRepository.UpdateAsync(category);
+            categoryRepository.Update(category);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }

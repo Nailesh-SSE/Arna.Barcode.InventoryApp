@@ -45,7 +45,7 @@ public class SaleReturnService : ISaleReturnService
         try
         {
             var saleReturnRepository = _unitOfWork.GetRepository<SaleReturn>();
-            saleReturnRepository.UpdateAsync(saleReturn);
+            saleReturnRepository.Update(saleReturn);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -65,7 +65,7 @@ public class SaleReturnService : ISaleReturnService
 
             saleReturn.IsDeleted = true;
             saleReturn.IsActive = false;
-            saleReturnRepository.UpdateAsync(saleReturn);
+            saleReturnRepository.Update(saleReturn);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
