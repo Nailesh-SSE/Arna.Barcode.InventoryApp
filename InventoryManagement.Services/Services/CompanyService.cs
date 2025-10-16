@@ -18,8 +18,8 @@ public class CompanyService : ICompanyService
     public async Task<List<CompanyModel>> GetAllCompaniesAsync()
     {
         var companyRepository = _unitOfWork.GetRepository<Company>();
-        var entities = await companyRepository.FindAsync(c => !c.IsDeleted);
-        var model = entities.Select(c => new CompanyModel
+        var company = await companyRepository.FindAsync(c => !c.IsDeleted);
+        var model = company.Select(c => new CompanyModel
         {
             Id = c.Id,
             Name = c.Name,
@@ -35,8 +35,11 @@ public class CompanyService : ICompanyService
     public async Task<List<CompanyModel>> GetCompaniesByTypeAsync(CompanyType type)
     {
         var companyRepository = _unitOfWork.GetRepository<Company>();
-        var entities = await companyRepository.FindAsync(c => c.CompanyType == type && !c.IsDeleted);
-        var model = entities.Select(c => new CompanyModel
+        var company = await companyRepository.FindAsync(c => c.CompanyType == type && !c.IsDeleted);
+        if (company == null)
+            return new List<CompanyModel>();
+
+        var model = company.Select(c => new CompanyModel
         {
             Id = c.Id,
             Name = c.Name,
@@ -105,7 +108,7 @@ public class CompanyService : ICompanyService
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
-        catch
+        catch (Exception ex)
         {
             return false;
         }
@@ -125,7 +128,7 @@ public class CompanyService : ICompanyService
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
-        catch
+        catch (Exception ex)
         {
             return false;
         }
@@ -136,7 +139,7 @@ public class CompanyService : ICompanyService
         var companyRepository = _unitOfWork.GetRepository<Company>();
         var companies = await companyRepository.FindAsync(c => c.Code == code && !c.IsDeleted);
 
-        if (Id.HasValue)
+        if (Id > 0)
             companies = companies.Where(c => c.Id != Id.Value);
 
         return !companies.Any();
@@ -145,8 +148,8 @@ public class CompanyService : ICompanyService
     {
         var companyRepository = _unitOfWork.GetRepository<Company>();
         var companies = await companyRepository.FindAsync(c => c.Name.Trim().ToLower() == Name.Trim().ToLower() && c.CompanyType == type
-        && c.IsActive && !c.IsDeleted && c.Id != Id );
-     
+        && c.IsActive && !c.IsDeleted && c.Id != Id);
+
         return !companies.Any();
     }
     public async Task GenerateCompanyCodeAndSquenceNumberAsync(CompanyModel model)
@@ -155,6 +158,6 @@ public class CompanyService : ICompanyService
         var companies = await companyRepository.GetAllAsync();
         var company = companies.Where(a => a.IsActive && !a.IsDeleted).OrderByDescending(a => a.Id).FirstOrDefault();
         model.SerialNumber = company != null ? company.SerialNumber + 1 : 0;
-        model.Code = model.Name + "-" + model.SerialNumber;
+        model.Code = "Comp" + model.SerialNumber;
     }
 }

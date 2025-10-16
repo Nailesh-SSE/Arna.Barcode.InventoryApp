@@ -20,12 +20,17 @@ public class InventoryDbContext : DbContext
     public DbSet<Outward> Outwards { get; set; }
     public DbSet<OutwardDetail> OutwardDetails { get; set; }
     public DbSet<SaleReturn> SaleReturns { get; set; }
+    public DbSet<Colour> Colour { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         // Configure relationships
+        modelBuilder.Entity<Colour>()
+            .HasIndex(c => new { c.Name, c.Code })
+            .IsUnique();
+
         modelBuilder.Entity<UsersInRole>()
             .HasOne(uir => uir.User)
             .WithMany()
