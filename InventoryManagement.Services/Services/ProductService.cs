@@ -2,7 +2,6 @@ using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagement.Services;
 
@@ -40,7 +39,9 @@ public class ProductService : IProductService
             Unit=p.Unit,
             UnitId = p.UnitId,
             MakeCompanyId = p.MakeCompanyId,
-            MakeCompany = p.MakeCompany
+            MakeCompany = p.MakeCompany,
+            ColourId=p.ColourId,
+            ColourName=p.ColourName,    
 
         }).ToList();
 
@@ -69,7 +70,9 @@ public class ProductService : IProductService
             Unit= product.Unit,
             UnitId = product.UnitId,
             MakeCompanyId = product.MakeCompanyId,
-            MakeCompany = product.MakeCompany
+            MakeCompany = product.MakeCompany,
+            ColourName= product.ColourName,
+            ColourId = product.ColourId,  
         };
         return getproductbyid;
     }
@@ -105,8 +108,10 @@ public class ProductService : IProductService
                     UnitId = productModel.UnitId,
                     MakeCompany = productModel.MakeCompany,
                     MakeCompanyId = productModel.MakeCompanyId,
-                    SerialNumber= productModel.SerialNumber
-                };
+                    SerialNumber= productModel.SerialNumber,
+                    ColourId= productModel.ColourId,
+                    ColourName= productModel.ColourName,
+            };
 
             var productRepository = _unitOfWork.GetRepository<Product>();
             await productRepository.AddAsync(createdProduct);
@@ -151,6 +156,8 @@ public class ProductService : IProductService
             existingProduct.UnitId = productModel.UnitId;
             existingProduct.MakeCompany = productModel.MakeCompany;
             existingProduct.MakeCompanyId = productModel.MakeCompanyId; 
+            existingProduct.ColourId = productModel.ColourId;
+            existingProduct.ColourName = productModel.ColourName;   
 
             var productRepository = _unitOfWork.GetRepository<Product>();
             productRepository.UpdateAsync(existingProduct);
@@ -236,7 +243,10 @@ public class ProductService : IProductService
             Unit = p.Unit,
             UnitId = p.UnitId,
             MakeCompany = p.MakeCompany,
-            MakeCompanyId = p.MakeCompanyId
+            MakeCompanyId = p.MakeCompanyId,
+            ColourId= p.ColourId,
+            ColourName= p.ColourName,
+
         }).ToList();
         return getproductsbycategory;
     }
