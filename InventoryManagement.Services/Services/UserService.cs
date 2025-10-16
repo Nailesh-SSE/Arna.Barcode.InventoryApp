@@ -62,7 +62,7 @@ public class UserService : IUserService
         try
         {
             var userRepository = _unitOfWork.GetRepository<Users>();
-            userRepository.UpdateAsync(user);
+            userRepository.Update(user);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -82,7 +82,7 @@ public class UserService : IUserService
 
             user.IsDeleted = true;
             user.IsActive = false;
-            userRepository.UpdateAsync(user);
+            userRepository.Update(user);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }

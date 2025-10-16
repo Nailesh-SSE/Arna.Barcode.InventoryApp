@@ -104,7 +104,7 @@ public class CompanyService : ICompanyService
             entity.IsDeleted = false;
             entity.Remark = companyModel.Remark;
 
-            companyRepository.UpdateAsync(entity);
+            companyRepository.Update(entity);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -124,7 +124,7 @@ public class CompanyService : ICompanyService
 
             company.IsDeleted = true;
             company.IsActive = false;
-            companyRepository.UpdateAsync(company);
+            companyRepository.Update(company);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }

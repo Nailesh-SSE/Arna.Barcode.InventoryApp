@@ -17,8 +17,7 @@ public static  class ServiceExtensions
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
        services.AddDbContext<InventoryDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("ERP_Connection"),
-                sql => sql.EnableRetryOnFailure()));
+            options.UseSqlServer(configuration.GetConnectionString("ERP_Connection")));
 
         services.AddScoped<ProtectedSessionStorage>();
         services.AddHttpContextAccessor();

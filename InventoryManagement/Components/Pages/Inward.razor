@@ -1,104 +1,104 @@
-@* @page "/inward"
+@page "/inward"
 @inject IInwardService InwardService
 @inject ICompanyService CompanyService
 @inject IProductService ProductService
+@inject ICategoryService CategoryService
 
 <PageTitle>Inward Management</PageTitle>
 
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col">
-            <h3><Icon Name="IconName.ArrowDownCircle" /> Inward Management</h3>
+            <h3>Inward Management</h3>
         </div>
         <div class="col-auto">
-            <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
-                <Icon Name="IconName.Plus" /> Add New Inward
-            </Button>
+            <button class="btn btn-primary" @onclick="ShowAddModal">
+                Add New Inward
+            </button>
         </div>
     </div>
 
     @if (isLoading)
     {
-        <div class="text-center">
-            <Spinner Type="SpinnerType.Border" />
+        <div class="text-center py-5">
+            <div class="spinner-border"></div>
         </div>
     }
     else
     {
-        <Grid TItem="Core.Entities.Inward"
-              Class="table table-hover table-bordered table-striped"
-              DataProvider="InwardsDataProvider"
-              AllowFiltering="true"
-              AllowPaging="true"
-              PageSize="10"
-              AllowSorting="true"
-              Responsive="true">
-
-            <GridColumn TItem="Core.Entities.Inward" HeaderText="ID" PropertyName="Id">
-                @context.Id
-            </GridColumn>
-
-            <GridColumn TItem="Core.Entities.Inward" HeaderText="Inward No" PropertyName="InwardNo">
-                @context.InwardNo
-            </GridColumn>
-
-            <GridColumn TItem="Core.Entities.Inward" HeaderText="Inward Date" PropertyName="InwardDate">
-                @context.InwardDate.ToString("dd/MM/yyyy")
-            </GridColumn>
-
-            <GridColumn TItem="Core.Entities.Inward" HeaderText="Ship Company" PropertyName="ShipMentCompanyId">
-                @(context.ShipMentCompany?.Name ?? "N/A")
-            </GridColumn>
-
-            <GridColumn TItem="Core.Entities.Inward" HeaderText="Invoice No" PropertyName="InvoiceNo">
-                @context.InvoiceNo
-            </GridColumn>
-
-            <GridColumn TItem="Core.Entities.Inward" HeaderText="Status" PropertyName="IsActive">
-                @if (context.IsActive)
+        <table class="table table-hover table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Inward No</th>
+                    <th>Inward Date/Time</th>
+                    <th>Ship Company</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var context in inwards)
                 {
-                    <Badge Color="BadgeColor.Success">Active</Badge>
+                    <tr>
+                        <td>@context.Id</td>
+                        <td>@context.InwardNo</td>
+                        <td>@context.InwardDate.ToString("dd/MM/yyyy hh:mm tt")</td>
+                        <td>@(shipCompanies.FirstOrDefault(c => c.Id == context.ShipMentCompanyId)?.Name ?? "N/A")</td>
+                        <td>
+                            @if (context.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">Inactive</span>
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" @onclick="@(() => ShowEditModal(context))">
+                                Edit
+                            </button>
+                            <button class="btn btn-danger btn-sm" @onclick="@(() => DeleteInward(context.Id))">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
                 }
-                else
-                {
-                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
-                }
-            </GridColumn>
-
-            <GridColumn TItem="Core.Entities.Inward" HeaderText="Actions">
-                <Button Color="ButtonColor.Info" Size="ButtonSize.Small" @onclick="() => ViewDetails(context.Id)">
-                    <Icon Name="IconName.Eye" /> View
-                </Button>
-                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                    <Icon Name="IconName.PencilSquare" /> Edit
-                </Button>
-                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteInward(context.Id)">
-                    <Icon Name="IconName.Trash" /> Delete
-                </Button>
-            </GridColumn>
-        </Grid>
+            </tbody>
+        </table>
     }
 </div>
 
-<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.ExtraLarge">
+<!-- Blazor Modal -->
+<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
     <BodyTemplate>
-        <EditForm Model="inward" OnValidSubmit="SaveInward">
+        <EditForm EditContext="@editContext" OnValidSubmit="SaveInward">
             <DataAnnotationsValidator />
-            
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Inward No <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="inward.InwardNo" />
-                    <ValidationMessage For="@(() => inward.InwardNo)" />
-                </div>
 
-                <div class="col-md-4 mb-3">
+            <div class="row">
+                @if (inward.Id > 0)
+                {
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Inward No <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="inward.InwardNo" readonly />
+                    </div>
+                }
+
+                <div class="col-md-3 mb-3">
                     <label class="form-label">Inward Date <span class="text-danger">*</span></label>
                     <InputDate class="form-control" @bind-Value="inward.InwardDate" />
                     <ValidationMessage For="@(() => inward.InwardDate)" />
                 </div>
 
-                <div class="col-md-4 mb-3">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">Inward Time</label>
+                    <input type="time" class="form-control"
+                           value="@inward.InwardTime.ToString(@"hh\:mm")"
+                           @onchange="OnTimeChanged" required />
+                </div>
+
+                <div class="col-md-3 mb-3">
                     <label class="form-label">Ship Company <span class="text-danger">*</span></label>
                     <InputSelect class="form-select" @bind-Value="inward.ShipMentCompanyId">
                         <option value="0">-- Select Company --</option>
@@ -109,22 +109,16 @@
                     </InputSelect>
                     <ValidationMessage For="@(() => inward.ShipMentCompanyId)" />
                 </div>
-            </div>
 
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Invoice No</label>
-                    <InputText class="form-control" @bind-Value="inward.InvoiceNo" />
-                </div>
-
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Invoice Date</label>
-                    <InputDate class="form-control" @bind-Value="inward.InvoiceDate" />
-                </div>
-
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Challan No</label>
-                    <InputText class="form-control" @bind-Value="inward.ChallanNo" />
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" value="@selectedCategoryId" @onchange="OnCategoryChanged">
+                        <option value="">-- All Categories --</option>
+                        @foreach (var cat in categories)
+                        {
+                            <option value="@cat.Id">@cat.Name</option>
+                        }
+                    </select>
                 </div>
             </div>
 
@@ -141,15 +135,15 @@
 
             <h5>Inward Items</h5>
             <div class="mb-3">
-                <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="AddInwardItem">
-                    <Icon Name="IconName.Plus" /> Add Item
-                </Button>
+                <button type="button" class="btn btn-success btn-sm" @onclick="AddInwardItem">
+                    Add Item
+                </button>
             </div>
 
             @if (inwardItems.Any())
             {
                 <div class="table-responsive">
-                    <table class="table table-bordered table-sm">
+                    <table class="table table-bordered table-sm align-middle">
                         <thead>
                             <tr>
                                 <th>Product</th>
@@ -167,7 +161,7 @@
                                     <td>
                                         <InputSelect class="form-select form-select-sm" @bind-Value="item.ProductId">
                                             <option value="0">-- Select Product --</option>
-                                            @foreach (var product in products)
+                                            @foreach (var product in filteredProducts)
                                             {
                                                 <option value="@product.Id">@product.Name (@product.SKU)</option>
                                             }
@@ -180,9 +174,10 @@
                                         <InputText class="form-control form-control-sm" @bind-Value="item.Unit" />
                                     </td>
                                     <td>
-                                        <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => RemoveInwardItem(index)">
-                                            <Icon Name="IconName.Trash" />
-                                        </Button>
+                                        <button type="button" class="btn btn-danger btn-sm"
+                                                @onclick="@(() => RemoveInwardItem(index))">
+                                            Remove
+                                        </button>
                                     </td>
                                 </tr>
                             }
@@ -192,24 +187,28 @@
             }
 
             <div class="text-end mt-3">
-                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+                <button type="button" class="btn btn-secondary" @onclick="HideModal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
             </div>
         </EditForm>
     </BodyTemplate>
 </Modal>
 
-
 @code {
-    private Modal modal = default!;
-    private List<Core.Entities.Inward> inwards = new();
-    private List<Company> shipCompanies = new();
-    private List<Product> products = new();
-    private Core.Entities.Inward inward = new();
-    private List<Core.Entities.InwardItem> inwardItems = new();
+    private List<InwardModel> inwards = new();
+    private List<CompanyModel> shipCompanies = new();
+    private List<ProductModel> products = new();
+    private List<ProductModel> filteredProducts = new();
+    private List<CategoryModel> categories = new();
+    private InwardModel inward = new();
+    private List<InwardItemModel> inwardItems = new();
     private bool isLoading = true;
     private string modalTitle = "Add Inward";
     private bool isEditMode = false;
+    private string? selectedCategoryId;
+    private Modal modal;
+    private EditContext editContext;
+    private ValidationMessageStore validationMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -219,117 +218,104 @@
     private async Task LoadData()
     {
         isLoading = true;
+        StateHasChanged();
+
         inwards = (await InwardService.GetAllAsync()).ToList();
         shipCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
-        products = (await ProductService.GetAllAsync()).ToList();
+        categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
+        products = (await ProductService.GetAllProductsAsync()).ToList();
+        filteredProducts = products;
+
         isLoading = false;
+        StateHasChanged();
     }
 
-    private async Task<GridDataProviderResult<Core.Entities.Inward>> InwardsDataProvider(GridDataProviderRequest<Core.Entities.Inward> request)
+    private void InitializeEditContext()
     {
-        if (inwards == null || !inwards.Any())
-            return await Task.FromResult(new GridDataProviderResult<Core.Entities.Inward> { Data = new List<Inward>(), TotalCount = 0 });
-
-        return await Task.FromResult(new GridDataProviderResult<Core.Entities.Inward> { Data = inwards, TotalCount = inwards.Count });
+        editContext = new EditContext(inward);
+        validationMessage = new ValidationMessageStore(editContext);
     }
 
     private void ShowAddModal()
     {
         modalTitle = "Add Inward";
         isEditMode = false;
-        inward = new Core.Entities.Inward { InwardDate = DateTime.Now, IsActive = true };
-        inwardItems = new List<InwardItem>();
+        inward = new InwardModel
+        {
+            InwardDate = DateTime.Now,
+            InwardTime = DateTime.Now.TimeOfDay,
+            IsActive = true
+        };
+        inwardItems = new();
+        selectedCategoryId = null;
+        filteredProducts = products;
+        InitializeEditContext();
         modal.ShowAsync();
     }
 
-    private async Task ShowEditModal(Inward editInward)
+    private async Task ShowEditModal(InwardModel edit)
     {
         modalTitle = "Edit Inward";
         isEditMode = true;
-        inward = new Core.Entities.Inward
-        {
-            Id = editInward.Id,
-            InwardNo = editInward.InwardNo,
-            InwardDate = editInward.InwardDate,
-            ShipMentCompanyId = editInward.ShipMentCompanyId,
-            InvoiceNo = editInward.InvoiceNo,
-            InvoiceDate = editInward.InvoiceDate,
-            ChallanNo = editInward.ChallanNo,
-            Remarks = editInward.Remarks,
-            IsActive = editInward.IsActive
-        };
-        
-        var items = await InwardService.GetInwardItemsByInwardIdAsync(editInward.Id);
-        inwardItems = items.ToList();
-        
+        inward = edit;
+        inward.InwardTime = inward.InwardDate.TimeOfDay;
+        inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(edit.Id);
+        selectedCategoryId = null;
+        filteredProducts = products;
+        InitializeEditContext();
         modal.ShowAsync();
+    }
+
+    private void OnCategoryChanged(ChangeEventArgs e)
+    {
+        selectedCategoryId = e.Value?.ToString();
+        if (string.IsNullOrEmpty(selectedCategoryId))
+            filteredProducts = products;
+        else
+            filteredProducts = products.Where(p => p.CategoryId == int.Parse(selectedCategoryId!)).ToList();
+        StateHasChanged();
+    }
+
+    private void OnTimeChanged(ChangeEventArgs e)
+    {
+        if (TimeSpan.TryParse(e.Value?.ToString(), out TimeSpan time))
+            inward.InwardTime = time;
     }
 
     private void AddInwardItem()
     {
-        inwardItems.Add(new Core.Entities.InwardItem { Unit = "PCS" });
+        inwardItems.Add(new InwardItemModel { Unit = "PCS" });
+        StateHasChanged();
     }
 
     private void RemoveInwardItem(int index)
     {
         inwardItems.RemoveAt(index);
+        StateHasChanged();
     }
 
     private async Task SaveInward()
     {
-        try
-        {
-            if (!inwardItems.Any())
-            {
-                // Toast notification removed
-                return;
-            }
+        inward.InwardDate = inward.InwardDate.Date.Add(inward.InwardTime);
+        inward.InwardItems = inwardItems;
 
-            inward.InwardItems = inwardItems;
+        if (isEditMode)
+            await InwardService.UpdateAsync(inward);
+        else
+            await InwardService.CreateAsync(inward);
 
-            if (isEditMode)
-            {
-                await InwardService.UpdateAsync(inward);
-                // Toast notification removed
-            }
-            else
-            {
-                await InwardService.AddAsync(inward);
-                // Toast notification removed
-            }
-
-            await HideModal();
-            await LoadData();
-        }
-        catch (Exception ex)
-        {
-            // Toast notification removed
-        }
+        await HideModal();
+        await LoadData();
     }
 
     private async Task DeleteInward(int id)
     {
-        try
-        {
-            await InwardService.DeleteAsync(id);
-            // Toast notification removed
-            await LoadData();
-        }
-        catch (Exception ex)
-        {
-            // Toast notification removed
-        }
-    }
-
-    private void ViewDetails(int id)
-    {
-        // Navigate to details page or show details modal
-        // Toast notification removed
+        await InwardService.DeleteAsync(id);
+        await LoadData();
     }
 
     private async Task HideModal()
     {
         await modal.HideAsync();
     }
-
-} *@
+}

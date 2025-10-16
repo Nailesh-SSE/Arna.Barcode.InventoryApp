@@ -59,7 +59,7 @@ public class OutwardService : IOutwardService
 
                 // Update barcode item status
                 barcodeItem.IsInStock = false;
-                inwardBarcodeItemRepository.UpdateAsync(barcodeItem);
+                inwardBarcodeItemRepository.Update(barcodeItem);
             }
 
             await _unitOfWork.SaveChangesAsync();
@@ -78,7 +78,7 @@ public class OutwardService : IOutwardService
         try
         {
             var outwardRepository = _unitOfWork.GetRepository<Outward>();
-            outwardRepository.UpdateAsync(outward);
+            outwardRepository.Update(outward);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -98,7 +98,7 @@ public class OutwardService : IOutwardService
 
             outward.IsDeleted = true;
             outward.IsActive = false;
-            outwardRepository.UpdateAsync(outward);
+            outwardRepository.Update(outward);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
