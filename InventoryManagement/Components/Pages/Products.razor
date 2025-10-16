@@ -4,6 +4,7 @@
 @inject IProductService ProductService
 @inject ICategoryService CategoryService
 @inject ICompanyService CompanyService
+@inject IColourService  ColourService
 
 <PageTitle>Products</PageTitle>
 
@@ -66,6 +67,12 @@
             </GridColumn>
             <GridColumn TItem="ProductModel" HeaderText="MakeCompany" PropertyName="MakeCompany">
                 @context.MakeCompany
+            </GridColumn>
+            <GridColumn TItem="ProductModel" HeaderText="ColourId" PropertyName="ColourId">
+                @context.ColourId
+            </GridColumn>
+            <GridColumn TItem="ProductModel" HeaderText="ColourName" PropertyName="ColourName">
+                @context.ColourName
             </GridColumn>
             <GridColumn TItem="ProductModel" HeaderText="Status" PropertyName="IsActive">
                 @if (context.IsActive)
@@ -139,7 +146,19 @@
                     <ValidationMessage For="@(() => productModel.UnitId)" />
                 </div>
             </div>
-
+            <div class="row">
+                <div  class="col-md-6 mb-3">
+                    <label class="form-label">Colour <span class="text-danger">*</span></label>
+                    <InputSelect class="form-control" @bind-Value="productModel.ColourId" @oninput="(e) => HandleColourChangeAsync(Convert.ToInt32(e.Value))">
+                        <option value="0">-- Select Unit -- </option>
+                        @foreach (var color in Colours)
+                        {
+                            <option value="@color.Id">@color.Name-@color.Code</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => productModel.ColourId)" />
+                </div>
+            </div>
             <div class="mb-3">
                 <label class="form-label">Description</label>
                 <InputTextArea class="form-control" rows="3" @bind-Value="productModel.Description" />
@@ -163,6 +182,7 @@
     private List<ProductModel> products = new();
     private List<CategoryModel> categories = new();
     private List<CompanyModel> companies = new();
+    private List<ColourModel> Colours = new();
     private ProductModel productModel = new();
     private Grid<ProductModel> productGrid;
     private bool isLoading = true;
@@ -201,6 +221,7 @@
         products = (await ProductService.GetAllProductsAsync()).ToList();
         categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
         companies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo)).ToList();
+        Colours = (await ColourService.GetAllColourAsync()).ToList();
         InitializeEditContext();
         isLoading = false;
     }
@@ -241,7 +262,9 @@
             IsActive = editProduct.IsActive,
             MakeCompanyId = editProduct.MakeCompanyId,
             MakeCompany = editProduct.MakeCompany,
-            SerialNumber = editProduct.SerialNumber
+            SerialNumber = editProduct.SerialNumber,
+            ColourId=editProduct.ColourId,
+            ColourName=editProduct.ColourName
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -262,6 +285,7 @@
             productModel.Unit = units.FirstOrDefault(u => u.Id == productModel.UnitId)?.Name ?? string.Empty;
             productModel.MakeCompany = companies.FirstOrDefault(m => m.Id == productModel.MakeCompanyId)?.Name ?? string.Empty;
             productModel.CategoryName = categories.FirstOrDefault(c => c.Id == productModel.CategoryId)?.Name ?? string.Empty;
+            productModel.ColourName = Colours.FirstOrDefault(c => c.Id == productModel.ColourId)?.Name ?? string.Empty;
             if (isEditMode)
             {
                 await ProductService.UpdateProductAsync(productModel);
@@ -341,6 +365,15 @@
         }
         editContext.NotifyValidationStateChanged();
     }
+    private async Task ValidateColour()
+    {
+        messageStore.Clear(()=> productModel.ColourId);
+        if (productModel.ColourId == 0)
+        {
+            messageStore.Add(() => productModel.ColourId, "Please select Colour");
+        }
+        editContext.NotifyValidationStateChanged();
+    }
 
     private async Task ValidateDuplicateNameAsync()
     {
@@ -384,6 +417,7 @@
             await ValidateCateogry();
             await ValidateName();
             await ValidateUnit();
+            await ValidateColour();
         }
         catch(Exception ex)
         {
@@ -399,5 +433,10 @@
     {
         productModel.UnitId = id;
         ValidateUnit();
+    }
+    private async Task HandleColourChangeAsync(int id)
+    {
+        productModel.ColourId = id;
+        ValidateColour();
     }
 }

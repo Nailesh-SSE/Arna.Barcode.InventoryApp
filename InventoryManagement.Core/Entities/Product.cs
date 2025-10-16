@@ -35,6 +35,9 @@ public class Product : Common
     public string MakeCompany { get; set; } = string.Empty;
 
     public int SerialNumber { get; set; }
+
+    public int ColourId { get; set; }
+    public string ColourName { get; set; }
     public virtual Category Category { get; set; } = null!;
     public virtual ICollection<InwardItem> InwardItems { get; set; } = new List<InwardItem>();
 }
