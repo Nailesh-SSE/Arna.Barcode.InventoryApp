@@ -27,7 +27,7 @@
     {
         <Grid TItem="CompanyModel"
               Class="table table-hover table-bordered table-striped"
-              DataProvider="CompaniesDataProvider"
+              Data="companyList"
               AllowPaging="true"
               PageSize="10"
               Responsive="true"
@@ -125,14 +125,6 @@
         isLoading = true;
         companyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo))?.ToList() ?? new List<CompanyModel>();
         isLoading = false;
-    }
-
-    private async Task<GridDataProviderResult<CompanyModel>> CompaniesDataProvider(GridDataProviderRequest<CompanyModel> request)
-    {
-        if (companyList == null || !companyList.Any())
-            return await Task.FromResult(new GridDataProviderResult<CompanyModel> { Data = new List<CompanyModel>(), TotalCount = 0 });
-
-        return await Task.FromResult(new GridDataProviderResult<CompanyModel> { Data = companyList, TotalCount = companyList.Count });
     }
 
     private void ShowAddModal()

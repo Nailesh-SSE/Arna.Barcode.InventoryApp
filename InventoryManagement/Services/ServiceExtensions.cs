@@ -3,6 +3,7 @@ using InventoryManagement.Core.Data;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Auth;
 using InventoryManagement.Services.Interfaces;
+using InventoryManagement.Services.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -35,6 +36,7 @@ public static  class ServiceExtensions
         services.AddScoped<IInwardService, InwardService>();
         services.AddScoped<IOutwardService, OutwardService>();
         services.AddScoped<ISaleReturnService, SaleReturnService>();
+        services.AddScoped<IColourService, ColourService>();
 
         services.AddScoped<AuthService>();
         services.AddScoped<IAuthValidationService, AuthValidationService>();
