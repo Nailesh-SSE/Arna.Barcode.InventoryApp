@@ -308,7 +308,7 @@
     {
         try
         {
-            bool confirmed = await JS.InvokeAsync<bool>("confirm", "Do you really want to delete this category?");
+            bool confirmed = await JS.InvokeAsync<bool>("confirm", "Do you really want to delete this product?");
 
             if (!confirmed)
             {

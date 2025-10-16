@@ -54,8 +54,8 @@ public class ColourService: IColourService
     }
     public async Task<bool> UpdateColourAsync(ColourModel colourModel)
     {
-        var isUnique = await IsColourAndNameUniqueAsync(colourModel.Name, colourModel.Code) == false;
-        if (isUnique)
+        var isUnique = await IsColourAndNameUniqueAsync(colourModel.Name, colourModel.Code, colourModel.Id) ;
+        if (!isUnique)
         {
             return false;
         }
