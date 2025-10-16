@@ -11,7 +11,7 @@ namespace InventoryManagement.Services.Models
 {
     public class CompanyModel :CommonModel
     {
-        [Key]
+       
         public int Id { get; set; }
 
          [StringLength(100)]

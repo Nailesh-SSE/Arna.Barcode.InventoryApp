@@ -11,10 +11,10 @@ namespace InventoryManagement.Core.Entities
     {
         [Key]
         public int Id { get; set; }
-        [Required(ErrorMessage = "Colour name is required")]
+        [Required]
         [StringLength(50)]
         public string Name { get; set; }
-        [Required(ErrorMessage = "Colour code is required")]
+        [Required]
         [StringLength(15)]
         public string Code { get; set; }    
         

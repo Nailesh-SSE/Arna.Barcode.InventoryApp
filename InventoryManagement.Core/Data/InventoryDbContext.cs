@@ -29,7 +29,8 @@ public class InventoryDbContext : DbContext
         // Configure relationships
         modelBuilder.Entity<Colour>()
             .HasIndex(c => new { c.Name, c.Code })
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0");
 
         modelBuilder.Entity<UsersInRole>()
             .HasOne(uir => uir.User)

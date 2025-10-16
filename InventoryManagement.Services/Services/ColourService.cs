@@ -60,7 +60,7 @@ public class ColourService: IColourService
             return false;
         }
         var colourRepository = _unitOfWork.GetRepository<Colour>();
-        var colour = colourRepository.GetByIdAsync(colourModel.Id).Result;
+        var colour = await colourRepository.GetByIdAsync(colourModel.Id);
 
         colour.Id = colourModel.Id;
         colour.Name = colourModel.Name;
@@ -70,7 +70,7 @@ public class ColourService: IColourService
         colour.UpdatedBy = colourModel.UpdatedBy;
         colour.UpdatedOn = DateTime.UtcNow;
 
-        colourRepository.UpdateAsync(colour);
+        colourRepository.Update(colour);
         await _unitOfWork.SaveChangesAsync();
         return true;
     }
@@ -85,7 +85,7 @@ public class ColourService: IColourService
             colour.IsDeleted = true;
             colour.IsActive = false;
             colour.UpdatedOn = DateTime.UtcNow;
-            colourRepository.UpdateAsync(colour);
+            colourRepository.Update(colour);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }

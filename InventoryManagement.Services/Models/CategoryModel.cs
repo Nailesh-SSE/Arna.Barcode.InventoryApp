@@ -10,12 +10,12 @@ public class CategoryModel : CommonModel
     [StringLength(100)]
     public string Name { get; set; } = string.Empty;
 
-    [StringLength(500, ErrorMessage = "Maximum 500 characters are allowed")]
+    [StringLength(500)]
     public string Description { get; set; } = string.Empty;
 
     public int? ParentCategoryId { get; set; }
 
-    [StringLength(100, ErrorMessage = "Maximum 100 characters are allowed")]
+    [StringLength(100)]
     public string? ParentCategoryName { get; set; }
 
     public int SerialNumber { get; set; }

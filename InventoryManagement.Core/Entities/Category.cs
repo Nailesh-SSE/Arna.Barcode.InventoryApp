@@ -7,7 +7,7 @@ public class Category : Common
     [Key]
     public int Id { get; set; }
 
-    [Required(ErrorMessage = "Category name is required")]
+    [Required]
     [StringLength(100)]
     public string Name { get; set; } = string.Empty;
 
