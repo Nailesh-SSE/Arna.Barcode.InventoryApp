@@ -3,9 +3,6 @@ using InventoryManagement.Core.Enums;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
-using System.Collections.Immutable;
-using System.Reflection.Metadata.Ecma335;
-using System.Threading.Tasks.Sources;
 
 namespace InventoryManagement.Services;
 

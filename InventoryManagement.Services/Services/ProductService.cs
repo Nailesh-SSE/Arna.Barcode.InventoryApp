@@ -2,7 +2,6 @@ using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagement.Services;
 
