@@ -78,29 +78,43 @@ public class InwardService : IInwardService
             await _unitOfWork.SaveChangesAsync();
 
             // Create all inward items using AddRange
-            var inwardItems = model.InwardItems.Select(itemModel => new InwardItem
+            var serialNo = await inwardItemRepo.CountAsync();
+            var inwardItems = new List<InwardItem>(); 
+
+            foreach (var itemModel in model.InwardItems)
             {
-                InwardId = inward.Id,
-                ProductId = itemModel.ProductId,
-                Quantity = itemModel.Quantity,
-                Unit = itemModel.Unit,
-                BatchNo = itemModel.BatchNo ?? string.Empty,
-                IsDeleted = false
-            }).ToList();
+                serialNo++;
+                var batchNo = GenerateBatchNo(serialNo);
+
+                inwardItems.Add(new InwardItem
+                {
+                    InwardId = inward.Id,
+                    ProductId = itemModel.ProductId,
+                    Quantity = itemModel.Quantity,
+                    Unit = itemModel.Unit,
+                    SerialNo = serialNo.ToString(),
+                    BatchNo = batchNo,
+                    IsDeleted = false
+                });
+            }
 
             await inwardItemRepo.AddRangeAsync(inwardItems);
             await _unitOfWork.SaveChangesAsync();
 
+            // Create all barcodes
             var barcodes = new List<InwardBarcodeItem>();
+            int barcodeCounter = 0;
+
             foreach (var item in inwardItems)
             {
                 for (int i = 0; i < item.Quantity; i++)
                 {
+                    barcodeCounter++;
                     barcodes.Add(new InwardBarcodeItem
                     {
                         InwardId = inward.Id,
                         InwardItemId = item.Id,
-                        BarcodeNo = GenerateBarcodeNumber(inward.Id, item.Id, item.BatchNo),
+                        BarcodeNo = GenerateBarcodeNumber(item.InwardId, barcodeCounter),
                         TransactionDate = inward.InwardDate,
                         IsInStock = true
                     });
@@ -129,6 +143,7 @@ public class InwardService : IInwardService
         {
             var inwardRepo = _unitOfWork.GetRepository<Inward>();
             var itemRepo = _unitOfWork.GetRepository<InwardItem>();
+            var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
 
             var entity = await inwardRepo.GetByIdAsync(model.Id);
             if (entity == null) return false;
@@ -141,35 +156,67 @@ public class InwardService : IInwardService
             entity.Remarks = model.Remarks;
             entity.IsActive = model.IsActive;
 
-            // Synchronize child items
-            var existingItemIds = entity.InwardItems.Select(i => i.Id).ToList();
-            var updatedItemIds = model.InwardItems.Select(i => i.Id).ToList();
+            // Delete existing items and their barcodes
+            var existingItems = await itemRepo.FindAsync(i => i.InwardId == entity.Id);
+            foreach (var item in existingItems)
+            {
+                var barcodeItems = await barcodeRepo.FindAsync(b => b.InwardItemId == item.Id);
+                foreach (var barcode in barcodeItems)
+                    await barcodeRepo.DeleteAsync(barcode.Id);
 
-            // Remove deleted items
-            var toRemove = entity.InwardItems.Where(i => !updatedItemIds.Contains(i.Id)).ToList();
-            foreach (var item in toRemove)
                 await itemRepo.DeleteAsync(item.Id);
+            }
 
-            // Update or add new items
+            // Create all inward items using AddRange
+            var serialNo = await itemRepo.CountAsync();
+            var inwardItems = new List<InwardItem>();
+
             foreach (var itemModel in model.InwardItems)
             {
-                var existing = entity.InwardItems.FirstOrDefault(x => x.Id == itemModel.Id);
-                if (existing != null)
+                serialNo++;
+                var batchNo = GenerateBatchNo(serialNo);
+
+                inwardItems.Add(new InwardItem
                 {
-                    existing.ProductId = itemModel.ProductId;
-                    existing.Quantity = itemModel.Quantity;
-                    existing.Unit = itemModel.Unit;
-                }
-                else
+                    InwardId = entity.Id,
+                    ProductId = itemModel.ProductId,
+                    Quantity = itemModel.Quantity,
+                    Unit = itemModel.Unit,
+                    SerialNo = serialNo.ToString(),
+                    BatchNo = batchNo,
+                    IsDeleted = false
+                });
+            }
+
+            await itemRepo.AddRangeAsync(inwardItems);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Create all barcodes
+            var barcodes = new List<InwardBarcodeItem>();
+            int barcodeCounter = 0;
+
+            foreach (var item in inwardItems)
+            {
+                for (int i = 0; i < item.Quantity; i++)
                 {
-                    entity.InwardItems.Add(new InwardItem
+                    barcodeCounter++;
+                    barcodes.Add(new InwardBarcodeItem
                     {
-                        ProductId = itemModel.ProductId,
-                        Quantity = itemModel.Quantity,
-                        Unit = itemModel.Unit
+                        InwardId = entity.Id,
+                        InwardItemId = item.Id,
+                        BarcodeNo = GenerateBarcodeNumber(item.InwardId, barcodeCounter),
+                        TransactionDate = entity.InwardDate,
+                        IsInStock = true
                     });
                 }
             }
+
+            if (barcodes.Any())
+            {
+                await barcodeRepo.AddRangeAsync(barcodes);
+            }
+            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
 
             inwardRepo.Update(entity);
             await _unitOfWork.SaveChangesAsync();
@@ -219,13 +266,6 @@ public class InwardService : IInwardService
         }).ToList();
     }
 
-    private string GenerateBarcodeNumber(int inwardId, int inwardItemId, string batchNo)
-    {
-        var datePattern = DateTime.Now.ToString("yyyyMMdd");
-        var random = new Random();
-        var randomPart = random.Next(0001, 1000).ToString();
-        return $"{datePattern}{inwardItemId:D4}{randomPart}";
-    }
     private (int startYear, int endYear) GetFinancialYear(DateTime date)
     {
         int year = date.Year;
@@ -248,5 +288,13 @@ public class InwardService : IInwardService
         return inwardNo;
     }
 
+    private string GenerateBarcodeNumber(int inwardId, int counter)
+    {
+        return $"1{inwardId:D3}{counter:D3}";
+    }
 
+    private string GenerateBatchNo(int serialNo)
+    {
+        return $"1{serialNo:D3}";
+    }
 }
