@@ -27,7 +27,7 @@
     {
         <Grid TItem="CompanyModel"
               Class="table table-hover table-bordered table-striped"
-              DataProvider="CompaniesDataProvider"
+              Data="companyList"
               AllowPaging="true"
               PageSize="10"
               Responsive="true"
@@ -97,7 +97,6 @@
     </BodyTemplate>
 </Modal>
 
-
 @code {
     private Modal modal = default!;
     private bool isLoading = true;
@@ -125,14 +124,6 @@
         isLoading = true;
         companyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo)).ToList();
         isLoading = false;
-    }
-
-    private async Task<GridDataProviderResult<CompanyModel>> CompaniesDataProvider(GridDataProviderRequest<CompanyModel> request)
-    {
-        if (companyList == null || !companyList.Any())
-            return await Task.FromResult(new GridDataProviderResult<CompanyModel> { Data = new List<CompanyModel>(), TotalCount = 0 });
-
-        return await Task.FromResult(new GridDataProviderResult<CompanyModel> { Data = companyList, TotalCount = companyList.Count });
     }
 
     private void ShowAddModal()
@@ -165,10 +156,12 @@
     {
         try
         {
-
             companyModel.CompanyType = CompanyType.MakeTo;
             if (!editContext.Validate()) return;
             await ValidateNameAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
+
             await ValidateDuplicateNameAsync();
             if (editContext.GetValidationMessages().Any())
                 return;
@@ -183,7 +176,6 @@
                 await CompanyService.CreateCompanyAsync(companyModel);
 
             }
-
             await HideModal();
             await LoadCompanies();
             await makeToCompanygrid.RefreshDataAsync();
@@ -198,7 +190,6 @@
     {
         try
         {
-
             bool isConfirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
             if (isConfirm)
             {
@@ -244,7 +235,6 @@
     private async Task HandleNameChangeAsync(string newValue)
     {
         companyModel.Name = newValue;
-
         try
         {
             await ValidateNameAsync();
@@ -254,5 +244,4 @@
 
         }
     }
-
 }

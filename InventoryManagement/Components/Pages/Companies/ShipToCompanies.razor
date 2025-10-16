@@ -109,7 +109,6 @@
     private ValidationMessageStore validationMessage;
 
 
-
     protected override async Task OnInitializedAsync()
     {
         await LoadCompanies();
@@ -161,8 +160,10 @@
             if (!editContext.Validate()) return;
 
             await ValidateNameAsync();
-            await ValidateDuplicateNameAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
 
+            await ValidateDuplicateNameAsync();
             if (editContext.GetValidationMessages().Any())
                 return;
 
@@ -234,7 +235,6 @@
     private async Task HandleNameChangeAsync(string newValue)
     {
         companyModel.Name = newValue;
-
         try
         {
             await ValidateNameAsync();
@@ -243,6 +243,5 @@
         {
 
         }
-
     }
 }

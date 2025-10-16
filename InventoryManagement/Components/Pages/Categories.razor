@@ -27,7 +27,7 @@
         <Grid TItem="CategoryModel"
               @ref="categoryGrid"
               Class="table table-hover table-bordered table-striped"
-              DataProvider="CategoriesDataProvider"
+              Data="categoryList"
               AllowPaging="true"
               PageSize="10"
               Responsive="true">
@@ -129,22 +129,13 @@
     {
         isLoading = true;
         categoryList = (await CategoryService.GetAllCategoriesAsync()).ToList();
-        parentCategoryList = categoryList.Where(c => c.ParentCategoryId == null).ToList();
-        InitializeEditContext();
+        parentCategoryList = categoryList.Where(c => c.ParentCategoryId == null).ToList();     
         isLoading = false;
     }
     private void InitializeEditContext()
     {
         editContext = new EditContext(categoryModel);
         messageStore = new ValidationMessageStore(editContext);
-    }
-
-    private async Task<GridDataProviderResult<CategoryModel>> CategoriesDataProvider(GridDataProviderRequest<CategoryModel> request)
-    {
-        if (categoryList == null || !categoryList.Any())
-            return await Task.FromResult(new GridDataProviderResult<CategoryModel> { Data = new List<CategoryModel>(), TotalCount = 0 });
-
-        return await Task.FromResult(new GridDataProviderResult<CategoryModel> { Data = categoryList, TotalCount = categoryList.Count });
     }
 
     private void ShowAddModal()
@@ -179,6 +170,9 @@
         {
             if(!editContext.Validate()) return;
             await ValidateNameAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
+
             await ValidateDuplicateNameAsync();
             if (editContext.GetValidationMessages().Any())
                 return;

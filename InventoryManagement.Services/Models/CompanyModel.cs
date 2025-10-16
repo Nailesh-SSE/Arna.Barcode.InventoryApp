@@ -14,8 +14,7 @@ namespace InventoryManagement.Services.Models
         [Key]
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "Company name is required")]
-        [StringLength(100)]
+         [StringLength(100)]
         public string Name { get; set; } = string.Empty;
 
         //[Required(ErrorMessage = "Company code is required")]
