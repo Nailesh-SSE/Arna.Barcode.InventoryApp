@@ -1,4 +1,4 @@
-@page "/inward"
+﻿@page "/inward"
 @inject IInwardService InwardService
 @inject ICompanyService CompanyService
 @inject IProductService ProductService
@@ -26,169 +26,183 @@
     }
     else
     {
-        <table class="table table-hover table-bordered table-striped">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Inward No</th>
-                    <th>Inward Date/Time</th>
-                    <th>Ship Company</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var context in inwards)
-                {
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered table-striped align-middle">
+                <thead class="table-light">
                     <tr>
-                        <td>@context.Id</td>
-                        <td>@context.InwardNo</td>
-                        <td>@context.InwardDate.ToString("dd/MM/yyyy hh:mm tt")</td>
-                        <td>@(shipCompanies.FirstOrDefault(c => c.Id == context.ShipMentCompanyId)?.Name ?? "N/A")</td>
-                        <td>
-                            @if (context.IsActive)
-                            {
-                                <span class="badge bg-success">Active</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-danger">Inactive</span>
-                            }
-                        </td>
-                        <td>
-                            <button class="btn btn-warning btn-sm" @onclick="@(() => ShowEditModal(context))">
-                                Edit
-                            </button>
-                            <button class="btn btn-danger btn-sm" @onclick="@(() => DeleteInward(context.Id))">
-                                Delete
-                            </button>
-                        </td>
+                        <th>ID</th>
+                        <th>Inward No</th>
+                        <th>Inward Date/Time</th>
+                        <th>Ship Company</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var context in inwards)
+                    {
+                        <tr>
+                            <td>@context.Id</td>
+                            <td>@context.InwardNo</td>
+                            <td>@context.InwardDate.ToString("dd/MM/yyyy hh:mm tt")</td>
+                            <td>@(shipCompanies.FirstOrDefault(c => c.Id == context.ShipMentCompanyId)?.Name ?? "N/A")</td>
+                            <td>
+                                @if (context.IsActive)
+                                {
+                                    <span class="badge bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Inactive</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    <button class="btn btn-warning btn-sm" @onclick="@(() => ShowEditModal(context))">Edit</button>
+                                    <button class="btn btn-danger btn-sm" @onclick="@(() => DeleteInward(context.Id))">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 </div>
 
-<!-- Blazor Modal -->
+<!-- Modal -->
 <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
     <BodyTemplate>
         <EditForm EditContext="@editContext" OnValidSubmit="SaveInward">
             <DataAnnotationsValidator />
 
-            <div class="row">
-                @if (inward.Id > 0)
-                {
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Inward No <span class="text-danger">*</span></label>
-                        <InputText class="form-control" @bind-Value="inward.InwardNo" readonly />
+            <div class="modal-content-custom">
+                <!-- Fixed Header Form -->
+                <div class="modal-header-section">
+                    <div class="row g-2">
+                        <div class="col-12 col-sm-6 col-md-3 no-md-width">
+                            <label class="form-label">Inward Date <span class="text-danger">*</span></label>
+                            <InputDate class="form-control" @bind-Value="inward.InwardDate" />
+                            <ValidationMessage For="@(() => inward.InwardDate)" />
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-md-3 no-md-width">
+                            <label class="form-label">Inward Time</label>
+                            <input type="time" class="form-control"
+                                   value="@inward.InwardTime.ToString(@"hh\:mm")"
+                                   @onchange="OnTimeChanged" required />
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-md-3 no-md-width">
+                            <label class="form-label">Ship Company <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="inward.ShipMentCompanyId">
+                                <option value="0">-- Select Company --</option>
+                                @foreach (var company in shipCompanies)
+                                {
+                                    <option value="@company.Id">@company.Name</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => inward.ShipMentCompanyId)" />
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label class="form-label">Category</label>
+                            <select class="form-select" value="@selectedCategoryId" @onchange="OnCategoryChanged">
+                                <option value="">-- All Categories --</option>
+                                @foreach (var cat in categories)
+                                {
+                                    <option value="@cat.Id">@cat.Name</option>
+                                }
+                            </select>
+                        </div>
                     </div>
-                }
 
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">Inward Date <span class="text-danger">*</span></label>
-                    <InputDate class="form-control" @bind-Value="inward.InwardDate" />
-                    <ValidationMessage For="@(() => inward.InwardDate)" />
-                </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-12 col-md-9">
+                            <label class="form-label">Remarks</label>
+                            <InputText class="form-control" @bind-Value="inward.Remarks" />
+                        </div>
 
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">Inward Time</label>
-                    <input type="time" class="form-control"
-                           value="@inward.InwardTime.ToString(@"hh\:mm")"
-                           @onchange="OnTimeChanged" required />
-                </div>
-
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">Ship Company <span class="text-danger">*</span></label>
-                    <InputSelect class="form-select" @bind-Value="inward.ShipMentCompanyId">
-                        <option value="0">-- Select Company --</option>
-                        @foreach (var company in shipCompanies)
+                        @if (inward.Id > 0)
                         {
-                            <option value="@company.Id">@company.Name</option>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label d-block text-start">Active</label>
+                                <div class="custom-checkbox-wrapper mt-2">
+                                    <InputCheckbox id="activeCheck" class="custom-checkbox" @bind-Value="inward.IsActive" />
+                                    <label for="activeCheck"></label>
+                                </div>
+                            </div>
                         }
-                    </InputSelect>
-                    <ValidationMessage For="@(() => inward.ShipMentCompanyId)" />
+                    </div>
                 </div>
 
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">Category</label>
-                    <select class="form-select" value="@selectedCategoryId" @onchange="OnCategoryChanged">
-                        <option value="">-- All Categories --</option>
-                        @foreach (var cat in categories)
-                        {
-                            <option value="@cat.Id">@cat.Name</option>
-                        }
-                    </select>
+                <hr />
+
+                <!-- Scrollable Product Table -->
+                <div class="modal-body-section">
+                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap">
+                        <h5 class="mb-0">Inward Items</h5>
+                        <button type="button" class="btn btn-success btn-sm" @onclick="AddInwardItem">Add Item</button>
+                    </div>
+
+                    @if (inwardItems.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Quantity</th>
+                                        <th>Unit</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < inwardItems.Count; i++)
+                                    {
+                                        var index = i;
+                                        var item = inwardItems[index];
+                                        <tr>
+                                            <td>
+                                                <InputSelect class="form-select form-select-sm" @bind-Value="item.ProductId">
+                                                    <option value="0">-- Select Product --</option>
+                                                    @foreach (var product in filteredProducts)
+                                                    {
+                                                        <option value="@product.Id">@product.Name (@product.SKU)</option>
+                                                    }
+                                                </InputSelect>
+                                            </td>
+                                            <td>
+                                                <InputNumber class="form-control form-control-sm" @bind-Value="item.Quantity" />
+                                            </td>
+                                            <td>
+                                                <InputText class="form-control form-control-sm" @bind-Value="item.Unit" />
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-danger btn-sm"
+                                                        @onclick="@(() => RemoveInwardItem(index))">
+                                                    Remove
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-3 text-muted">
+                            No items added yet. Click "Add Item" to get started.
+                        </div>
+                    }
                 </div>
-            </div>
 
-            <div class="mb-3">
-                <label class="form-label">Remarks</label>
-                <InputTextArea class="form-control" rows="2" @bind-Value="inward.Remarks" />
-            </div>
-
-            <div class="mb-3">
-                <InputCheckbox @bind-Value="inward.IsActive" /> Active
-            </div>
-
-            <hr />
-
-            <h5>Inward Items</h5>
-            <div class="mb-3">
-                <button type="button" class="btn btn-success btn-sm" @onclick="AddInwardItem">
-                    Add Item
-                </button>
-            </div>
-
-            @if (inwardItems.Any())
-            {
-                <div class="table-responsive">
-                    <table class="table table-bordered table-sm align-middle">
-                        <thead>
-                            <tr>
-                                <th>Product</th>
-                                <th>Quantity</th>
-                                <th>Unit</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @for (int i = 0; i < inwardItems.Count; i++)
-                            {
-                                var index = i;
-                                var item = inwardItems[index];
-                                <tr>
-                                    <td>
-                                        <InputSelect class="form-select form-select-sm" @bind-Value="item.ProductId">
-                                            <option value="0">-- Select Product --</option>
-                                            @foreach (var product in filteredProducts)
-                                            {
-                                                <option value="@product.Id">@product.Name (@product.SKU)</option>
-                                            }
-                                        </InputSelect>
-                                    </td>
-                                    <td>
-                                        <InputNumber class="form-control form-control-sm" @bind-Value="item.Quantity" />
-                                    </td>
-                                    <td>
-                                        <InputText class="form-control form-control-sm" @bind-Value="item.Unit" />
-                                    </td>
-                                    <td>
-                                        <button type="button" class="btn btn-danger btn-sm"
-                                                @onclick="@(() => RemoveInwardItem(index))">
-                                            Remove
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                <!-- Fixed Footer -->
+                <div class="modal-footer-section">
+                    <button type="button" class="btn btn-secondary me-2" @onclick="HideModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
                 </div>
-            }
-
-            <div class="text-end mt-3">
-                <button type="button" class="btn btn-secondary" @onclick="HideModal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save</button>
             </div>
         </EditForm>
     </BodyTemplate>
@@ -255,7 +269,7 @@
 
     private async Task ShowEditModal(InwardModel edit)
     {
-        modalTitle = "Edit Inward";
+        modalTitle = $"Edit Inward {edit.InwardNo}";
         isEditMode = true;
         inward = edit;
         inward.InwardTime = inward.InwardDate.TimeOfDay;
@@ -319,3 +333,217 @@
         await modal.HideAsync();
     }
 }
+
+<style>
+    /* ✅ Desktop Layout - Separate Scroll Areas */
+    .modal-content-custom {
+        display: flex;
+        flex-direction: column;
+        height: 80vh;
+        max-height: 90vh;
+        overflow: hidden;
+    }
+
+    .modal-header-section {
+        flex-shrink: 0;
+        overflow: visible;
+        padding: 15px;
+        background: #fff;
+    }
+
+    .modal-body-section {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 0 15px 15px 15px;
+        min-height: 250px;
+    }
+
+    .modal-footer-section {
+        flex-shrink: 0;
+        padding: 15px;
+        border-top: 1px solid #dee2e6;
+        background: #fff;
+        text-align: right;
+    }
+
+    /* ✅ Desktop Scrollbar */
+    .modal-body-section::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .modal-body-section::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .modal-body-section::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 10px;
+    }
+
+        .modal-body-section::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+    /* ✅ Mobile Layout - Single Scrollbar for Entire Modal */
+    @@media (max-width: 768px) {
+        .no-md-width {
+            flex: 0 0 auto !important;
+            width: 50% !important;
+        }
+        .modal-content-custom {
+            height: 95vh;
+            max-height: 95vh;
+            overflow-y: auto; /* Single scrollbar for entire modal */
+            display: block; /* Change from flex to block for proper scrolling */
+        }
+
+        .modal-header-section {
+            padding: 12px;
+            position: relative;
+        }
+
+        .modal-body-section {
+            padding: 0 12px 12px 12px;
+            overflow: visible; /* Remove individual scrolling */
+            min-height: auto;
+            flex-grow: 0;
+        }
+
+        .modal-footer-section {
+            padding: 12px;
+            position: relative; /* Remove sticky positioning */
+            bottom: auto;
+            z-index: auto;
+        }
+        /* Mobile scrollbar styling */
+        .modal-content-custom::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .modal-content-custom::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .modal-content-custom::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+
+            .modal-content-custom::-webkit-scrollbar-thumb:hover {
+                background: #a8a8a8;
+            }
+
+        .table-responsive {
+            font-size: 13px;
+        }
+
+        .btn-sm {
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+        /* Ensure form controls are properly sized on mobile */
+        .form-control, .form-select {
+            font-size: 14px;
+        }
+        /* Make table more compact on mobile */
+        .table > :not(caption) > * > * {
+            padding: 0.4rem 0.3rem;
+        }
+        /* Ensure table is scrollable horizontally if needed */
+        .table-responsive {
+            overflow-x: auto;
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .modal-content-custom {
+            height: 98vh;
+            max-height: 98vh;
+        }
+
+        .modal-header-section .row > div {
+            margin-bottom: 8px;
+        }
+
+        .modal-header-section {
+            padding: 10px;
+        }
+
+        .modal-body-section {
+            padding: 0 10px 10px 10px;
+        }
+
+        .modal-footer-section {
+            padding: 10px;
+        }
+            /* Stack buttons on very small screens */
+            .modal-footer-section .btn {
+                width: 100%;
+                margin-bottom: 8px;
+            }
+
+            .modal-footer-section .me-2 {
+                margin-right: 0 !important;
+            }
+        /* Ensure table cells don't break layout */
+        .table {
+            min-width: 400px;
+        }
+        /* Adjust header spacing */
+        h5 {
+            font-size: 1.1rem;
+        }
+    }
+
+    @@media (max-width: 400px) {
+        .modal-content-custom {
+            height: 100vh;
+            max-height: 100vh;
+        }
+        /* Adjust table for very small screens */
+        .table {
+            min-width: 350px;
+        }
+    }
+
+    /* ✅ Custom Checkbox */
+    .custom-checkbox-wrapper {
+        display: inline-block;
+    }
+
+    .custom-checkbox {
+        display: none;
+    }
+
+        .custom-checkbox + label {
+            display: inline-block;
+            width: 25px;
+            height: 25px;
+            border: 2px solid #ccc;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            position: relative;
+            cursor: pointer;
+            vertical-align: middle;
+            transition: all 0.2s ease;
+        }
+
+        .custom-checkbox:checked + label::after {
+            content: '';
+            position: absolute;
+            left: 7px;
+            top: 2px;
+            width: 10px;
+            height: 15px;
+            border: solid green;
+            border-width: 0 3px 3px 0;
+            transform: rotate(45deg);
+        }
+
+        .custom-checkbox + label:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            border-color: #999;
+        }
+</style>
