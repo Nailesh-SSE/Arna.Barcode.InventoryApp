@@ -1,4 +1,4 @@
-@* @page "/outward"
+@page "/outward"
 @inject IOutwardService OutwardService
 @inject ICompanyService CompanyService
 @inject IInwardService InwardService
@@ -25,36 +25,38 @@
     }
     else
     {
-        <Grid TItem="Core.Entities.Outward"
+        <Grid TItem="OutwardModel"
               Class="table table-hover table-bordered table-striped"
-              DataProvider="OutwardsDataProvider"
-              AllowFiltering="true"
+              Data="outwards"
               AllowPaging="true"
               PageSize="10"
               AllowSorting="true"
               Responsive="true">
 
-            <GridColumn TItem="Core.Entities.Outward" HeaderText="ID" PropertyName="Id">
+            <GridColumn TItem="OutwardModel" HeaderText="ID" PropertyName="Id">
                 @context.Id
             </GridColumn>
 
-            <GridColumn TItem="Core.Entities.Outward" HeaderText="Outward No" PropertyName="OutwardNo">
+            <GridColumn TItem="OutwardModel" HeaderText="Outward No" PropertyName="OutwardNo">
                 @context.OutwardNo
             </GridColumn>
 
-            <GridColumn TItem="Core.Entities.Outward" HeaderText="Outward Date" PropertyName="OutwardDate">
+            <GridColumn TItem="OutwardModel" HeaderText="Outward Date" PropertyName="OutwardDate">
                 @context.OutwardDate.ToString("dd/MM/yyyy")
             </GridColumn>
 
-            <GridColumn TItem="Core.Entities.Outward" HeaderText="Bill To Company" PropertyName="BillToCompanyId">
-                @(context.BillToCompany?.Name ?? "N/A")
+            <GridColumn TItem="OutwardModel" HeaderText="Bill To Company" PropertyName="BillToCompanyId">
+                @(billCompanies.FirstOrDefault(c => c.Id == context.BillToCompanyId)?.Name ?? "N/A")
             </GridColumn>
 
-            <GridColumn TItem="Core.Entities.Outward" HeaderText="Invoice No" PropertyName="InvoiceNo">
+            <GridColumn TItem="OutwardModel" HeaderText="Invoice No" PropertyName="InvoiceNo">
                 @context.InvoiceNo
             </GridColumn>
+            <GridColumn TItem="OutwardModel" HeaderText="Challan No" PropertyName="ChallanNo">
+                @context.ChallanNo
+            </GridColumn>
 
-            <GridColumn TItem="Core.Entities.Outward" HeaderText="Status" PropertyName="IsActive">
+            <GridColumn TItem="OutwardModel" HeaderText="Status" PropertyName="IsActive">
                 @if (context.IsActive)
                 {
                     <Badge Color="BadgeColor.Success">Active</Badge>
@@ -65,13 +67,13 @@
                 }
             </GridColumn>
 
-            <GridColumn TItem="Core.Entities.Outward" HeaderText="Actions">
+            <GridColumn TItem="OutwardModel" HeaderText="Actions">
                 <Button Color="ButtonColor.Info" Size="ButtonSize.Small" @onclick="() => ViewDetails(context.Id)">
                     <Icon Name="IconName.Eye" /> View
                 </Button>
-                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+               <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                     <Icon Name="IconName.PencilSquare" /> Edit
-                </Button>
+                </Button> 
                 <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteOutward(context.Id)">
                     <Icon Name="IconName.Trash" /> Delete
                 </Button>
@@ -82,7 +84,7 @@
 
 <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.ExtraLarge">
     <BodyTemplate>
-        <EditForm Model="outward" OnValidSubmit="SaveOutward">
+        <EditForm EditContext="@editContext" OnValidSubmit="SaveOutward">
             <DataAnnotationsValidator />
             
             <div class="row">
@@ -183,7 +185,7 @@
                         </tbody>
                     </table>
                 </div>
-            }
+            } 
 
             <div class="text-end mt-3">
                 <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
@@ -196,49 +198,52 @@
 
 @code {
     private Modal modal = default!;
-    private List<Core.Entities.Outward> outwards = new();
-    private List<Company> billCompanies = new();
-    private Core.Entities.Outward outward = new();
+    private List<OutwardModel> outwards = new();
+    private List<CompanyModel> billCompanies = new();
+    private OutwardModel outward = new();
     private List<Core.Entities.OutwardDetail> outwardDetails = new();
+    private List<int> selectedBarcodeItemIds = new();
+
     private bool isLoading = true;
     private string modalTitle = "Add Outward";
     private bool isEditMode = false;
+    private EditContext editContext;
+    private ValidationMessageStore messageStore;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
     }
-
+    private void InitializeEditContext()
+    {
+        editContext = new EditContext(outward);
+        messageStore = new ValidationMessageStore(editContext);
+    }
     private async Task LoadData()
     {
         isLoading = true;
-        outwards = (await OutwardService.GetAllAsync()).ToList();
+        outwards = (await OutwardService.GetAllOutwardsAsync()).ToList();
         billCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
+        // outwardDetails=
+        InitializeEditContext();
         isLoading = false;
-    }
-
-    private async Task<GridDataProviderResult<Core.Entities.Outward>> OutwardsDataProvider(GridDataProviderRequest<Core.Entities.Outward> request)
-    {
-        if (outwards == null || !outwards.Any())
-            return await Task.FromResult(new GridDataProviderResult<Core.Entities.Outward> { Data = new List<Outward>(), TotalCount = 0 });
-
-        return await Task.FromResult(new GridDataProviderResult<Core.Entities.Outward> { Data = outwards, TotalCount = outwards.Count });
     }
 
     private void ShowAddModal()
     {
         modalTitle = "Add Outward";
         isEditMode = false;
-        outward = new Core.Entities.Outward { OutwardDate = DateTime.Now, IsActive = true };
+        outward = new OutwardModel { OutwardDate = DateTime.Now, IsActive = true };
         outwardDetails = new List<OutwardDetail>();
+        InitializeEditContext();
         modal.ShowAsync();
     }
 
-    private async Task ShowEditModal(Outward editOutward)
+    private async Task ShowEditModal(OutwardModel editOutward)
     {
         modalTitle = "Edit Outward";
         isEditMode = true;
-        outward = new Core.Entities.Outward
+        outward = new OutwardModel
         {
             Id = editOutward.Id,
             OutwardNo = editOutward.OutwardNo,
@@ -250,7 +255,7 @@
             Remarks = editOutward.Remarks,
             IsActive = editOutward.IsActive
         };
-        
+        InitializeEditContext();
         var details = await OutwardService.GetOutwardDetailsByOutwardIdAsync(editOutward.Id);
         outwardDetails = details.ToList();
         
@@ -271,23 +276,22 @@
     {
         try
         {
-            if (!outwardDetails.Any())
-            {
-                // Toast notification removed
-                return;
-            }
+            if (!editContext.Validate()) return;
+            // outward.OutwardDetails = outwardDetails;
+            // if (!outwardDetails.Any())
+            // {
+            //     Toast notification removed
+            //     return;
+            // }
 
-            outward.OutwardDetails = outwardDetails;
 
             if (isEditMode)
             {
-                await OutwardService.UpdateAsync(outward);
-                // Toast notification removed
+                await OutwardService.UpdateOutwardAsync(outward);
             }
             else
             {
-                await OutwardService.AddAsync(outward);
-                // Toast notification removed
+                await OutwardService.CreateOutwardAsync(outward, selectedBarcodeItemIds);
             }
 
             await HideModal();
@@ -303,7 +307,7 @@
     {
         try
         {
-            await OutwardService.DeleteAsync(id);
+            await OutwardService.DeleteOutwardAsync(id);
             // Toast notification removed
             await LoadData();
         }
@@ -323,4 +327,4 @@
         await modal.HideAsync();
     }
 
-} *@
+}

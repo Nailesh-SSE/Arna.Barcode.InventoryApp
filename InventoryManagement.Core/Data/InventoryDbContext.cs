@@ -108,7 +108,7 @@ public class InventoryDbContext : DbContext
         modelBuilder.Entity<OutwardDetail>()
             .HasOne(od => od.InwardBarcodeItem)
             .WithMany(ibi => ibi.OutwardDetails)
-            .HasForeignKey(od => od.InwardBarcodeItemId)
+            .HasForeignKey(od => od.InwardItemId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<SaleReturn>()
