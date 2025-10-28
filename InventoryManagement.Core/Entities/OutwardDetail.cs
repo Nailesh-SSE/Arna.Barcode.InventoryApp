@@ -11,7 +11,8 @@ public class OutwardDetail : Common
     public int OutwardId { get; set; }
 
     [Required]
-    public int InwardBarcodeItemId { get; set; }
+    public int InwardItemId { get; set; }
+    public int ProductId { get; set; }
 
     [Required(ErrorMessage = "Barcode number is required")]
     [StringLength(100)]
@@ -23,6 +24,8 @@ public class OutwardDetail : Common
     [Required]
     [StringLength(20)]
     public string Unit { get; set; } = "PCS";
+    [StringLength(100)]
+    public string Remark { get; set; }
 
     public virtual Outward Outward { get; set; } = null!;
     public virtual InwardBarcodeItem InwardBarcodeItem { get; set; } = null!;

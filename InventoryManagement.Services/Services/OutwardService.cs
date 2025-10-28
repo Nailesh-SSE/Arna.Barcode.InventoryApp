@@ -1,6 +1,7 @@
 using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
+using InventoryManagement.Services.Models;
 
 namespace InventoryManagement.Services;
 
@@ -13,26 +14,67 @@ public class OutwardService : IOutwardService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<IEnumerable<Outward>> GetAllOutwardsAsync()
+    public async Task<List<OutwardModel>> GetAllOutwardsAsync()
     {
         var outwardRepository = _unitOfWork.GetRepository<Outward>();
-        return await outwardRepository.FindAsync(o => !o.IsDeleted);
+        var outwards= await outwardRepository.FindAsync(o => !o.IsDeleted);
+
+        return outwards.Select(i => new OutwardModel
+        {
+            Id = i.Id,
+            OutwardNo = i.OutwardNo,
+            OutwardDate = i.OutwardDate,
+            BillToCompanyId = i.BillToCompanyId,
+            InvoiceDate=i.InvoiceDate,
+            InvoiceNo=i.InvoiceNo,
+            ChallanNo=i.ChallanNo,
+            Remarks = i.Remarks,
+            IsActive = i.IsActive
+        }).ToList();
     }
 
-    public async Task<Outward?> GetOutwardByIdAsync(int id)
+    public async Task<OutwardModel?> GetOutwardByIdAsync(int id)
     {
         var outwardRepository = _unitOfWork.GetRepository<Outward>();
-        return await outwardRepository.GetByIdAsync(id);
+        var outward = await outwardRepository.GetByIdAsync(id);
+        if (outward == null) return null;
+
+        var model = new OutwardModel
+        {
+            Id = outward.Id,
+            OutwardNo = outward.OutwardNo,
+            OutwardDate = outward.OutwardDate,
+            BillToCompanyId = outward.BillToCompanyId,
+            Remarks = outward.Remarks,
+            IsActive = outward.IsActive,
+            InvoiceDate = outward.InvoiceDate,
+            InvoiceNo = outward.InvoiceNo,
+            ChallanNo = outward.ChallanNo,
+        };
+        return model;
     }
 
-    public async Task<bool> CreateOutwardAsync(Outward outward, List<int> barcodeItemIds)
+    public async Task<bool> CreateOutwardAsync(OutwardModel outward, List<int> barcodeItemIds)
     {
         try
         {
             await _unitOfWork.BeginTransactionAsync();
 
             var outwardRepository = _unitOfWork.GetRepository<Outward>();
-            await outwardRepository.AddAsync(outward);
+
+            var newOutward = new Outward
+            {
+                OutwardNo = outward.OutwardNo,
+                OutwardDate = outward.OutwardDate,
+                BillToCompanyId = outward.BillToCompanyId,
+                Remarks = outward.Remarks,
+                InvoiceDate = outward.InvoiceDate,
+                InvoiceNo = outward.InvoiceNo,
+                ChallanNo = outward.ChallanNo,
+                IsActive = true,
+                IsDeleted = false
+            };
+            await outwardRepository.AddAsync(newOutward);
             await _unitOfWork.SaveChangesAsync();
 
             var inwardBarcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
@@ -51,7 +93,7 @@ public class OutwardService : IOutwardService
                 var outwardDetail = new OutwardDetail
                 {
                     OutwardId = outward.Id,
-                    InwardBarcodeItemId = barcodeItemId,
+                    InwardItemId = barcodeItemId,
                     BarcodeNo = barcodeItem.BarcodeNo,
                    //TransactionDate = outward.TransactionDate
                 };
@@ -73,12 +115,25 @@ public class OutwardService : IOutwardService
         }
     }
 
-    public async Task<bool> UpdateOutwardAsync(Outward outward)
+    public async Task<bool> UpdateOutwardAsync(OutwardModel outward)
     {
         try
         {
             var outwardRepository = _unitOfWork.GetRepository<Outward>();
-            outwardRepository.Update(outward);
+            var existingoutword = await outwardRepository.GetByIdAsync(outward.Id);
+
+            if (existingoutword == null) return false;
+
+            existingoutword.OutwardNo = outward.OutwardNo;
+            existingoutword.OutwardDate = outward.OutwardDate;
+            existingoutword.BillToCompanyId = outward.BillToCompanyId;
+            existingoutword.Remarks = outward.Remarks;
+            existingoutword.InvoiceDate = outward.InvoiceDate;
+            existingoutword.InvoiceNo = outward.InvoiceNo;
+            existingoutword.ChallanNo = outward.ChallanNo;
+            existingoutword.IsActive = outward.IsActive;
+            existingoutword.IsDeleted = !outward.IsActive;
+            outwardRepository.Update(existingoutword);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }

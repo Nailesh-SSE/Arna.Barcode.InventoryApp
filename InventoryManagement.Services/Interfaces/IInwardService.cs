@@ -11,4 +11,7 @@ public interface IInwardService
     Task<bool> DeleteAsync(int id);
 
     Task<List<InwardItemModel>> GetInwardItemsByInwardIdAsync(int inwardId);
+    Task<bool> CreateInwardItemAsync(InwardItemModel model);
+    Task<bool> UpdateInwardItemAsync(InwardItemModel model);
+    Task<bool> DeleteInwardItemAsync(int id);
 }

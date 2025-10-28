@@ -1,0 +1,215 @@
+﻿@page "/inward"
+@inject IInwardService InwardService
+@inject ICompanyService CompanyService
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+
+<PageTitle>Inward Management</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3>Inward Management</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowAddModal">
+                Add New Inward
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border"></div>
+        </div>
+    }
+    else
+    {
+        <InwardTable Inwards="inwards"
+                     ShipCompanies="shipCompanies"
+                     OnEdit="ShowEditModal"
+                     OnDelete="DeleteInward"
+                     OnAddItems="OpenAddItemModal" />
+    }
+</div>
+
+<InwardFormModal @ref="inwardFormModal"
+                 Title="@modalTitle"
+                 Inward="inward"
+                 ShipCompanies="shipCompanies"
+                 Categories="categories"
+                 Products="products"
+                 OnSave="SaveInward"
+                 OnCancel="HideModal" />
+
+<InwardItemsModal @ref="itemsModal"
+                  SelectedInward="selectedInward"
+                  InwardItems="inwardItems"
+                  FilteredProducts="filteredProducts"
+                  OnSave="SaveInwardItems"
+                  OnSaveItem="SaveSingleItem"
+                  OnDeleteItem="DeleteSingleItem"
+                  OnAddItem="AddNewItemRow"
+                  OnRemoveUnsaved="RemoveUnsavedItem"
+                  OnClose="HideItemModal" />
+
+@code {
+    private List<InwardModel> inwards = new();
+    private List<CompanyModel> shipCompanies = new();
+    private List<ProductModel> products = new();
+    private List<ProductModel> filteredProducts = new();
+    private List<CategoryModel> categories = new();
+    private InwardModel inward = new();
+    private List<InwardItemModel> inwardItems = new();
+    private bool isLoading = true;
+    private string modalTitle = "Add Inward";
+    private bool isEditMode = false;
+    private InwardFormModal inwardFormModal;
+    private InwardItemsModal itemsModal;
+    private InwardModel? selectedInward;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        inwards = (await InwardService.GetAllAsync()).ToList();
+        shipCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
+        categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
+        products = (await ProductService.GetAllProductsAsync()).ToList();
+        filteredProducts = products;
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void ShowAddModal()
+    {
+        modalTitle = "Add Inward";
+        isEditMode = false;
+        inward = new InwardModel
+        {
+            InwardDate = DateTime.Now,
+            InwardTime = DateTime.Now.TimeOfDay,
+            IsActive = true
+        };
+        inwardItems = new();
+        filteredProducts = products;
+        inwardFormModal.Show();
+    }
+
+    private async Task ShowEditModal(InwardModel edit)
+    {
+        modalTitle = $"Edit Inward {edit.InwardNo}";
+        isEditMode = true;
+        inward = edit;
+        inward.InwardTime = inward.InwardDate.TimeOfDay;
+        inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(edit.Id);
+        filteredProducts = products;
+        inwardFormModal.Show();
+    }
+
+    private async Task SaveInward()
+    {
+        inward.InwardDate = inward.InwardDate.Date.Add(inward.InwardTime);
+        inward.InwardItems = inwardItems;
+
+        if (isEditMode)
+            await InwardService.UpdateAsync(inward);
+        else
+            await InwardService.CreateAsync(inward);
+
+        await HideModal();
+        await LoadData();
+    }
+
+    private async Task DeleteInward(int id)
+    {
+        await InwardService.DeleteAsync(id);
+        await LoadData();
+    }
+
+    private async Task HideModal()
+    {
+        await inwardFormModal.Hide();
+    }
+
+    private async Task OpenAddItemModal(int inwardId)
+    {
+        selectedInward = inwards.FirstOrDefault(i => i.Id == inwardId);
+        if (selectedInward == null) return;
+
+        inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(inwardId);
+        filteredProducts = products;
+        await itemsModal.Show();
+    }
+
+    private async Task HideItemModal()
+    {
+        await itemsModal.Hide();
+    }
+
+    private async Task SaveInwardItems()
+    {
+        if (selectedInward == null) return;
+
+        selectedInward.InwardItems = inwardItems;
+        await InwardService.UpdateAsync(selectedInward);
+        await HideItemModal();
+        await LoadData();
+    }
+
+    private void AddNewItemRow()
+    {
+        var hasBlankRow = inwardItems.Any(item => item.Id == 0 && (item.ProductId == 0 || item.Quantity == 0));
+
+        if (hasBlankRow)
+        {
+            return;
+        }
+
+        inwardItems.Add(new InwardItemModel { Unit = "PCS" });
+        StateHasChanged();
+    }
+
+    private async Task SaveSingleItem(InwardItemModel item)
+    {
+        if (selectedInward == null) return;
+
+        item.InwardId = selectedInward.Id;
+
+        bool success = item.Id == 0
+            ? await InwardService.CreateInwardItemAsync(item)
+            : await InwardService.UpdateInwardItemAsync(item);
+
+        if (success)
+        {
+            inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(selectedInward.Id);
+            StateHasChanged();
+        }
+        else
+        {
+            throw new Exception("Failed to save item");
+        }
+    }
+
+    private void RemoveUnsavedItem(InwardItemModel item)
+    {
+        inwardItems.Remove(item);
+        StateHasChanged();
+    }
+    private async Task DeleteSingleItem(int itemId)
+    {
+        if (await InwardService.DeleteInwardItemAsync(itemId))
+        {
+            inwardItems = inwardItems.Where(i => i.Id != itemId).ToList();
+            StateHasChanged();
+        }
+    }
+}

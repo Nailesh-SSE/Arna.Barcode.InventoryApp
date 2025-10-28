@@ -1,13 +1,14 @@
 using InventoryManagement.Core.Entities;
+using InventoryManagement.Services.Models;
 
 namespace InventoryManagement.Services.Interfaces;
 
 public interface IOutwardService
 {
-    Task<IEnumerable<Outward>> GetAllOutwardsAsync();
-    Task<Outward?> GetOutwardByIdAsync(int id);
-    Task<bool> CreateOutwardAsync(Outward outward, List<int> barcodeItemIds);
-    Task<bool> UpdateOutwardAsync(Outward outward);
+    Task<List<OutwardModel>> GetAllOutwardsAsync();
+    Task<OutwardModel?> GetOutwardByIdAsync(int id);
+    Task<bool> CreateOutwardAsync(OutwardModel outward, List<int> barcodeItemIds);
+    Task<bool> UpdateOutwardAsync(OutwardModel outward);
     Task<bool> DeleteOutwardAsync(int id);
     Task<IEnumerable<InwardBarcodeItem>> GetAvailableBarcodeItemsAsync();
     Task<bool> IsBarcodeAvailableAsync(string barcodeNo);
