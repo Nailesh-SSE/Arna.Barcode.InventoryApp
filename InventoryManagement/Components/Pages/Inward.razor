@@ -60,6 +60,7 @@
                                 <div class="d-flex gap-1 flex-wrap">
                                     <button class="btn btn-warning btn-sm" @onclick="@(() => ShowEditModal(context))">Edit</button>
                                     <button class="btn btn-danger btn-sm" @onclick="@(() => DeleteInward(context.Id))">Delete</button>
+                                    <button class="btn btn-success btn-sm" @onclick="@(() => ShowAddItemModal(context))"> Add Item</button>
                                 </div>
                             </td>
                         </tr>
@@ -136,76 +137,87 @@
                     </div>
                 </div>
 
-                <hr />
-
-                <!-- Scrollable Product Table -->
-                <div class="modal-body-section">
-                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap">
-                        <h5 class="mb-0">Inward Items</h5>
-                        <button type="button" class="btn btn-success btn-sm" @onclick="AddInwardItem">Add Item</button>
-                    </div>
-
-                    @if (inwardItems.Any())
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-sm align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Product</th>
-                                        <th>Quantity</th>
-                                        <th>Unit</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @for (int i = 0; i < inwardItems.Count; i++)
-                                    {
-                                        var index = i;
-                                        var item = inwardItems[index];
-                                        <tr>
-                                            <td>
-                                                <InputSelect class="form-select form-select-sm" @bind-Value="item.ProductId">
-                                                    <option value="0">-- Select Product --</option>
-                                                    @foreach (var product in filteredProducts)
-                                                    {
-                                                        <option value="@product.Id">@product.Name (@product.SKU)</option>
-                                                    }
-                                                </InputSelect>
-                                            </td>
-                                            <td>
-                                                <InputNumber class="form-control form-control-sm" @bind-Value="item.Quantity" />
-                                            </td>
-                                            <td>
-                                                <InputText class="form-control form-control-sm" @bind-Value="item.Unit" />
-                                            </td>
-                                            <td>
-                                                <button type="button" class="btn btn-danger btn-sm"
-                                                        @onclick="@(() => RemoveInwardItem(index))">
-                                                    Remove
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-3 text-muted">
-                            No items added yet. Click "Add Item" to get started.
-                        </div>
-                    }
-                </div>
-
+ 
                 <!-- Fixed Footer -->
                 <div class="modal-footer-section">
                     <button type="button" class="btn btn-secondary me-2" @onclick="HideModal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save</button>
+               
                 </div>
             </div>
         </EditForm>
     </BodyTemplate>
+</Modal>
+
+<Modal @ref="AdditemModal" Title="@modalTitle" Size="ModalSize.Large">
+  <BodyTemplate>
+        <EditForm EditContext="@editItemContext" OnValidSubmit="AddInwardItem">
+            <DataAnnotationsValidator />
+
+            <!-- Scrollable Product Table -->
+            <div class="modal-body-section">
+                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap">
+                    <h5 class="mb-0">Inward Items</h5>
+                    <button type="button" class="btn btn-success btn-sm" @onclick="AddInwardItem">Add Item</button>
+                </div>
+
+                @if (inwardItems.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                   
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < inwardItems.Count; i++)
+                                {
+                                    var index = i;
+                                    var item = inwardItems[index];
+                                    <tr>
+                                        <td>
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="item.ProductId">
+                                                <option value="0">-- Select Product --</option>
+                                                @foreach (var product in filteredProducts)
+                                                {
+                                                    <option value="@product.Id">@product.Name (@product.SKU) - @product.Unit</option>
+                                                }
+                                            </InputSelect>
+                                        </td>
+                                        <td>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="item.Quantity" />
+                                        </td>
+                                        @* <td>
+                                            <InputText class="form-control form-control-sm" @bind-Value="item.Unit" />
+                                        </td> *@
+                                        <td>
+                                            <button type="button" class="btn btn-primary btn sm" @onclick="@(() => SaveInwardItem(item))">
+                                                Save
+                                            </button>
+                                            <button type="button" class="btn btn-danger btn-sm"
+                                                    @onclick="@(() => RemoveInwardItem(index))">
+                                                Remove
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-3 text-muted">
+                        No items added yet. Click "Add Item" to get started.
+                    </div>
+                }
+            </div>
+        </EditForm>
+  </BodyTemplate>
 </Modal>
 
 @code {
@@ -221,7 +233,9 @@
     private bool isEditMode = false;
     private string? selectedCategoryId;
     private Modal modal;
+    private Modal AdditemModal;
     private EditContext editContext;
+    private EditContext editItemContext;
     private ValidationMessageStore validationMessage;
 
     protected override async Task OnInitializedAsync()
@@ -247,6 +261,7 @@
     private void InitializeEditContext()
     {
         editContext = new EditContext(inward);
+        editItemContext = new EditContext(inwardItems);
         validationMessage = new ValidationMessageStore(editContext);
     }
 
@@ -265,6 +280,27 @@
         filteredProducts = products;
         InitializeEditContext();
         modal.ShowAsync();
+    }
+    private async Task ShowAddItemModal(InwardModel item)
+    {
+        modalTitle = "Add Item";   
+        inward= item;  
+        inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(item.Id);
+        InitializeEditContext();
+        await AdditemModal.ShowAsync();
+    }
+    
+    private async Task SaveInwardItem(InwardItemModel item)
+    {
+        item.InwardId = inward.Id;
+        inwardItems.Add(new InwardItemModel { Unit = "PCS" });
+
+        inward.InwardItems = inwardItems;
+      
+       // await ValidateIsProductSelected();
+        await InwardService.UpdateAsync(inward);
+        StateHasChanged();
+      
     }
 
     private async Task ShowEditModal(InwardModel edit)
@@ -296,12 +332,53 @@
             inward.InwardTime = time;
     }
 
+    
     private void AddInwardItem()
     {
-        inwardItems.Add(new InwardItemModel { Unit = "PCS" });
-        StateHasChanged();
-    }
+        if (inwardItems.Any())
+        {
+           // var LastItem = inwardItems.Last();
+            if (ValidateAllItems())
+            {             
+               inwardItems.Add(new InwardItemModel { Unit = "PCS" });
+                
+            }
+        }
+        else
+        {
+            inwardItems.Add(new InwardItemModel { Unit = "PCS" });
+            StateHasChanged();
 
+        }
+    }
+    private bool ValidateAllItems()
+    {
+        validationMessage.Clear();
+        bool isValid = true;
+
+        foreach (var item in inwardItems)
+        {
+            if (item.ProductId == 0)
+            {
+                validationMessage.Add(() => item.ProductId, "Product selection is required");
+                isValid = false;
+            }
+        }
+
+        editContext.NotifyValidationStateChanged();
+        return isValid;
+    }
+    private async Task ValidateIsProductSelected()
+    {
+        var LastItem = inwardItems.Last();
+        validationMessage.Clear();
+        if ( LastItem.ProductId==0)
+        {
+            validationMessage.Add(() => LastItem.ProductId, "Product Selection is Required");
+            editContext.NotifyValidationStateChanged();
+        }
+        
+    }
     private void RemoveInwardItem(int index)
     {
         inwardItems.RemoveAt(index);
