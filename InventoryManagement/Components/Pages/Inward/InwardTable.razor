@@ -1,0 +1,50 @@
+﻿<div class="table-responsive">
+    <table class="table table-hover table-bordered table-striped align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>ID</th>
+                <th>Inward No</th>
+                <th>Inward Date/Time</th>
+                <th>Ship Company</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var context in Inwards)
+            {
+                <tr>
+                    <td>@context.Id</td>
+                    <td>@context.InwardNo</td>
+                    <td>@context.InwardDate.ToString("dd/MM/yyyy hh:mm tt")</td>
+                    <td>@(ShipCompanies.FirstOrDefault(c => c.Id == context.ShipMentCompanyId)?.Name ?? "N/A")</td>
+                    <td>
+                        @if (context.IsActive)
+                        {
+                            <span class="badge bg-success">Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">Inactive</span>
+                        }
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1 flex-wrap">
+                            <button class="btn btn-success btn-sm" @onclick="@(() => OnAddItems.InvokeAsync(context.Id))">Add Items</button>
+                            <button class="btn btn-warning btn-sm" @onclick="@(() => OnEdit.InvokeAsync(context))">Edit</button>
+                            <button class="btn btn-danger btn-sm" @onclick="@(() => OnDelete.InvokeAsync(context.Id))">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public List<InwardModel> Inwards { get; set; } = new();
+    [Parameter] public List<CompanyModel> ShipCompanies { get; set; } = new();
+    [Parameter] public EventCallback<InwardModel> OnEdit { get; set; }
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+    [Parameter] public EventCallback<int> OnAddItems { get; set; }
+}
