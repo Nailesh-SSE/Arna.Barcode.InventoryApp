@@ -49,13 +49,6 @@
                 @(billCompanies.FirstOrDefault(c => c.Id == context.BillToCompanyId)?.Name ?? "N/A")
             </GridColumn>
 
-            <GridColumn TItem="OutwardModel" HeaderText="Invoice No" PropertyName="InvoiceNo">
-                @context.InvoiceNo
-            </GridColumn>
-            <GridColumn TItem="OutwardModel" HeaderText="Challan No" PropertyName="ChallanNo">
-                @context.ChallanNo
-            </GridColumn>
-
             <GridColumn TItem="OutwardModel" HeaderText="Status" PropertyName="IsActive">
                 @if (context.IsActive)
                 {
@@ -68,8 +61,11 @@
             </GridColumn>
 
             <GridColumn TItem="OutwardModel" HeaderText="Actions">
-                <Button Color="ButtonColor.Info" Size="ButtonSize.Small" @onclick="() => ViewDetails(context.Id)">
+                @* <Button Color="ButtonColor.Info" Size="ButtonSize.Small" @onclick="() => ViewDetails(context.Id)">
                     <Icon Name="IconName.Eye" /> View
+                </Button> *@
+                <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
+                    <Icon Name="IconName.PlusCircle" /> Add Items
                 </Button>
                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                     <Icon Name="IconName.PencilSquare" /> Edit
@@ -88,11 +84,11 @@
             <DataAnnotationsValidator />
             
             <div class="row">
-                <div class="col-md-4 mb-3">
+                @* <div class="col-md-4 mb-3">
                     <label class="form-label">Outward No <span class="text-danger">*</span></label>
                     <InputText class="form-control" @bind-Value="outward.OutwardNo" />
                     <ValidationMessage For="@(() => outward.OutwardNo)" />
-                </div>
+                </div> *@
 
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Outward Date <span class="text-danger">*</span></label>
@@ -102,7 +98,7 @@
 
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
-                    <InputSelect class="form-select" @bind-Value="outward.BillToCompanyId">
+                    <InputSelect class="form-select" @bind-Value="outward.BillToCompanyId" @oninput="(e) => HandleBillToCompanyChangeAsync(Convert.ToInt32(e.Value))">
                         <option value="0">-- Select Company --</option>
                         @foreach (var company in billCompanies)
                         {
@@ -110,23 +106,6 @@
                         }
                     </InputSelect>
                     <ValidationMessage For="@(() => outward.BillToCompanyId)" />
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Invoice No</label>
-                    <InputText class="form-control" @bind-Value="outward.InvoiceNo" />
-                </div>
-
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Invoice Date</label>
-                    <InputDate class="form-control" @bind-Value="outward.InvoiceDate" />
-                </div>
-
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Challan No</label>
-                    <InputText class="form-control" @bind-Value="outward.ChallanNo" />
                 </div>
             </div>
 
@@ -139,53 +118,6 @@
                 <InputCheckbox @bind-Value="outward.IsActive" /> Active
             </div>
 
-            <hr />
-
-            <h5>Outward Items</h5>
-            <div class="mb-3">
-                <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="AddOutwardDetail">
-                    <Icon Name="IconName.Plus" /> Add Item
-                </Button>
-            </div>
-
-            @if (outwardDetails.Any())
-            {
-                <div class="table-responsive">
-                    <table class="table table-bordered table-sm">
-                        <thead>
-                            <tr>
-                                <th>Barcode No</th>
-                                <th>Quantity</th>
-                                <th>Unit</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @for (int i = 0; i < outwardDetails.Count; i++)
-                            {
-                                var index = i;
-                                var item = outwardDetails[index];
-                                <tr>
-                                    <td>
-                                        <InputText class="form-control form-control-sm" @bind-Value="item.BarcodeNo" placeholder="Enter barcode" />
-                                    </td>
-                                    <td>
-                                        <InputNumber class="form-control form-control-sm" @bind-Value="item.Quantity" />
-                                    </td>
-                                    <td>
-                                        <InputText class="form-control form-control-sm" @bind-Value="item.Unit" />
-                                    </td>
-                                    <td>
-                                        <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => RemoveOutwardDetail(index)">
-                                            <Icon Name="IconName.Trash" />
-                                        </Button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            } 
 
             <div class="text-end mt-3">
                 <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
@@ -196,6 +128,66 @@
 </Modal>
 
 
+<Modal @ref="itemModal" Title="Add Items" Size="ModalSize.Large">
+    <BodyTemplate>
+        <EditForm EditContext="@itemEditContext" OnValidSubmit="AddItemToOutward">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <label class="form-label">Barcode</label>
+                    <InputNumber class="form-control" @bind-Value="newItem.BarcodeNo" />
+                    <ValidationMessage For="@(() => newItem.BarcodeNo)" />
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">
+                        <Icon Name="IconName.Plus" /> Add
+                    </Button>
+                </div>
+            </div>
+        </EditForm>
+
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Barcode</th>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                 @if (itemList.Any())
+                {
+                    @foreach (var item in itemList)
+                    {
+                        <tr>
+                            <td>@item.BarcodeNo</td>
+                            <td>@item.ProductId</td>
+                            <td>@item.Quantity</td>
+                            <td>
+                                @* <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => RemoveItem(item)">
+                                    <Icon Name="IconName.Trash" /> Remove
+                                </Button> *@
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="4" class="text-center text-muted">No items added yet.</td></tr>
+                } 
+            </tbody>
+        </table>
+
+        <div class="text-end">
+            <Button Color="ButtonColor.Secondary" @onclick="HideItemModal">Cancel</Button>
+            <Button Color="ButtonColor.Success" @onclick="SaveOutwardItems">Save Items</Button>
+        </div>
+    </BodyTemplate>
+</Modal>
+
 @code {
     private Modal modal = default!;
     private List<OutwardModel> outwards = new();
@@ -203,6 +195,12 @@
     private OutwardModel outward = new();
     private List<Core.Entities.OutwardDetail> outwardDetails = new();
     private List<int> selectedBarcodeItemIds = new();
+
+    private Modal itemModal = default!;
+    private EditContext itemEditContext;
+    private OutwardDetailModel newItem = new();
+    private List<OutWardItem> itemList = new();
+    private int selectedOutwardIdForItems;
 
     private bool isLoading = true;
     private string modalTitle = "Add Outward";
@@ -239,6 +237,19 @@
         modal.ShowAsync();
     }
 
+    private async Task ShowItemModal(OutwardModel outward)
+    {
+        modalTitle = "Add Outward";
+        isEditMode = false;
+        selectedOutwardIdForItems = outward.Id;
+        itemList ??= (await OutwardService.GetOutwardDetailsByOutwardIdAsync(outward.Id)).ToList();
+        newItem = new OutwardDetailModel();
+        itemEditContext = new EditContext(newItem);
+        messageStore = new ValidationMessageStore(itemEditContext);
+        await itemModal.ShowAsync();
+    }
+
+
     private async Task ShowEditModal(OutwardModel editOutward)
     {
         modalTitle = "Edit Outward";
@@ -257,8 +268,8 @@
         };
         InitializeEditContext();
         var details = await OutwardService.GetOutwardDetailsByOutwardIdAsync(editOutward.Id);
-        outwardDetails = details.ToList();
-        
+        // outwardDetails = details.ToList();
+
         modal.ShowAsync();
     }
 
@@ -283,8 +294,9 @@
             //     Toast notification removed
             //     return;
             // }
-
-
+            await ValidateBillToCompany();
+            if (editContext.GetValidationMessages().Any())
+                return;
             if (isEditMode)
             {
                 await OutwardService.UpdateOutwardAsync(outward);
@@ -299,7 +311,6 @@
         }
         catch (Exception ex)
         {
-            // Toast notification removed
         }
     }
 
@@ -308,18 +319,59 @@
         try
         {
             await OutwardService.DeleteOutwardAsync(id);
-            // Toast notification removed
             await LoadData();
         }
         catch (Exception ex)
         {
-            // Toast notification removed
+        }
+    }
+    private async Task SaveOutwardItems()
+    {
+        // await OutwardService.SaveOutwardItemsAsync(selectedOutwardIdForItems, itemList);
+        await itemModal.HideAsync();
+        await LoadData();
+    }
+
+
+
+
+    private async Task AddItemToOutward()
+    {
+        try
+        {
+
+        if (newItem.BarcodeNo == "0")
+            return;
+
+        // Add the item to the list
+        itemList.Add(new OutWardItem
+        {
+            BarcodeNo = newItem.BarcodeNo,
+            ProductId = newItem.ProductId,
+            Quantity = newItem.Quantity > 0 ? newItem.Quantity : 1,
+            Unit = "PCS",
+            OutwardId = selectedOutwardIdForItems
+        });
+
+        // Reset input form
+        newItem = new OutwardDetailModel();
+        itemEditContext = new EditContext(newItem);
+
+        // Trigger re-render
+        StateHasChanged();
+        }
+        catch(Exception ex)
+        {
+            
         }
     }
 
+    private async Task HideItemModal()
+    {
+        await itemModal.HideAsync();
+    }
     private void ViewDetails(int id)
     {
-        // Toast notification removed
     }
 
     private async Task HideModal()
@@ -327,4 +379,19 @@
         await modal.HideAsync();
     }
 
+    private async Task ValidateBillToCompany()
+    {
+        messageStore.Clear(() => outward.BillToCompanyId);
+        if (outward.BillToCompanyId == 0)
+        {
+            messageStore.Add(() => outward.BillToCompanyId, "Please select Bill To company");
+        }
+        editContext.NotifyValidationStateChanged();
+    }
+
+    private async Task HandleBillToCompanyChangeAsync(int id)
+    {
+        outward.BillToCompanyId = id;
+        ValidateBillToCompany();
+    }
 }

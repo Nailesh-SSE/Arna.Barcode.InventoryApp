@@ -61,7 +61,7 @@ public class OutwardService : IOutwardService
             await _unitOfWork.BeginTransactionAsync();
 
             var outwardRepository = _unitOfWork.GetRepository<Outward>();
-
+            await GenerateOutwardNumberAsync(outward);
             var newOutward = new Outward
             {
                 OutwardNo = outward.OutwardNo,
@@ -178,9 +178,36 @@ public class OutwardService : IOutwardService
         return barcodeItem != null && barcodeItem.IsInStock;
     }
 
-    public async Task<IEnumerable<OutwardDetail>> GetOutwardDetailsByOutwardIdAsync(int outwardId)
+    public async Task<List<OutWardItem>> GetOutwardDetailsByOutwardIdAsync(int outwardId)
     {
         var outwardDetailRepository = _unitOfWork.GetRepository<OutwardDetail>();
-        return await outwardDetailRepository.FindAsync(od => od.OutwardId == outwardId && !od.IsDeleted);
+        var outwarddetails= await outwardDetailRepository.FindAsync(od => od.OutwardId == outwardId && !od.IsDeleted);
+        if(outwarddetails == null)
+        {
+            return new List<OutWardItem>();
+        }
+        return outwarddetails.Select(o => new OutWardItem {
+            Id=o.Id,
+            OutwardId=o.OutwardId,
+            ProductId =o.ProductId,
+            BarcodeNo=o.BarcodeNo,
+            Quantity = o.Quantity,
+            Unit = o.Unit,
+        }).ToList();
+    }
+
+    public async Task GenerateOutwardNumberAsync(OutwardModel model)
+    {
+        var Repository = _unitOfWork.GetRepository<Outward>();
+        var outwards = await Repository.GetAllAsync();
+        var outward = outwards.Where(a => a.IsActive && !a.IsDeleted).OrderByDescending(a => a.Id).FirstOrDefault();
+        if (outward != null && int.TryParse(outward.OutwardNo, out int lastNumber))
+        {
+            model.OutwardNo = (lastNumber + 1).ToString();
+        }
+        else
+        {
+            model.OutwardNo = "1";
+        }
     }
 }

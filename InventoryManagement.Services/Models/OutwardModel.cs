@@ -28,7 +28,6 @@ namespace InventoryManagement.Services.Models
         public int ProductId { get; set; }
         public decimal Quantity { get; set; }
         public string? Unit { get; set; }
-        public string? BatchNo { get; set; }
         public string? BarcodeNo { get; set; }
     }
 }
