@@ -3,6 +3,8 @@
 @inject ICompanyService CompanyService
 @inject IProductService ProductService
 @inject ICategoryService CategoryService
+@using Blazored.Typeahead
+@inject IJSRuntime JS
 
 <PageTitle>Inward Management</PageTitle>
 
@@ -13,7 +15,7 @@
         </div>
         <div class="col-auto">
             <button class="btn btn-primary" @onclick="ShowAddModal">
-                Add New Inward
+              <Icon Name="IconName.Plus"/>  Add New Inward
             </button>
         </div>
     </div>
@@ -131,8 +133,12 @@
 
     private async Task DeleteInward(int id)
     {
-        await InwardService.DeleteAsync(id);
-        await LoadData();
+        bool isConfirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
+        if (isConfirm)
+        {
+            await InwardService.DeleteAsync(id);
+            await LoadData();
+        }
     }
 
     private async Task HideModal()

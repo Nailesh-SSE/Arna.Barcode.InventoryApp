@@ -1,47 +1,59 @@
 ﻿<div class="table-responsive">
-    <table class="table table-hover table-bordered table-striped align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>ID</th>
-                <th>Inward No</th>
-                <th>Inward Date/Time</th>
-                <th>Ship Company</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var context in Inwards)
+    <Grid TItem="InwardModel"
+          Class="table table-hover table-bordered table-striped"
+          Data="Inwards"
+          AllowPaging="true"
+          PageSize="10"
+          Responsive="true"
+          @ref="InwardGrid">
+
+        <GridColumn TItem="InwardModel" HeaderText="No">
+            @(Inwards.IndexOf(context) + 1)
+        </GridColumn>
+
+        <GridColumn TItem="InwardModel" HeaderText="Inward No" PropertyName="InwardNo">
+            @context.InwardNo
+        </GridColumn>
+
+        <GridColumn TItem="InwardModel" HeaderText="Inward Date/Time">
+            @context.InwardDate.ToString("dd/MM/yyyy hh:mm tt")
+        </GridColumn>
+
+        <GridColumn TItem="InwardModel" HeaderText="Ship Company">
+            @(ShipCompanies.FirstOrDefault(c => c.Id == context.ShipMentCompanyId)?.Name ?? "N/A")
+        </GridColumn>
+
+        <GridColumn TItem="InwardModel" HeaderText="Status">
+            @if (context.IsActive)
             {
-                <tr>
-                    <td>@context.Id</td>
-                    <td>@context.InwardNo</td>
-                    <td>@context.InwardDate.ToString("dd/MM/yyyy hh:mm tt")</td>
-                    <td>@(ShipCompanies.FirstOrDefault(c => c.Id == context.ShipMentCompanyId)?.Name ?? "N/A")</td>
-                    <td>
-                        @if (context.IsActive)
-                        {
-                            <span class="badge bg-success">Active</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-danger">Inactive</span>
-                        }
-                    </td>
-                    <td>
-                        <div class="d-flex gap-1 flex-wrap">
-                            <button class="btn btn-success btn-sm" @onclick="@(() => OnAddItems.InvokeAsync(context.Id))">Add Items</button>
-                            <button class="btn btn-warning btn-sm" @onclick="@(() => OnEdit.InvokeAsync(context))">Edit</button>
-                            <button class="btn btn-danger btn-sm" @onclick="@(() => OnDelete.InvokeAsync(context.Id))">Delete</button>
-                        </div>
-                    </td>
-                </tr>
+                <Badge Color="BadgeColor.Success">Active</Badge>
             }
-        </tbody>
-    </table>
+            else
+            {
+                <Badge Color="BadgeColor.Danger">Inactive</Badge>
+            }
+        </GridColumn>
+
+        <GridColumn TItem="InwardModel" HeaderText="Actions">
+            <div class="d-flex flex-wrap gap-1">
+                <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context.Id)">
+                    <Icon Name="IconName.Plus" /> Add Items
+                </Button>
+
+                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => OnEdit.InvokeAsync(context)">
+                    <Icon Name="IconName.PencilSquare" /> Edit
+                </Button>
+
+                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => OnDelete.InvokeAsync(context.Id)">
+                    <Icon Name="IconName.Trash" /> Delete
+                </Button>
+            </div>
+        </GridColumn>
+    </Grid>
 </div>
 
 @code {
+    private Grid<InwardModel>? InwardGrid;
     [Parameter] public List<InwardModel> Inwards { get; set; } = new();
     [Parameter] public List<CompanyModel> ShipCompanies { get; set; } = new();
     [Parameter] public EventCallback<InwardModel> OnEdit { get; set; }

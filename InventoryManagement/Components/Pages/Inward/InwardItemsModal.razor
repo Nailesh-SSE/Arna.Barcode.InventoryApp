@@ -6,7 +6,7 @@
         {
             <div class="modal-content-custom">
                 <div class="modal-header-section">
-                    <h5 class="mb-2">Manage Items for Inward: @SelectedInward.InwardNo</h5>
+                    <h5 class="mb-2"> Inward No: @SelectedInward.InwardNo</h5>
                 </div>
 
                 <div class="modal-body-section">
@@ -33,8 +33,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>Product</th>
-                                        <th>Quantity</th>
-                                        <th>Unit</th>
+                                        <th>Quantity</th>                                
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -52,7 +51,7 @@
                                                     <option value="0">-- Select Product --</option>
                                                     @foreach (var product in FilteredProducts)
                                                     {
-                                                        <option value="@product.Id">@product.Name (@product.SKU)</option>
+                                                        <option value="@product.Id">@product.Name (@product.SKU)-@product.Unit</option>
                                                     }
                                                 </InputSelect>
                                                 @if (showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))
@@ -69,11 +68,7 @@
                                                     <small class="text-danger">Quantity must be greater than 0</small>
                                                 }
                                             </td>
-                                            <td>
-                                                <InputText class="form-control form-control-sm"
-                                                           @bind-Value="item.Unit"
-                                                           @onchange="@(() => ClearMessages())" />
-                                            </td>
+                                         
                                             <td>
                                                 <div class="d-flex gap-1">
                                                     <button type="button"
@@ -217,6 +212,7 @@
             await OnSaveItem.InvokeAsync(item);
             successMessage = item.Id == 0 ? "Item added successfully!" : "Item updated successfully!";
             showValidation = false;
+          await HandleAddItem();
         }
         catch (Exception ex)
         {
