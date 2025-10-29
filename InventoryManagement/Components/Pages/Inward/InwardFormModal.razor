@@ -72,9 +72,9 @@
 </Modal>
 
 @code {
-    private Modal modal;
-    private EditContext editContext;
-    private ValidationMessageStore validationMessage;
+    private Modal modal = new();
+    private EditContext? editContext;
+    private ValidationMessageStore? validationMessage;
     private string? selectedCategoryId;
 
     [Parameter] public string Title { get; set; } = "Inward Form";

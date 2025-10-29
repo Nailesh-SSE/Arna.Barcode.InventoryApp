@@ -149,7 +149,7 @@ public class InwardService : IInwardService
 
             entity.ProductId = model.ProductId;
             entity.Quantity = model.Quantity;
-            entity.Unit = model.Unit;
+            entity.Unit = model.Unit ?? "PCS";
 
             repo.Update(entity);
             await _unitOfWork.SaveChangesAsync();
@@ -191,7 +191,7 @@ public class InwardService : IInwardService
         var inwardRepo = _unitOfWork.GetRepository<Inward>();
         var inward = new Inward
         {
-            InwardNo = model.InwardNo,
+            InwardNo = model.InwardNo ?? string.Empty,
             InwardDate = model.InwardDate,
             ShipMentCompanyId = model.ShipMentCompanyId,
             CategoryId = model.CategoryId,

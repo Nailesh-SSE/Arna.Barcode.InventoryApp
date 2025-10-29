@@ -26,33 +26,16 @@
     }
     else
     {
-        <InwardTable Inwards="inwards"
-                     ShipCompanies="shipCompanies"
-                     OnEdit="ShowEditModal"
-                     OnDelete="DeleteInward"
-                     OnAddItems="OpenAddItemModal" />
+        <InwardTable Inwards="inwards" ShipCompanies="shipCompanies" OnEdit="ShowEditModal" OnDelete="DeleteInward" OnAddItems="OpenAddItemModal" />
     }
 </div>
 
-<InwardFormModal @ref="inwardFormModal"
-                 Title="@modalTitle"
-                 Inward="inward"
-                 ShipCompanies="shipCompanies"
-                 Categories="categories"
-                 Products="products"
-                 OnSave="SaveInward"
-                 OnCancel="HideModal" />
+<InwardFormModal @ref="inwardFormModal" Title="@modalTitle" Inward="inward" ShipCompanies="shipCompanies" Categories="categories"
+                 Products="products" OnSave="SaveInward" OnCancel="HideModal" />
 
-<InwardItemsModal @ref="itemsModal"
-                  SelectedInward="selectedInward"
-                  InwardItems="inwardItems"
-                  FilteredProducts="filteredProducts"
-                  OnSave="SaveInwardItems"
-                  OnSaveItem="SaveSingleItem"
-                  OnDeleteItem="DeleteSingleItem"
-                  OnAddItem="AddNewItemRow"
-                  OnRemoveUnsaved="RemoveUnsavedItem"
-                  OnClose="HideItemModal" />
+<InwardItemsModal @ref="itemsModal" SelectedInward="selectedInward" InwardItems="inwardItems" FilteredProducts="filteredProducts"
+                  OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnAddItem="AddNewItemRow"
+                  OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" />
 
 @code {
     private List<InwardModel> inwards = new();
@@ -65,8 +48,8 @@
     private bool isLoading = true;
     private string modalTitle = "Add Inward";
     private bool isEditMode = false;
-    private InwardFormModal inwardFormModal;
-    private InwardItemsModal itemsModal;
+    private InwardFormModal inwardFormModal = new();
+    private InwardItemsModal itemsModal = new();
     private InwardModel? selectedInward;
 
     protected override async Task OnInitializedAsync()
@@ -101,7 +84,7 @@
         };
         inwardItems = new();
         filteredProducts = products;
-        inwardFormModal.Show();
+        inwardFormModal?.Show();
     }
 
     private async Task ShowEditModal(InwardModel edit)
@@ -112,7 +95,7 @@
         inward.InwardTime = inward.InwardDate.TimeOfDay;
         inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(edit.Id);
         filteredProducts = products;
-        inwardFormModal.Show();
+        inwardFormModal?.Show();
     }
 
     private async Task SaveInward()
