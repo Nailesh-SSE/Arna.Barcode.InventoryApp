@@ -13,6 +13,7 @@ public class InwardModel
     public TimeSpan InwardTime { get; set; }
 
     [Required(ErrorMessage = "Shipment Company is required")]
+    [Range(1, int.MaxValue, ErrorMessage = "Shipment Company is required")]
     public int ShipMentCompanyId { get; set; }
     public int? CategoryId { get; set; }
     public string? Remarks { get; set; }
