@@ -21,25 +21,25 @@
 
                         <div class="col-md-6">
                             <label class="form-label">Ship Company <span class="text-danger">*</span></label>
-                            <InputSelect class="form-select" @bind-Value="Inward.ShipMentCompanyId">
+                             <InputSelect class="form-select" @bind-Value="Inward.ShipMentCompanyId">
                                 <option value="0">-- Select Company --</option>
                                 @foreach (var company in ShipCompanies)
                                 {
                                     <option value="@company.Id">@company.Name</option>
                                 }
                             </InputSelect>
-                            <ValidationMessage For="@(() => Inward.ShipMentCompanyId)" />
+                        <ValidationMessage For="@(() => Inward.ShipMentCompanyId)" />
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label">Category</label>
-                            <select class="form-select" value="@selectedCategoryId" @onchange="OnCategoryChanged">
+                            <InputSelect class="form-select" @bind-Value="Inward.CategoryId">
                                 <option value="">-- All Categories --</option>
                                 @foreach (var cat in Categories)
-                                {   
+                                {
                                     <option value="@cat.Id">@cat.Name</option>
                                 }
-                            </select>
+                            </InputSelect>
                         </div>
                     </div>
 
@@ -62,7 +62,7 @@
                     </div>
                 </div>
 
-                <div class="modal-footer-section mt-3">
+                <div class="modal-footer-section mt-3 text-end">
                     <button type="button" class="btn btn-secondary me-2" @onclick="HandleCancel">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </div>
@@ -129,4 +129,5 @@
     {
         await OnCancel.InvokeAsync();
     }
+
 }

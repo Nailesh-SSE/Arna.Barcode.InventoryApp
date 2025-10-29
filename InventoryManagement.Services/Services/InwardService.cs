@@ -407,7 +407,8 @@ public class InwardService : IInwardService
             InwardDate = entity.InwardDate,
             ShipMentCompanyId = entity.ShipMentCompanyId,
             Remarks = entity.Remarks,
-            IsActive = entity.IsActive
+            IsActive = entity.IsActive,
+            CategoryId=entity.CategoryId
         };
     }
 
