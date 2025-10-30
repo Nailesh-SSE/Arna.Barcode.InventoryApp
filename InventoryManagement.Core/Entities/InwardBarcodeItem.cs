@@ -13,7 +13,7 @@ public class InwardBarcodeItem : Common
     [Required]
     public int InwardItemId { get; set; }
 
-    [Required(ErrorMessage = "Barcode number is required")]
+    [Required]
     [StringLength(100)]
     public string BarcodeNo { get; set; } = string.Empty;
 
@@ -24,5 +24,4 @@ public class InwardBarcodeItem : Common
 
     public virtual Inward Inward { get; set; } = null!;
     public virtual InwardItem InwardItem { get; set; } = null!;
-    public virtual ICollection<OutwardDetail> OutwardDetails { get; set; } = new List<OutwardDetail>();
 }

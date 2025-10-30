@@ -61,7 +61,7 @@ public class OutwardService : IOutwardService
             await _unitOfWork.BeginTransactionAsync();
 
             var outwardRepository = _unitOfWork.GetRepository<Outward>();
-
+            await GenerateOutwardNumberAsync(outward);
             var newOutward = new Outward
             {
                 OutwardNo = outward.OutwardNo,
@@ -92,10 +92,12 @@ public class OutwardService : IOutwardService
                 // Create outward detail
                 var outwardDetail = new OutwardDetail
                 {
-                    OutwardId = outward.Id,
-                    InwardItemId = barcodeItemId,
+                    OutwardId = newOutward.Id,
                     BarcodeNo = barcodeItem.BarcodeNo,
-                   //TransactionDate = outward.TransactionDate
+                    ProductId=barcodeItem.InwardItem.ProductId,
+                    Quantity = 1,
+                    Unit = "PCS",
+                    //TransactionDate = outward.TransactionDate
                 };
                 await outwardDetailRepository.AddAsync(outwardDetail);
 
@@ -178,9 +180,215 @@ public class OutwardService : IOutwardService
         return barcodeItem != null && barcodeItem.IsInStock;
     }
 
-    public async Task<IEnumerable<OutwardDetail>> GetOutwardDetailsByOutwardIdAsync(int outwardId)
+    public async Task<List<OutWardItem>> GetOutwardDetailsByOutwardIdAsync(int outwardId)
     {
         var outwardDetailRepository = _unitOfWork.GetRepository<OutwardDetail>();
-        return await outwardDetailRepository.FindAsync(od => od.OutwardId == outwardId && !od.IsDeleted);
+        var outwarddetails= await outwardDetailRepository.FindAsync(od => od.OutwardId == outwardId && !od.IsDeleted);
+        if(outwarddetails == null)
+        {
+            return new List<OutWardItem>();
+        }
+        return outwarddetails.Select(o => new OutWardItem {
+            Id=o.Id,
+            OutwardId=o.OutwardId,
+            ProductId =o.ProductId,
+            BarcodeNo=o.BarcodeNo,
+            Quantity = o.Quantity,
+            Unit = o.Unit,
+        }).ToList();
     }
+
+    public async Task GenerateOutwardNumberAsync(OutwardModel model)
+    {
+        var Repository = _unitOfWork.GetRepository<Outward>();
+        var outwards = await Repository.GetAllAsync();
+        var outward = outwards.Where(a => a.IsActive && !a.IsDeleted).OrderByDescending(a => a.Id).FirstOrDefault();
+        if (outward != null && int.TryParse(outward.OutwardNo, out int lastNumber))
+        {
+            model.OutwardNo = (lastNumber + 1).ToString();
+        }
+        else
+        {
+            model.OutwardNo = "1";
+        }
+    }
+    public async Task<bool> UpdateAsync(OutwardModel model)
+    {
+        try
+        {
+            await _unitOfWork.BeginTransactionAsync();
+
+            var outwardRepo = _unitOfWork.GetRepository<Outward>();
+            var entity = await outwardRepo.GetByIdAsync(model.Id);
+            if (entity == null) return false;
+
+            entity.OutwardNo= model.OutwardNo;
+            entity.OutwardDate= model.OutwardDate;  
+            entity.BillToCompanyId= model.BillToCompanyId;
+            entity.IsActive= model.IsActive;
+            entity.Remarks= model.Remarks;
+
+            await ReplaceOutwardItemsAsync(entity.Id, model.OutwardDetails, entity.OutwardDate, saveChanges: false);
+            outwardRepo.Update(entity);
+            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
+
+            return true;
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            return false;
+        }
+    }
+    public async Task<bool> CreateOutwardItemAsync(OutWardItem model)
+    {
+        try
+        {
+            await _unitOfWork.BeginTransactionAsync();
+
+            var outwardrepo = _unitOfWork.GetRepository<Outward>();
+            var outward = await outwardrepo.GetByIdAsync(model.OutwardId);
+            if (outward == null) return false;
+
+
+            var entity = await CreateOutwardItemEntityAsync(model);
+
+            await _unitOfWork.CommitTransactionAsync();
+            return true;
+        }
+        catch(Exception ex)
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            Console.WriteLine($"Error: {ex.Message}");
+            return false;
+        }
+        
+    }
+    //public async Task<bool> UpdateOutwardItemAsync(OutWardItem model)
+    //{
+    //    try
+    //    {
+    //        await _unitOfWork.BeginTransactionAsync();
+
+    //        var repo = _unitOfWork.GetRepository<OutwardDetail>();
+    //        var entity = await repo.GetByIdAsync(model.Id);
+    //        if (entity == null) return false;
+
+    //        entity.ProductId = model.ProductId;
+    //        entity.Quantity = model.Quantity;
+    //        entity.Unit = model.Unit;
+
+    //        repo.Update(entity);
+    //        await _unitOfWork.SaveChangesAsync();
+
+    //        await _unitOfWork.CommitTransactionAsync();
+    //        return true;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        await _unitOfWork.RollbackTransactionAsync();
+    //        Console.WriteLine($"Error updating inward item: {ex.Message}");
+    //        return false;
+    //    }
+    //}
+
+    private async Task<OutwardDetail> CreateOutwardItemEntityAsync(OutWardItem itemmodel, bool saveChanges = true)
+    {
+        var outwardDetailRepo = _unitOfWork.GetRepository<OutwardDetail>();
+        var inwardBarcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+
+        var barcodeItem = (await inwardBarcodeRepo.FindAsync(x => x.BarcodeNo == itemmodel.BarcodeNo)).FirstOrDefault();
+
+        if (barcodeItem == null)
+            throw new Exception($"Invalid barcode number: {itemmodel.BarcodeNo}");
+
+        if (barcodeItem.InwardItem == null)
+            throw new Exception($"Barcode {itemmodel.BarcodeNo} is not linked to any InwardItem.");
+
+        // ? Build outward detail entity
+        var entity = new OutwardDetail
+        {
+            OutwardId = itemmodel.OutwardId,
+            BarcodeNo = barcodeItem.BarcodeNo,          // ? correct link to DB record
+            ProductId = barcodeItem.InwardItem.ProductId,
+            Unit = itemmodel.Unit ?? "PCS",
+            //Quantity = itemmodel.Quantity,
+            IsDeleted = false
+        };
+
+        // ? Save to DB
+        await outwardDetailRepo.AddAsync(entity);
+        if (saveChanges)
+            await _unitOfWork.SaveChangesAsync();
+
+        // ? Mark barcode as used
+        barcodeItem.IsInStock = false;
+        inwardBarcodeRepo.Update(barcodeItem);
+        if (saveChanges)
+            await _unitOfWork.SaveChangesAsync();
+
+        return entity;
+    }
+
+    private async Task ReplaceOutwardItemsAsync(int OutwardId, List<OutWardItem> newItems, DateTime transactionDate, bool saveChanges = true)
+    {
+        //await DeleteExistingOutwardItemsAsync(OutwardId);
+        await CreateOutwardItemsAsync(OutwardId, newItems, transactionDate);
+    }
+    private async Task DeleteExistingOutwardItemsAsync(int outwardId)
+    {
+        var itemRepo = _unitOfWork.GetRepository<OutwardDetail>();
+        var existingItems = await itemRepo.FindAsync(i => i.OutwardId == outwardId);
+
+        foreach (var item in existingItems)
+        {
+            await itemRepo.DeleteAsync(item.Id);
+        }
+    }
+    private async Task CreateOutwardItemsAsync(int OutwardId, List<OutWardItem> itemModels, DateTime transactionDate)
+    {
+        if (!itemModels.Any()) return;
+        var itemRepo = _unitOfWork.GetRepository<OutwardDetail>();
+        var items = new List<OutwardDetail>();
+
+        foreach (var item in itemModels)
+        {
+            items.Add(new OutwardDetail
+            {
+                OutwardId = OutwardId,
+                ProductId = item.ProductId,
+                //Quantity = item.Quantity,
+                Unit = item.Unit,
+                BarcodeNo = item.BarcodeNo,
+                IsDeleted = false
+            });
+        }
+
+        await itemRepo.AddRangeAsync(items);
+        await _unitOfWork.SaveChangesAsync();
+    }
+    //private async Task<List<OutwardDetail>> CreateOutwardItemEntitiesAsync(int outwardId, List<OutWardItem> itemModels)
+    //{
+    //    var itemRepo = _unitOfWork.GetRepository<OutwardDetail>();
+    //    var serialNo = await itemRepo.CountAsync();
+    //    var items = new List<OutwardDetail>();
+
+    //    foreach (var itemModel in itemModels)
+    //    {
+    //        serialNo++;
+    //        items.Add(new OutwardDetail
+    //        {
+    //            OutwardId = outwardId,
+    //            ProductId = itemModel.ProductId,
+    //            Quantity = itemModel.Quantity,
+    //            Unit = itemModel.Unit,
+    //            IsDeleted = false
+    //        });
+    //    }
+
+    //    await itemRepo.AddRangeAsync(items);
+    //    await _unitOfWork.SaveChangesAsync();
+    //    return items;
+    //}
 }

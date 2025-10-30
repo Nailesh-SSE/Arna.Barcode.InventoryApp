@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InventoryManagement.Core.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    [Migration("20251016121027_updateColourTableUniqueContraint")]
-    partial class updateColourTableUniqueContraint
+    [Migration("20251030081650_initCreate")]
+    partial class initCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -68,7 +68,7 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("UpdatedOn")
+                    b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
@@ -111,7 +111,7 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("UpdatedOn")
+                    b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
@@ -166,7 +166,7 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("UpdatedOn")
+                    b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
@@ -219,7 +219,7 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("UpdatedOn")
+                    b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
@@ -269,7 +269,7 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("UpdatedOn")
+                    b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
@@ -334,7 +334,7 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("UpdatedOn")
+                    b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
@@ -395,7 +395,7 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("UpdatedOn")
+                    b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
@@ -424,9 +424,6 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("InwardBarcodeItemId")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -436,8 +433,16 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<int>("OutwardId")
                         .HasColumnType("int");
 
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
+
+                    b.Property<string>("Remark")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Unit")
                         .IsRequired()
@@ -447,14 +452,12 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("UpdatedOn")
+                    b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
                     b.HasIndex("BarcodeNo");
-
-                    b.HasIndex("InwardBarcodeItemId");
 
                     b.HasIndex("OutwardId");
 
@@ -533,7 +536,7 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("UpdatedOn")
+                    b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
@@ -599,7 +602,7 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("UpdatedOn")
+                    b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
@@ -660,7 +663,7 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("UpdatedOn")
+                    b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UserName")
@@ -702,7 +705,7 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("UpdatedOn")
+                    b.Property<DateTime?>("UpdatedOn")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("UserId")
@@ -789,19 +792,11 @@ namespace InventoryManagement.Core.Migrations
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.OutwardDetail", b =>
                 {
-                    b.HasOne("InventoryManagement.Core.Entities.InwardBarcodeItem", "InwardBarcodeItem")
-                        .WithMany("OutwardDetails")
-                        .HasForeignKey("InwardBarcodeItemId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("InventoryManagement.Core.Entities.Outward", "Outward")
                         .WithMany("OutwardDetails")
                         .HasForeignKey("OutwardId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("InwardBarcodeItem");
 
                     b.Navigation("Outward");
                 });
@@ -859,11 +854,6 @@ namespace InventoryManagement.Core.Migrations
                     b.Navigation("InwardBarcodeItems");
 
                     b.Navigation("InwardItems");
-                });
-
-            modelBuilder.Entity("InventoryManagement.Core.Entities.InwardBarcodeItem", b =>
-                {
-                    b.Navigation("OutwardDetails");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.InwardItem", b =>

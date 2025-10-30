@@ -10,7 +10,9 @@ public interface IOutwardService
     Task<bool> CreateOutwardAsync(OutwardModel outward, List<int> barcodeItemIds);
     Task<bool> UpdateOutwardAsync(OutwardModel outward);
     Task<bool> DeleteOutwardAsync(int id);
+    Task GenerateOutwardNumberAsync(OutwardModel model);
     Task<IEnumerable<InwardBarcodeItem>> GetAvailableBarcodeItemsAsync();
     Task<bool> IsBarcodeAvailableAsync(string barcodeNo);
-    Task<IEnumerable<OutwardDetail>> GetOutwardDetailsByOutwardIdAsync(int outwardId);
+    Task<List<OutWardItem>> GetOutwardDetailsByOutwardIdAsync(int outwardId);
+    Task<bool> UpdateAsync(OutwardModel model);
 }
