@@ -29,7 +29,6 @@ public class CategoryService : ICategoryService
             CreatedBy = c.CreatedBy,
             CreatedOn = c.CreatedOn,
             UpdatedBy = c.UpdatedBy,
-            UpdatedOn = c.UpdatedOn,
             IsActive = c.IsActive,
             IsDeleted = c.IsDeleted
         }).ToList();

@@ -137,7 +137,7 @@
             <div class="row mb-3">
                 <div class="col-md-8">
                     <label class="form-label">Barcode</label>
-                    <InputNumber class="form-control" @bind-Value="newItem.BarcodeNo" />
+                    <InputText class="form-control" @bind-Value="newItem.BarcodeNo" />
                     <ValidationMessage For="@(() => newItem.BarcodeNo)" />
                 </div>
                 <div class="col-md-4 d-flex align-items-end">
@@ -207,6 +207,7 @@
     private bool isEditMode = false;
     private EditContext editContext;
     private ValidationMessageStore messageStore;
+    private OutwardModel? selectedoutward;
 
     protected override async Task OnInitializedAsync()
     {
@@ -239,14 +240,25 @@
 
     private async Task ShowItemModal(OutwardModel outward)
     {
-        modalTitle = "Add Outward";
-        isEditMode = false;
-        selectedOutwardIdForItems = outward.Id;
-        itemList ??= (await OutwardService.GetOutwardDetailsByOutwardIdAsync(outward.Id)).ToList();
-        newItem = new OutwardDetailModel();
-        itemEditContext = new EditContext(newItem);
-        messageStore = new ValidationMessageStore(itemEditContext);
-        await itemModal.ShowAsync();
+        try
+        {
+            modalTitle = "Add Outward";
+            isEditMode = false;
+            selectedoutward = outward;
+            selectedOutwardIdForItems = outward.Id;
+            var outwardItems = (await OutwardService.GetOutwardDetailsByOutwardIdAsync(outward.Id)).ToList();
+            itemList = outwardItems?.ToList() ?? new List<OutWardItem>();
+
+            newItem = new OutwardDetailModel();
+            itemEditContext = new EditContext(newItem);
+            messageStore = new ValidationMessageStore(itemEditContext);
+            await itemModal.ShowAsync();
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Error message:{ex.Message}");
+        }
+
     }
 
 
@@ -327,7 +339,10 @@
     }
     private async Task SaveOutwardItems()
     {
-        // await OutwardService.SaveOutwardItemsAsync(selectedOutwardIdForItems, itemList);
+        if (selectedoutward == null) return;
+
+        selectedoutward.OutwardDetails = itemList;
+        await OutwardService.UpdateAsync(selectedoutward);
         await itemModal.HideAsync();
         await LoadData();
     }
@@ -340,7 +355,7 @@
         try
         {
 
-        if (newItem.BarcodeNo == "0")
+        if (newItem.BarcodeNo == "0" || newItem.BarcodeNo=="")
             return;
 
         // Add the item to the list

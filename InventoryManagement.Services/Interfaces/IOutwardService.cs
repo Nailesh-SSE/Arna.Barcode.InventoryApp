@@ -14,4 +14,5 @@ public interface IOutwardService
     Task<IEnumerable<InwardBarcodeItem>> GetAvailableBarcodeItemsAsync();
     Task<bool> IsBarcodeAvailableAsync(string barcodeNo);
     Task<List<OutWardItem>> GetOutwardDetailsByOutwardIdAsync(int outwardId);
+    Task<bool> UpdateAsync(OutwardModel model);
 }
