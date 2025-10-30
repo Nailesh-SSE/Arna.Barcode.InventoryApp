@@ -128,7 +128,7 @@ public class CategoryService : ICategoryService
                 CreatedOn = categoryModel.CreatedOn,
                 UpdatedBy = categoryModel.UpdatedBy,
                 UpdatedOn = categoryModel.UpdatedOn,
-                IsActive = categoryModel.IsActive,
+                IsActive = true,
                 IsDeleted = categoryModel.IsDeleted,
                 SerialNumber = categoryModel.SerialNumber
             };

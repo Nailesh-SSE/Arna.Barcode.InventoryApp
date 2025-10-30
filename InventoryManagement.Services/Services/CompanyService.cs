@@ -69,7 +69,7 @@ public class CompanyService : ICompanyService
                 Id = companyModel.Id,
                 Code = companyModel.Code,
                 Name = companyModel.Name.Trim().ToLower(),
-                IsActive = companyModel.IsActive,
+                IsActive = true,
                 CompanyType = companyModel.CompanyType,
                 SerialNumber = companyModel.SerialNumber,
                 Remark = companyModel.Remark

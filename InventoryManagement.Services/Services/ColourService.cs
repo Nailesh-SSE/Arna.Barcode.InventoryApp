@@ -45,7 +45,7 @@ public class ColourService: IColourService
             Id = colourModel.Id,
             Name = colourModel.Name,
             Code = colourModel.Code,
-            IsActive = colourModel.IsActive,
+            IsActive = true,
             IsDeleted = false
         };
         await colourRepository.AddAsync(colour);
