@@ -1,33 +1,33 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace InventoryManagement.Services.Models
+namespace InventoryManagement.Services.Models;
+
+public class OutwardModel:CommonModel
 {
-    public class OutwardModel:CommonModel
-    {
-        public int Id { get; set; }
-        [StringLength(50)]
-        public string OutwardNo { get; set; } = string.Empty;
-        public DateTime OutwardDate { get; set; } = DateTime.UtcNow.Date;
-        public int BillToCompanyId { get; set; }
-        public string? InvoiceNo { get; set; }
+    public int Id { get; set; }
+    public string OutwardNo { get; set; } = string.Empty;
+    public DateTime OutwardDate { get; set; } = DateTime.UtcNow.Date;
+    public int BillToCompanyId { get; set; }
+    public string? Remarks { get; set; }
+    public List<OutWardItemModel> OutwardItems { get; set; } = new();
+}
 
-        public DateTime? InvoiceDate { get; set; }
+public class OutWardItemModel
+{
+    public int Id { get; set; }
+    public int OutwardId { get; set; }
+    public int ProductId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
 
-        [StringLength(50)]
-        public string? ChallanNo { get; set; }
+    [Required(ErrorMessage = "Barcode is required")]
+    public string BarcodeNo { get; set; } = string.Empty;
 
-        [StringLength(500)]
-        public string? Remarks { get; set; }
+    public decimal Quantity { get; set; } = 1;
+    public string Unit { get; set; } = "PCS";
+}
 
-        public List<OutWardItem> OutwardDetails { get; set; } = new();
-    }
-    public class OutWardItem
-    {
-        public int Id { get; set; }
-        public int OutwardId { get; set; }
-        public int ProductId { get; set; }
-        public decimal Quantity { get; set; }
-        public string? Unit { get; set; }
-        public string? BarcodeNo { get; set; }
-    }
+public class BarcodeValidationResult
+{
+    public bool IsValid { get; set; }
+    public string ErrorMessage { get; set; } = string.Empty;
 }

@@ -22,8 +22,5 @@ public class OutwardDetail : Common
     [StringLength(20)]
     public string Unit { get; set; } = "PCS";
 
-    [StringLength(100)]
-    public string Remark { get; set; }
-
     public virtual Outward Outward { get; set; } = null!;
 }

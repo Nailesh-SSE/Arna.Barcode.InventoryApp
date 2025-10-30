@@ -17,13 +17,6 @@ public class Outward : Common
     [Required]
     public int BillToCompanyId { get; set; }
 
-    [StringLength(50)]
-    public string? InvoiceNo { get; set; }
-
-    public DateTime? InvoiceDate { get; set; }
-
-    [StringLength(50)]
-    public string? ChallanNo { get; set; }
 
     [StringLength(500)]
     public string? Remarks { get; set; }
