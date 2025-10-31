@@ -74,7 +74,10 @@
         var uri = new Uri(Navigation.Uri);
         var query = QueryHelpers.ParseQuery(uri.Query);
 
-        returnUrl = query.TryGetValue("returnUrl", out var url) ? url.ToString() : "/";
+        returnUrl = query.TryGetValue("returnUrl", out var url) &&
+                   !url.ToString().Contains("/login") ?
+                   url.ToString() : "/";
+
         errorMessage = query.TryGetValue("error", out var error) ? error.ToString() : null;
     }
 

@@ -27,14 +27,18 @@ public class AuthService
             if (user == null)
                 return RedirectWithError("/login", "User not found", returnUrl);
 
+            // Match this with the cookie expiration
+            var expiresUtc = DateTimeOffset.UtcNow.AddHours(2);
+
             var claims = new List<Claim>
-            {
-                new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new(ClaimTypes.Name, user.UserName),
-                new(ClaimTypes.Email, user.EmailId ?? ""),
-                new("FullName", user.Name ?? ""),
-                new("UserId", user.Id.ToString())
-            };
+        {
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Name, user.UserName),
+            new(ClaimTypes.Email, user.EmailId ?? ""),
+            new("FullName", user.Name ?? ""),
+            new("UserId", user.Id.ToString()),
+            new("ExpiresUtc", expiresUtc.ToUnixTimeSeconds().ToString())
+        };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
@@ -42,7 +46,8 @@ public class AuthService
             var authProperties = new AuthenticationProperties
             {
                 IsPersistent = true,
-                ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8),
+                ExpiresUtc = expiresUtc,
+                AllowRefresh = true,
                 RedirectUri = returnUrl ?? "/"
             };
 

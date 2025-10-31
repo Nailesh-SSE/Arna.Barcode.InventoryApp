@@ -4,7 +4,6 @@ using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Auth;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Services;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
@@ -16,8 +15,20 @@ public static  class ServiceExtensions
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-       services.AddDbContext<InventoryDbContext>(options =>
+        services.AddDbContext<InventoryDbContext>(options =>
             options.UseSqlServer(configuration.GetConnectionString("ERP_Connection")));
+
+        services.AddDistributedMemoryCache();
+
+        services.AddSession(options =>
+        {
+            options.IdleTimeout = TimeSpan.FromHours(2);
+            options.Cookie.Name = "InventoryManagement.Session";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.IsEssential = true;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SameSite = SameSiteMode.Lax;
+        });
 
         services.AddScoped<ProtectedSessionStorage>();
         services.AddHttpContextAccessor();
@@ -45,36 +56,36 @@ public static  class ServiceExtensions
     public static IServiceCollection AddAuthenticationAndAuthorization(this IServiceCollection services)
     {
         services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-            .AddCookie(options =>
-            {
-                options.Cookie.Name = "InventoryManagement.Auth";
-                options.Cookie.HttpOnly = true;
-                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                options.Cookie.SameSite = SameSiteMode.Strict;
-                options.LoginPath = "/login";
-                options.LogoutPath = "/account/logout";
-                options.AccessDeniedPath = "/access-denied";
-                options.ExpireTimeSpan = TimeSpan.FromSeconds(120);
-                options.SlidingExpiration = true;
-                options.Events = new CookieAuthenticationEvents
-                {
-                    OnValidatePrincipal = async context =>
-                    {
-                        var expires = context.Properties?.ExpiresUtc;
-                        if (expires.HasValue && expires.Value < DateTimeOffset.UtcNow)
-                        {
-                            Console.WriteLine("Cookie expired, signing out...");
-                            context.RejectPrincipal();
-                            await context.HttpContext.SignOutAsync();
-                        }
-                    },
-                    OnRedirectToLogin = context =>
-                    {
-                        context.Response.StatusCode = 401;
-                        return Task.CompletedTask;
-                    }
-                };
-            });
+      .AddCookie(options =>
+      {
+          options.Cookie.Name = "InventoryManagement.Auth";
+          options.Cookie.HttpOnly = true;
+          options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+          options.Cookie.SameSite = SameSiteMode.Lax;
+          options.LoginPath = "/login";
+          options.LogoutPath = "/account/logout";
+          options.AccessDeniedPath = "/access-denied";
+          options.ExpireTimeSpan = TimeSpan.FromHours(2);
+          options.SlidingExpiration = true;
+
+          options.Events = new CookieAuthenticationEvents
+          {
+              OnRedirectToLogin = context =>
+              {
+                  // Prevent redirect loops
+                  if (!context.Request.Path.StartsWithSegments("/login"))
+                  {
+                      context.Response.Redirect($"/login?returnUrl={Uri.EscapeDataString(context.Request.Path)}");
+                  }
+                  return Task.CompletedTask;
+              },
+              OnRedirectToAccessDenied = context =>
+              {
+                  context.Response.StatusCode = 403;
+                  return Task.CompletedTask;
+              }
+          };
+      });
 
         services.AddAuthorizationCore(options =>
         {
@@ -101,6 +112,7 @@ public static  class ServiceExtensions
         app.UseStaticFiles();
         app.UseAntiforgery();
 
+        app.UseSession();
         app.UseAuthentication();
         app.UseAuthorization();
 

@@ -18,43 +18,48 @@ public class AuthComponentBase : ComponentBase, IDisposable
         await ValidateAuth();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await ValidateAuth();
-        }
-    }
-
     protected virtual async Task ValidateAuth()
     {
+        // Don't validate on login page - this prevents the loop
+        if (Navigation.Uri.Contains("/login", StringComparison.OrdinalIgnoreCase))
+        {
+            IsLoading = false;
+            IsAuthenticated = false;
+            return;
+        }
+
         IsLoading = true;
         StateHasChanged();
 
         try
         {
-            var isValid = await AuthValidationService.ValidateAndRefreshTokenAsync();
-
-            if (!isValid)
-            {
-                IsAuthenticated = false;
-                IsLoading = false;
-                StateHasChanged();
-                return;
-            }
-
             var authState = await AuthenticationState.GetAuthenticationStateAsync();
-            IsAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+            var user = authState.User;
+
+            IsAuthenticated = user.Identity?.IsAuthenticated ?? false;
 
             if (!IsAuthenticated)
             {
-                Navigation.NavigateTo("/login", true);
+                Console.WriteLine("User not authenticated, redirecting to login");
+                // Use a simple return URL to avoid loops
+                var currentUri = new Uri(Navigation.Uri);
+                var returnUrl = currentUri.PathAndQuery;
+
+                // Only redirect if we're not already going to login
+                if (!returnUrl.Contains("/login"))
+                {
+                    Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(returnUrl)}", true);
+                }
+                return;
             }
+
+            Console.WriteLine("User is authenticated successfully");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Auth validation error: {ex.Message}");
-            await AuthValidationService.ForceLogoutAsync();
+            // Don't redirect with the current URL to avoid loops
+            Navigation.NavigateTo("/login", true);
         }
         finally
         {
