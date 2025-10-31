@@ -36,7 +36,7 @@
               PageSize="10"
               Responsive="true">
 
-            <GridColumn TItem="ProductModel" HeaderText="Sequence" PropertyName="Id">
+            <GridColumn TItem="ProductModel" HeaderText="No" PropertyName="Id">
                 @{
                     var index = products.IndexOf(context) + 1;
                 }
@@ -55,22 +55,12 @@
                 @(categories.FirstOrDefault(c => c.Id == context.CategoryId)?.Name ?? "N/A")
             </GridColumn>
 
-            <GridColumn TItem="ProductModel" HeaderText="UnitId" PropertyName="UnitId">
-                @context.UnitId
-            </GridColumn>
-
             <GridColumn TItem="ProductModel" HeaderText="Unit" PropertyName="Unit">
                 @context.Unit
-            </GridColumn>
-            <GridColumn TItem="ProductModel" HeaderText="MakeCompanyId" PropertyName="MakeCompanyId">
-                @context.MakeCompanyId
-            </GridColumn>
+            </GridColumn>          
             <GridColumn TItem="ProductModel" HeaderText="MakeCompany" PropertyName="MakeCompany">
                 @context.MakeCompany
-            </GridColumn>
-            <GridColumn TItem="ProductModel" HeaderText="ColourId" PropertyName="ColourId">
-                @context.ColourId
-            </GridColumn>
+            </GridColumn>          
             <GridColumn TItem="ProductModel" HeaderText="ColourName" PropertyName="ColourName">
                 @context.ColourName
             </GridColumn>
@@ -163,11 +153,12 @@
                 <label class="form-label">Description</label>
                 <InputTextArea class="form-control" rows="3" @bind-Value="productModel.Description" />
             </div>
-
-            <div class="mb-3">
-                <InputCheckbox @bind-Value="productModel.IsActive" /> Active
+            @if (productModel.Id > 0)
+            {
+                <div class="mb-3">
+                    <InputCheckbox @bind-Value="productModel.IsActive" /> Active
             </div>
-
+            }
             <div class="text-end">
                 <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
                 <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>

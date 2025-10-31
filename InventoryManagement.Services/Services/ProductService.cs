@@ -102,7 +102,7 @@ public class ProductService : IProductService
                     CategoryName = productModel.CategoryName,
                     CreatedBy = productModel.CreatedBy,
                     CreatedOn = productModel.CreatedOn,
-                    IsActive = productModel.IsActive,
+                    IsActive = true,
                     IsDeleted = productModel.IsDeleted,
                     Unit = productModel.Unit,
                     UnitId = productModel.UnitId,

@@ -85,10 +85,12 @@
                 </div>
             </div>
 
-            <div class="mb-3">
-                <InputCheckbox @bind-Value="companyModel.IsActive" /> Active
-            </div>
-
+            @if (companyModel.Id > 0)
+            {
+                <div class="mb-3">
+                    <InputCheckbox @bind-Value="companyModel.IsActive" /> Active
+                </div>
+            }
             <div class="text-end">
                 <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
                 <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>

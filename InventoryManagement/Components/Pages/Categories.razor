@@ -44,7 +44,7 @@
             <GridColumn TItem="CategoryModel" HeaderText="Description" PropertyName="Description">
                 @context.Description
             </GridColumn>
-
+        
             <GridColumn TItem="CategoryModel" HeaderText="Status" PropertyName="IsActive">
                 @if (context.IsActive)
                 {
@@ -83,7 +83,7 @@
                 <label class="form-label">Description</label>
                 <InputTextArea class="form-control" rows="3" @bind-Value="categoryModel.Description" />
             </div>
-
+           
             <div class="mb-3">
                 <label class="form-label">Parent Category</label>
                 <InputSelect class="form-select" @bind-Value="categoryModel.ParentCategoryId">
@@ -94,10 +94,12 @@
                     }
                 </InputSelect>
             </div>
-
-            <div class="mb-3">
-                <InputCheckbox @bind-Value="categoryModel.IsActive" /> Active
+            @if (categoryModel.Id > 0)
+            {
+                <div class="mb-3">
+                    <InputCheckbox @bind-Value="categoryModel.IsActive" /> Active
             </div>
+            }
 
             <div class="text-end">
                 <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
