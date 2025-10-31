@@ -20,7 +20,7 @@
         </GridColumn>
 
         <GridColumn TItem="InwardModel" HeaderText="Ship Company">
-            @(ShipCompanies.FirstOrDefault(c => c.Id == context.ShipMentCompanyId)?.Name ?? "N/A")
+            @(ShipCompanies.FirstOrDefault(c => c.Id == context.ShipMentCompanyId)?.Name.ToUpper() ?? "N/A")
         </GridColumn>
 
         <GridColumn TItem="InwardModel" HeaderText="Status">
@@ -44,9 +44,9 @@
                     <Icon Name="IconName.PencilSquare" /> Edit
                 </Button>
 
-                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => OnDelete.InvokeAsync(context.Id)">
+                @* <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => OnDelete.InvokeAsync(context.Id)">
                     <Icon Name="IconName.Trash" /> Delete
-                </Button>
+                </Button> *@
             </div>
         </GridColumn>
     </Grid>
