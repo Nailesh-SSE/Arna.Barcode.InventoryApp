@@ -84,7 +84,7 @@
         inwards = (await InwardService.GetAllAsync()).ToList();
         shipCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
         categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
-        products = (await ProductService.GetAllProductsAsync()).ToList();
+        products = (await ProductService.GetAllProductsAsync()).Where(e=>e.IsActive==true).ToList();
         filteredProducts = products;
 
         isLoading = false;

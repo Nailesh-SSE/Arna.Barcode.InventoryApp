@@ -42,18 +42,34 @@
                 </div>
 
                 <div class="form-group">
-                    <div class="input-container">
+                    <div class="input-container" style="position: relative;">
                         <span class="input-icon">
                             <Icon Name="IconName.Lock" />
                         </span>
-                        <input type="password"
+
+                        <input type="@passwordInputType"
                                name="password"
                                class="form-input"
                                placeholder="Password"
                                maxlength="50"
                                required />
+
+                        <button type="button"
+                                class="toggle-password-btn"
+                                @onclick="TogglePasswordVisibility"
+                                style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none;">
+                            @if (isPasswordVisible)
+                            {
+                                <Icon Name="IconName.EyeFill" />
+                            }
+                            else
+                            {
+                                <Icon Name="IconName.EyeSlash" />
+                            }
+                        </button>
                     </div>
                 </div>
+
 
                 <div class="form-group">
                     <button type="submit" class="login-button">Sign In</button>
@@ -68,7 +84,13 @@
 @code {
     private string? errorMessage;
     private string? returnUrl;
+    private bool isPasswordVisible = false;
+    private string passwordInputType => isPasswordVisible ? "text" : "password";
 
+    private void TogglePasswordVisibility()
+    {
+        isPasswordVisible = !isPasswordVisible;
+    }
     protected override void OnInitialized()
     {
         var uri = new Uri(Navigation.Uri);
