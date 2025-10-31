@@ -82,11 +82,12 @@
                     <ValidationMessage For="@(()=> colourModel.Code)"/>
                 </div>
             </div>
-
-            <div class="mb-3">
-                <InputCheckbox @bind-Value="colourModel.IsActive" /> Active
+            @if (colourModel.Id > 0)
+            {
+                <div class="mb-3">
+                    <InputCheckbox @bind-Value="colourModel.IsActive" /> Active
             </div>
-
+            }
             <div class="text-end">
                 <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
                 <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>

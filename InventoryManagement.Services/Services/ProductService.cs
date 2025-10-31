@@ -102,7 +102,7 @@ public class ProductService : IProductService
                     CategoryName = productModel.CategoryName,
                     CreatedBy = productModel.CreatedBy,
                     CreatedOn = productModel.CreatedOn,
-                    IsActive = productModel.IsActive,
+                    IsActive = true,
                     IsDeleted = productModel.IsDeleted,
                     Unit = productModel.Unit,
                     UnitId = productModel.UnitId,
@@ -131,7 +131,7 @@ public class ProductService : IProductService
             if (!await IsSkuUniqueAsync(productModel.SKU, productModel.Id))
                 return false;
 
-            if (!await IsProductNameUniqueAsync(productModel.Name, productModel.Id))
+            if (!await IsProductNameUniqueAsync(productModel.Name, productModel.Id,productModel.ColourId))
                 return false;
 
             var categoryRepository = _unitOfWork.GetRepository<Category>();
@@ -207,10 +207,10 @@ public class ProductService : IProductService
 
         return !products.Any();
     }
-    public async Task<bool> IsProductNameUniqueAsync(string name,int companyId ,int? excludeId = null)
+    public async Task<bool> IsProductNameUniqueAsync(string name,int companyId,int colorid ,int? excludeId = null)
     {
         var productRepository = _unitOfWork.GetRepository<Product>();
-        var products = await productRepository.FindAsync(p => p.Name == name && p.MakeCompanyId==companyId &&!p.IsDeleted);
+        var products = await productRepository.FindAsync(p => p.Name == name && p.MakeCompanyId==companyId && p.ColourId==colorid &&!p.IsDeleted );
 
         if (excludeId.HasValue)
             products = products.Where(p => p.Id != excludeId.Value);

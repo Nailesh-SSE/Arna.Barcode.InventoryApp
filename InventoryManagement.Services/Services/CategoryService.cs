@@ -29,7 +29,6 @@ public class CategoryService : ICategoryService
             CreatedBy = c.CreatedBy,
             CreatedOn = c.CreatedOn,
             UpdatedBy = c.UpdatedBy,
-            UpdatedOn = c.UpdatedOn,
             IsActive = c.IsActive,
             IsDeleted = c.IsDeleted
         }).ToList();
@@ -129,7 +128,7 @@ public class CategoryService : ICategoryService
                 CreatedOn = categoryModel.CreatedOn,
                 UpdatedBy = categoryModel.UpdatedBy,
                 UpdatedOn = categoryModel.UpdatedOn,
-                IsActive = categoryModel.IsActive,
+                IsActive = true,
                 IsDeleted = categoryModel.IsDeleted,
                 SerialNumber = categoryModel.SerialNumber
             };

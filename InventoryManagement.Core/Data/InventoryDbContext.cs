@@ -105,12 +105,8 @@ public class InventoryDbContext : DbContext
             .HasForeignKey(od => od.OutwardId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<OutwardDetail>()
-            .HasOne(od => od.InwardBarcodeItem)
-            .WithMany(ibi => ibi.OutwardDetails)
-            .HasForeignKey(od => od.InwardItemId)
-            .OnDelete(DeleteBehavior.Restrict);
-
+        modelBuilder.Entity<OutwardDetail>();
+         
         modelBuilder.Entity<SaleReturn>()
             .HasOne(sr => sr.BillToCompany)
             .WithMany()
