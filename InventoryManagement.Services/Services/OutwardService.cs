@@ -58,7 +58,7 @@ public class OutwardService : IOutwardService
         catch
         {
             await _unitOfWork.RollbackTransactionAsync();
-            throw;
+            return false;
         }
     }
 
@@ -126,7 +126,7 @@ public class OutwardService : IOutwardService
         catch
         {
             await _unitOfWork.RollbackTransactionAsync();
-            throw;
+            return false;
         }
     }
 
@@ -287,7 +287,7 @@ public class OutwardService : IOutwardService
         catch
         {
             await _unitOfWork.RollbackTransactionAsync();
-            throw;
+            return false;
         }
     }
 
