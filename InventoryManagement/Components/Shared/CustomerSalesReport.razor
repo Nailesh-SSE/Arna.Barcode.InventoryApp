@@ -1,0 +1,93 @@
+@using InventoryManagement.Services.Models
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <Icon Name="IconName.People" /> Customer Wise Sales Report
+        </h5>
+    </div>
+    <div class="card-body">
+        @if (CustomerSalesData.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Customer Name</th>
+                            <th>Code</th>
+                            <th>Type</th>
+                            <th>Total Orders</th>
+                            <th>Items Purchased</th>
+                            <th>Total Spent</th>
+                            <th>Avg Order Value</th>
+                            <th>Top Products</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var customer in CustomerSalesData.Take(50))
+                        {
+                            <tr>
+                                <td><strong>@customer.CustomerName</strong></td>
+                                <td><code>@customer.CustomerCode</code></td>
+                                <td>
+                                    <span class="badge bg-info">@customer.CustomerType</span>
+                                </td>
+                                <td class="text-center">@customer.TotalOrders</td>
+                                <td class="text-center">@customer.TotalItemsPurchased</td>
+                                <td>@customer.TotalSpent.ToString("C")</td>
+                                <td>@customer.AverageOrderValue.ToString("C")</td>
+                                <td>
+                                    @if (customer.TopProducts.Any())
+                                    {
+                                        <div>
+                                            @foreach (var product in customer.TopProducts.Take(2))
+                                            {
+                                                <span class="badge bg-light text-dark me-1">@product</span>
+                                            }
+                                            @if (customer.TopProducts.Count > 2)
+                                            {
+                                                <span class="text-muted">+@(customer.TopProducts.Count - 2) more</span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-secondary">
+                        <tr>
+                            <th colspan="3">Total</th>
+                            <th>@CustomerSalesData.Sum(c => c.TotalOrders)</th>
+                            <th>@CustomerSalesData.Sum(c => c.TotalItemsPurchased)</th>
+                            <th>@CustomerSalesData.Sum(c => c.TotalSpent).ToString("C")</th>
+                            <th>@CustomerSalesData.Where(c => c.AverageOrderValue > 0).DefaultIfEmpty().Average(c => c.AverageOrderValue).ToString("C")</th>
+                            <th>-</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            @if (CustomerSalesData.Count > 50)
+            {
+                <div class="text-center mt-3">
+                    <p class="text-muted">Showing top 50 of @CustomerSalesData.Count customers</p>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-center text-muted py-4">
+                <Icon Name="IconName.People" Size="IconSize.x3" />
+                <p class="mt-2">No customer sales data available</p>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<CustomerSalesModel> CustomerSalesData { get; set; } = new();
+}

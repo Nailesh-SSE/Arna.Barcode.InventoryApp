@@ -1,4 +1,4 @@
-﻿/* Login Page Styles */
+﻿/* Login Container */
 .login-container {
     min-height: 100vh;
     display: flex;
@@ -9,22 +9,20 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* Login Box */
 .login-box {
     background: white;
     border-radius: 10px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
     width: 100%;
     max-width: 400px;
-    overflow: hidden;
+    padding: 40px 35px;
+    animation: slideUp 0.5s ease-out;
 }
 
-.login-header {
-    padding: 30px 20px 20px;
-    text-align: center;
-}
-
-.logo {
-    max-width: 160px;
+/* Header Styles */
+.login-header .logo {
+    max-width: 180px;
     height: auto;
 }
 
@@ -36,125 +34,98 @@
     letter-spacing: 0.5px;
 }
 
-.login-body {
-    padding: 30px;
-}
-
-.login-message {
-    text-align: center;
-    color: #6c757d;
-    margin-bottom: 30px;
+/* Login Message */
+.login-message p {
     font-size: 14px;
     font-weight: 500;
-}
-
-.form-group {
-    margin-bottom: 25px;
-}
-
-.input-container {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.input-icon {
-    position: absolute;
-    left: 15px;
     color: #6c757d;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
+    margin: 0;
 }
 
-.form-input {
-    width: 100%;
-    padding: 14px 15px 14px 45px;
-    border: 1px solid #dcdfe6;
+/* Input Group Styling */
+.input-group {
+    border: 1px solid #dce1e6;
     border-radius: 6px;
-    font-size: 14px;
     transition: all 0.3s ease;
     background: #fff;
-    color: #333;
 }
 
-    .form-input:focus {
-        outline: none;
+    .input-group:focus-within {
         border-color: #667eea;
         box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         transform: translateY(-1px);
     }
 
-    .form-input::placeholder {
+.input-group-text {
+    background: transparent !important;
+    border: none !important;
+    padding: 12px 15px;
+    color: #6c757d !important;
+}
+
+.form-control {
+    border: none !important;
+    padding: 12px 15px;
+    font-size: 14px;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+    .form-control::placeholder {
         color: #a0a4a8;
     }
 
-.login-button {
-    width: 100%;
+    .form-control:focus {
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+/* Login Button */
+.login-btn {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
     border: none;
-    padding: 14px;
+    padding: 12px;
     border-radius: 6px;
     font-size: 16px;
     font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
     letter-spacing: 0.5px;
     text-transform: uppercase;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
-    .login-button:hover {
+    .login-btn:hover:not(:disabled) {
         transform: translateY(-2px);
         box-shadow: 0 7px 20px rgba(102, 126, 234, 0.4);
     }
 
-    .login-button:active {
+    .login-btn:active:not(:disabled) {
         transform: translateY(0);
     }
 
-.alert {
-    padding: 12px 15px;
+    .login-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+/* Alert Styling */
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
     border-radius: 6px;
-    margin-bottom: 20px;
+    padding: 12px 15px;
     font-size: 14px;
-    text-align: center;
 }
 
-.alert-error {
-    background-color: #fee;
-    color: #c33;
-    border: 1px solid #fdd;
-    font-weight: 500;
+/* Validation Messages */
+.text-danger.small {
+    font-size: 12px;
+    margin-top: 5px;
+    display: block;
 }
 
-/* Responsive adjustments */
-@media (max-width: 480px) {
-    .login-box {
-        margin: 10px;
-    }
-
-    .login-body {
-        padding: 25px 20px;
-    }
-
-    .login-header {
-        padding: 30px 20px 15px;
-    }
-
-    .company-name {
-        font-size: 22px;
-    }
-}
-
-/* Add some smooth animations */
-.login-box {
-    animation: slideUp 0.5s ease-out;
-}
-
+/* Animation */
 @keyframes slideUp {
     from {
         opacity: 0;
@@ -164,5 +135,26 @@
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    .login-box {
+        padding: 30px 25px;
+        margin: 10px;
+    }
+
+    .login-header .logo {
+        max-width: 140px;
+    }
+
+    .company-name {
+        font-size: 22px;
+    }
+
+    .input-group-text,
+    .form-control {
+        padding: 10px 12px;
     }
 }

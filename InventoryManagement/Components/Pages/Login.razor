@@ -1,85 +1,113 @@
 @page "/login"
-@using Microsoft.AspNetCore.WebUtilities
 @layout LoginLayout
-@attribute [AllowAnonymous]
-@inject NavigationManager Navigation
+@using System.ComponentModel.DataAnnotations
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
 
 <PageTitle>Arna Technosoft</PageTitle>
 
 <div class="login-container">
     <div class="login-box">
-        <div class="login-header">
-            <div class="logo-container">
-                <img src="images/ArnaLogo.png" alt="Arna Technosoft" class="logo" />
+        <!-- Header with Logo -->
+        <div class="login-header text-center mb-4">
+            <img src="images/ArnaLogo.png" alt="Arna Technosoft" class="logo mb-3" />
+        </div>
+
+        <!-- Login Message -->
+        <div class="login-message text-center mb-4">
+            <p class="text-muted">Sign in to start your session</p>
+        </div>
+
+        <!-- Error Alert -->
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger mb-3" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                @errorMessage
             </div>
-        </div>
+        }
 
-        <div class="login-body">
-            <p class="login-message">Sign in to start your session</p>
+        <!-- Login Form -->
+        <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
 
-            @if (!string.IsNullOrEmpty(errorMessage))
-            {
-                <div class="alert alert-error">
-                    <span>@errorMessage</span>
+            <!-- Username Field -->
+            <div class="form-group mb-3">
+                <label class="form-label visually-hidden">User Name</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-end-0">
+                        <i class="bi bi-person text-muted"></i>
+                    </span>
+                    <InputText @bind-Value="loginModel.Username" class="form-control border-start-0 ps-0" placeholder="User Name" />
                 </div>
-            }
+                <ValidationMessage For="@(() => loginModel.Username)" class="text-danger small mt-1" />
+            </div>
 
-            <form action="account/login" method="post">
-                <AntiforgeryToken />
-
-                <div class="form-group">
-                    <div class="input-container">
-                        <span class="input-icon">
-                            <Icon Name="IconName.Envelope" />
-                        </span>
-                        <input type="text"
-                               name="username"
-                               class="form-input"
-                               placeholder="User Name"
-                               maxlength="50"
-                               required />
-                    </div>
+            <!-- Password Field -->
+            <div class="form-group mb-4">
+                <label class="form-label visually-hidden">Password</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-end-0">
+                        <i class="bi bi-lock text-muted"></i>
+                    </span>
+                    <InputText type="password" @bind-Value="loginModel.Password" class="form-control border-start-0 ps-0" placeholder="Password" />
                 </div>
+                <ValidationMessage For="@(() => loginModel.Password)" class="text-danger small mt-1" />
+            </div>
 
-                <div class="form-group">
-                    <div class="input-container">
-                        <span class="input-icon">
-                            <Icon Name="IconName.Lock" />
-                        </span>
-                        <input type="password"
-                               name="password"
-                               class="form-input"
-                               placeholder="Password"
-                               maxlength="50"
-                               required />
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <button type="submit" class="login-button">Sign In</button>
-                </div>
-
-                <input type="hidden" name="returnUrl" value="@returnUrl" />
-            </form>
-        </div>
+            <!-- Submit Button -->
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary login-btn" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    }
+                    SIGN IN
+                </button>
+            </div>
+        </EditForm>
     </div>
 </div>
 
 @code {
+    private LoginModel loginModel = new();
     private string? errorMessage;
-    private string? returnUrl;
+    private bool isLoading;
 
-    protected override void OnInitialized()
+    private async Task HandleLogin()
     {
-        var uri = new Uri(Navigation.Uri);
-        var query = QueryHelpers.ParseQuery(uri.Query);
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
 
-        returnUrl = query.TryGetValue("returnUrl", out var url) &&
-                   !url.ToString().Contains("/login") ?
-                   url.ToString() : "/";
+            var success = await AuthService.LoginAsync(loginModel.Username, loginModel.Password);
 
-        errorMessage = query.TryGetValue("error", out var error) ? error.ToString() : null;
+            if (success)
+            {
+                NavigationManager.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                errorMessage = "Invalid username or password";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Login failed: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
-    private void ClearError() => errorMessage = null;
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Username is required")]
+        public string Username { get; set; } = "";
+
+        [Required(ErrorMessage = "Password is required")]
+        public string Password { get; set; } = "";
+    }
 }

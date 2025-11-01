@@ -1,0 +1,173 @@
+@* @page "/sales-reports"
+@layout Layout.MainLayout
+@inherits AuthComponentBase
+@using InventoryManagement.Services.Models
+@using InventoryManagement.Services.Interfaces
+
+<PageTitle>Sales Reports - Inventory Management</PageTitle>
+
+@if (IsLoading)
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <span class="ms-2">Loading sales reports...</span>
+    </div>
+}
+else if (IsAuthenticated)
+{
+    <div class="container-fluid">
+        <!-- Report Filters -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <Icon Name="IconName.Funnel" /> Report Filters
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Report Type</label>
+                        <select class="form-select" @bind="SelectedReportType">
+                            <option value="monthly">Monthly Sales</option>
+                            <option value="product">Product Wise</option>
+                            <option value="customer">Customer Wise</option>
+                            <option value="daily">Daily Sales</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" class="form-control" @bind="StartDate" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">End Date</label>
+                        <input type="date" class="form-control" @bind="EndDate" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <Button Color="ButtonColor.Primary" @onclick="LoadReportData">
+                                <Icon Name="IconName.Search" /> Generate Report
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales Summary -->
+        @if (SalesSummary != null)
+        {
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h4>@SalesSummary.TotalOrders</h4>
+                            <p class="card-text">Total Orders</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h4>@SalesSummary.TotalItemsSold</h4>
+                            <p class="card-text">Items Sold</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h4>@SalesSummary.UniqueCustomers</h4>
+                            <p class="card-text">Unique Customers</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h4>@SalesSummary.UniqueProductsSold</h4>
+                            <p class="card-text">Products Sold</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Report Content -->
+        @switch (SelectedReportType)
+        {
+            case "monthly":
+                <MonthlySalesReport MonthlySalesData="MonthlySalesData" />
+                break;
+            case "product":
+                <ProductSalesReport ProductSalesData="ProductSalesData" />
+                break;
+            case "customer":
+                <CustomerSalesReport CustomerSalesData="CustomerSalesData" />
+                break;
+            case "daily":
+                <DailySalesReport DailySalesData="DailySalesData" />
+                break;
+        }
+    </div>
+}
+
+@code {
+    [Inject] ISalesReportService SalesReportService { get; set; } = default!;
+
+    private string SelectedReportType = "monthly";
+    private DateTime StartDate = DateTime.Today.AddMonths(-11);
+    private DateTime EndDate = DateTime.Today;
+
+    private SalesSummaryModel SalesSummary = new();
+    private List<MonthlySalesModel> MonthlySalesData = new();
+    private List<ProductSalesModel> ProductSalesData = new();
+    private List<CustomerSalesModel> CustomerSalesData = new();
+    private List<DailySalesModel> DailySalesData = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await LoadReportData();
+    }
+
+    private async Task LoadReportData()
+    {
+        try
+        {
+            IsLoading = true;
+            StateHasChanged();
+
+            // Load summary
+            SalesSummary = await SalesReportService.GetSalesSummaryAsync(StartDate, EndDate);
+
+            // Load specific report data based on type
+            switch (SelectedReportType)
+            {
+                case "monthly":
+                    MonthlySalesData = await SalesReportService.GetMonthlySalesReportAsync(StartDate.Year);
+                    break;
+                case "product":
+                    ProductSalesData = await SalesReportService.GetProductWiseSalesReportAsync(StartDate, EndDate);
+                    break;
+                case "customer":
+                    CustomerSalesData = await SalesReportService.GetCustomerWiseSalesReportAsync(StartDate, EndDate);
+                    break;
+                case "daily":
+                    DailySalesData = await SalesReportService.GetDailySalesReportAsync(StartDate, EndDate);
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading sales report data: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+} *@

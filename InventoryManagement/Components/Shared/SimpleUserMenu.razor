@@ -1,0 +1,39 @@
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+
+@if (AuthService.IsAuthenticated())
+{
+    <div class="dropdown">
+        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <Icon Name="IconName.PersonCircle" />
+            @AuthService.GetCurrentUserName()
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+            <li>
+                <div class="dropdown-item-text">
+                    <small class="text-muted">Welcome back!</small><br>
+                    <strong>@AuthService.GetCurrentUserNameFull()</strong>
+                </div>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <Button class="dropdown-item" Type="ButtonType.Link" To="/sales-reports">
+                    <Icon Name="IconName.BarChart" /> Reports
+                </Button>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <Button class="dropdown-item text-danger" @onclick="HandleLogout">
+                    <Icon Name="IconName.BoxArrowRight" /> Logout
+                </Button>
+            </li>
+        </ul>
+    </div>
+}
+
+@code {
+    private async Task HandleLogout()
+    {
+        NavigationManager.NavigateTo("/logout", forceLoad: true);
+    }
+}

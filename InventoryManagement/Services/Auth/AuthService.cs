@@ -1,8 +1,4 @@
-﻿
 using InventoryManagement.Services.Interfaces;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using System.Security.Claims;
 
 namespace InventoryManagement.Services.Auth;
 
@@ -10,84 +6,86 @@ public class AuthService
 {
     private readonly IUserService _userService;
 
+    private static bool _isAuthenticated = false;
+    private static string _currentUserId = string.Empty;
+    private static string _currentUserName = string.Empty;
+    private static string _currentUserFullName = string.Empty;
+    private static DateTime _loginTime;
+    private static TimeSpan _sessionTimeout = TimeSpan.FromHours(2); 
+
     public AuthService(IUserService userService)
     {
         _userService = userService;
     }
 
-    public async Task<IResult> LoginAsync(HttpContext httpContext, string username, string password, string? returnUrl)
+    public async Task<bool> LoginAsync(string username, string password)
     {
         try
         {
             var isValid = await _userService.AuthenticateAsync(username, password);
             if (!isValid)
-                return RedirectWithError("/login", "Invalid username or password", returnUrl);
+            {
+                ClearSession();
+                return false;
+            }
 
             var user = await _userService.GetUserByUsernameAsync(username);
             if (user == null)
-                return RedirectWithError("/login", "User not found", returnUrl);
-
-            // Match this with the cookie expiration
-            var expiresUtc = DateTimeOffset.UtcNow.AddHours(2);
-
-            var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name, user.UserName),
-            new(ClaimTypes.Email, user.EmailId ?? ""),
-            new("FullName", user.Name ?? ""),
-            new("UserId", user.Id.ToString()),
-            new("ExpiresUtc", expiresUtc.ToUnixTimeSeconds().ToString())
-        };
-
-            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
-
-            var authProperties = new AuthenticationProperties
             {
-                IsPersistent = true,
-                ExpiresUtc = expiresUtc,
-                AllowRefresh = true,
-                RedirectUri = returnUrl ?? "/"
-            };
+                ClearSession();
+                return false;
+            }
 
-            await httpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                claimsPrincipal,
-                authProperties);
+            _isAuthenticated = true;
+            _currentUserId = user.Id.ToString();
+            _currentUserName = user.UserName ?? username;
+            _currentUserFullName = user.Name ?? username;
+            _loginTime = DateTime.UtcNow;
 
-            return Results.Redirect(string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl);
+            return true;
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"Login error: {ex.Message}");
-            return RedirectWithError("/login", "An error occurred during login", returnUrl);
+            ClearSession();
+            return false;
         }
     }
 
-    public async Task<IResult> LogoutAsync(HttpContext httpContext)
+    public bool IsAuthenticated()
     {
-        try
-        {
-            await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        if (!_isAuthenticated)
+            return false;
 
-            if (httpContext.Session != null)
-                httpContext.Session.Clear();
-        }
-        catch (Exception ex)
+        // Check session timeout    
+        if (DateTime.UtcNow - _loginTime > _sessionTimeout)
         {
-            Console.WriteLine($"Logout error: {ex.Message}");
+            // Expired session
+            ClearSession();
+            return false;
         }
 
-        return Results.Redirect("/login");
+        return true;
     }
 
-    private static IResult RedirectWithError(string path, string error, string? returnUrl)
-    {
-        var query = $"?error={Uri.EscapeDataString(error)}";
-        if (!string.IsNullOrEmpty(returnUrl))
-            query += $"&returnUrl={Uri.EscapeDataString(returnUrl)}";
+    public void Logout() => ClearSession();
 
-        return Results.Redirect(path + query);
+    private void ClearSession()
+    {
+        _isAuthenticated = false;
+        _currentUserId = string.Empty;
+        _currentUserName = string.Empty;
+        _currentUserFullName = string.Empty;
+        _loginTime = DateTime.MinValue;
+    }
+
+    public string GetCurrentUserId() => _currentUserId;
+    public string GetCurrentUserName() => _currentUserName;
+    public string GetCurrentUserNameFull() => _currentUserFullName;
+    public DateTime? GetLoginTime() => _isAuthenticated ? _loginTime : null;
+    public TimeSpan GetRemainingSessionTime()
+    {
+        if (!_isAuthenticated) return TimeSpan.Zero;
+        var remaining = _sessionTimeout - (DateTime.UtcNow - _loginTime);
+        return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
     }
 }

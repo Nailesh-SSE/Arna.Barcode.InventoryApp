@@ -1,29 +1,32 @@
 @page "/categories"
 @inject IJSRuntime JS
 @inject ICategoryService CategoryService
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
 
 <PageTitle>Categories</PageTitle>
 
-<div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col">
-            <h3><Icon Name="IconName.Tags" /> Categories</h3>
-        </div>
-        <div class="col-auto">
-            <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
-                <Icon Name="IconName.Plus" /> Add New
-            </Button>
-        </div>
-    </div>
 
-    @if (isLoading)
-    {
-        <div class="text-center">
-            <Spinner Type="SpinnerType.Border" />
+@if (isLoading)
+{
+    <div class="text-center">
+        <Spinner Type="SpinnerType.Border" />
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col">
+                <h3><Icon Name="IconName.Tags" /> Categories</h3>
+            </div>
+            <div class="col-auto">
+                <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                    <Icon Name="IconName.Plus" /> Add New
+                </Button>
+            </div>
         </div>
-    }
-    else
-    {
+
         <Grid TItem="CategoryModel"
               @ref="categoryGrid"
               Class="table table-hover table-bordered table-striped"
@@ -31,10 +34,10 @@
               AllowPaging="true"
               PageSize="10"
               Responsive="true">
-              
+
 
             <GridColumn TItem="CategoryModel" HeaderText="No">
-                   @(categoryList.IndexOf(context) + 1)
+                @(categoryList.IndexOf(context) + 1)
             </GridColumn>
 
             <GridColumn TItem="CategoryModel" HeaderText="Name" PropertyName="Name">
@@ -44,7 +47,7 @@
             <GridColumn TItem="CategoryModel" HeaderText="Description" PropertyName="Description">
                 @context.Description
             </GridColumn>
-        
+
             <GridColumn TItem="CategoryModel" HeaderText="Status" PropertyName="IsActive">
                 @if (context.IsActive)
                 {
@@ -65,17 +68,17 @@
                 </Button>
             </GridColumn>
         </Grid>
-    }
-</div>
+    </div>
+}
 
- <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
     <BodyTemplate>
         <EditForm EditContext="editContext" OnValidSubmit="SaveCategory">
             <DataAnnotationsValidator />
-            
+
             <div class="mb-3">
                 <label class="form-label">Name <span class="text-danger">*</span></label>
-                <InputText class="form-control" @bind-Value="categoryModel.Name" @oninput="(e)=>HandleNameChangeAsync(e.Value?.ToString())" />
+                <InputText class="form-control" @bind-Value="categoryModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
                 <ValidationMessage For="@(() => categoryModel.Name)" />
             </div>
 
@@ -83,7 +86,7 @@
                 <label class="form-label">Description</label>
                 <InputTextArea class="form-control" rows="3" @bind-Value="categoryModel.Description" />
             </div>
-           
+
             <div class="mb-3">
                 <label class="form-label">Parent Category</label>
                 <InputSelect class="form-select" @bind-Value="categoryModel.ParentCategoryId">
@@ -98,7 +101,7 @@
             {
                 <div class="mb-3">
                     <InputCheckbox @bind-Value="categoryModel.IsActive" /> Active
-            </div>
+                </div>
             }
 
             <div class="text-end">
@@ -107,7 +110,7 @@
             </div>
         </EditForm>
     </BodyTemplate>
-</Modal> 
+</Modal>
 
 
 @code {
@@ -124,6 +127,11 @@
     private CancellationTokenSource _validationCts;
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+        if (!AuthService.IsAuthenticated())
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+        }
         await LoadCategories();
     }
 
@@ -131,7 +139,7 @@
     {
         isLoading = true;
         categoryList = (await CategoryService.GetAllCategoriesAsync()).ToList();
-        parentCategoryList = categoryList.Where(c => c.ParentCategoryId == null).ToList();     
+        parentCategoryList = categoryList.Where(c => c.ParentCategoryId == null).ToList();
         isLoading = false;
     }
     private void InitializeEditContext()
@@ -160,7 +168,7 @@
             Description = editCategory.Description,
             ParentCategoryId = editCategory.ParentCategoryId,
             IsActive = editCategory.IsActive,
-            SerialNumber=editCategory.SerialNumber
+            SerialNumber = editCategory.SerialNumber
         };
         InitializeEditContext();
         modal?.ShowAsync();
@@ -170,7 +178,7 @@
     {
         try
         {
-            if(!editContext.Validate()) return;
+            if (!editContext.Validate()) return;
             await ValidateNameAsync();
             if (editContext.GetValidationMessages().Any())
                 return;
@@ -184,7 +192,7 @@
             }
             else
             {
-                await CategoryService.CreateCategoryAsync(categoryModel);          
+                await CategoryService.CreateCategoryAsync(categoryModel);
             }
 
             await HideModal();
@@ -195,7 +203,7 @@
         {
         }
     }
-     
+
     private async Task DeleteCategory(int id)
     {
         try
@@ -235,7 +243,7 @@
             messageStore.Add(() => categoryModel.Name, "Name is required.");
             editContext.NotifyValidationStateChanged();
         }
-        
+
     }
     private async Task HandleNameChangeAsync(string newValue)
     {

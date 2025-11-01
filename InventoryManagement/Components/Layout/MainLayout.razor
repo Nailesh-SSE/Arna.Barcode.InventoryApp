@@ -1,16 +1,21 @@
 @inherits LayoutComponentBase
 
 <div class="page">
-    <div class="sidebar">
+    <div class="sidebar @(isCollapsed ? "collapsed" : "")">
         <NavMenu />
     </div>
 
-    <main>
+    <main class="@(isCollapsed ? "expanded" : "")">
         <div class="top-row px-4 d-flex justify-content-between align-items-center">
+            <!-- Toggle button for sidebar -->
+            <button class="navbar-toggler-main" @onclick="ToggleSidebar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
             <div class="breadcrumb-container">
             </div>
             <div class="user-menu-container">
-                <UserMenu />
+                <SimpleUserMenu />
             </div>
         </div>
 
@@ -19,3 +24,15 @@
         </article>
     </main>
 </div>
+
+<!-- Mobile overlay -->
+<div class="sidebar-overlay @(isCollapsed ? "" : "show")" @onclick="ToggleSidebar"></div>
+
+@code {
+    private bool isCollapsed = true;
+
+    private void ToggleSidebar()
+    {
+        isCollapsed = !isCollapsed;
+    }
+}

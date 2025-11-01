@@ -2,6 +2,9 @@
 @inject IOutwardService OutwardService
 @inject ICompanyService CompanyService
 @inject IJSRuntime JSRuntime
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+
 <PageTitle>Outward Management</PageTitle>
 
 <div class="container-fluid">
@@ -243,6 +246,10 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (!AuthService.IsAuthenticated())
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+        }
         await LoadData();
     }
 
