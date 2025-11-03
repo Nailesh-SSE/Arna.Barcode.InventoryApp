@@ -143,15 +143,30 @@ public class InwardService : IInwardService
         {
             await _unitOfWork.BeginTransactionAsync();
 
-            var repo = _unitOfWork.GetRepository<InwardItem>();
-            var entity = await repo.GetByIdAsync(model.Id);
-            if (entity == null) return false;
+            var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
+            var entity = await inwardItemRepo.GetByIdAsync(model.Id);
 
+            var inwardRepo = _unitOfWork.GetRepository<Inward>();
+            var inward = await GetByIdAsync(model.InwardId);
+            
+            if (entity == null) return false;
+            if (inward == null)
+                throw new Exception("Related Inward record not found.");
+
+            // Update common fields
             entity.ProductId = model.ProductId;
-            entity.Quantity = model.Quantity;
             entity.Unit = model.Unit;
 
-            repo.Update(entity);
+            // Handle quantity change
+            if (entity.Quantity != model.Quantity)
+            {
+                entity.Quantity = model.Quantity;
+                await DeleteBarcodesForItemAsync(entity.Id);
+                await CreateBarcodesForSingleItemAsync(entity, inward.InwardDate);
+            }
+
+            inwardItemRepo.Update(entity);
+
             await _unitOfWork.SaveChangesAsync();
 
             await _unitOfWork.CommitTransactionAsync(); 
@@ -320,21 +335,54 @@ public class InwardService : IInwardService
 
     private async Task CreateBarcodesForSingleItemAsync(InwardItem item, DateTime transactionDate)
     {
-        var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
-
-        var existingBarcodes = await barcodeRepo.FindAsync(b => b.InwardId == item.InwardId);
-        int startCounter = existingBarcodes.Any() ? existingBarcodes.Count() + 1 : 1;
-
-        var barcodes = new List<InwardBarcodeItem>();
-        for (int i = 0; i < item.Quantity; i++)
+        try
         {
-            barcodes.Add(CreateBarcodeEntity(item, startCounter + i, transactionDate));
+            var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+
+            // Get all existing barcodes for this inward to find the highest counter
+            var existingBarcodes = await barcodeRepo.FindAsync(b => b.InwardId == item.InwardId);
+
+            int startCounter = 1; // Default start
+
+            if (existingBarcodes != null && existingBarcodes.Any())
+            {
+                // Find the highest counter from existing barcodes
+                var highestCounter = existingBarcodes
+                    .Where(b => !string.IsNullOrEmpty(b.BarcodeNo))
+                    .Select(b =>
+                    {
+                        // Extract the counter part from barcode (last 6 digits)
+                        if (b.BarcodeNo.Length >= 6)
+                        {
+                            var counterPart = b.BarcodeNo.Substring(b.BarcodeNo.Length - 6);
+                            if (int.TryParse(counterPart, out int counter))
+                                return counter;
+                        }
+                        return 0;
+                    })
+                    .DefaultIfEmpty(0)
+                    .Max();
+
+                startCounter = highestCounter + 1;
+            }
+
+            var barcodes = new List<InwardBarcodeItem>();
+            for (int i = 0; i < item.Quantity; i++)
+            {
+                barcodes.Add(CreateBarcodeEntity(item, startCounter + i, transactionDate));
+            }
+
+            if (barcodes.Any())
+            {
+                await barcodeRepo.AddRangeAsync(barcodes);
+                await _unitOfWork.SaveChangesAsync();
+            }
         }
-
-        if (barcodes.Any())
+        catch (Exception ex)
         {
-            await barcodeRepo.AddRangeAsync(barcodes);
-            await _unitOfWork.SaveChangesAsync();
+            // Log the exception properly
+            Console.WriteLine($"Error creating barcodes: {ex.Message}");
+            throw; // Re-throw to handle in calling method
         }
     }
 
@@ -355,7 +403,7 @@ public class InwardService : IInwardService
         {
             InwardId = item.InwardId,
             InwardItemId = item.Id,
-            BarcodeNo = GenerateBarcodeNumber(item.InwardId, counter),
+            BarcodeNo = GenerateBarcodeNumber(transactionDate, item.InwardId, counter),
             TransactionDate = transactionDate,
             IsInStock = true
         };
@@ -375,9 +423,11 @@ public class InwardService : IInwardService
         return $"IN-{startYear % 100}-{endYear % 100}/{count}";
     }
 
-    private string GenerateBarcodeNumber(int inwardId, int counter)
+    private string GenerateBarcodeNumber(DateTime TransactionDate,int inwardId, int counter)
     {
-        return $"1{inwardId:D3}{counter:D3}";
+        string datePart = TransactionDate.ToString("ddMMyy"); 
+
+        return $"{datePart}{inwardId:D4}{counter:D6}";
     }
 
     private string GenerateBatchNo(int serialNo)
