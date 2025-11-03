@@ -9,11 +9,12 @@ public interface IRepository<T> where T : class
     Task<IEnumerable<T>> GetAllAsync();
     Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate);
     Task<T> AddAsync(T entity);
-    Task AddRangeAsync(IEnumerable<T> entities); 
+    Task AddRangeAsync(IEnumerable<T> entities);
     T Update(T entity);
     Task<bool> DeleteAsync(int id);
     Task<int> CountAsync();
     Task<bool> ExistsAsync(int id);
+    IQueryable<T> GetQueryable(); // Added GetQueryable method
 }
 
 public class Repository<T> : IRepository<T> where T : class
@@ -25,6 +26,11 @@ public class Repository<T> : IRepository<T> where T : class
     {
         _context = context;
         _dbSet = context.Set<T>();
+    }
+
+    public IQueryable<T> GetQueryable()
+    {
+        return _dbSet.AsQueryable();
     }
 
     public async Task<T?> GetByIdAsync(int id, params Expression<Func<T, object>>[]? includes)

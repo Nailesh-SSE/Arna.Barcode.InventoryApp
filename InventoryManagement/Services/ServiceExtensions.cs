@@ -37,12 +37,11 @@ public static class ServiceExtensions
         services.AddScoped<IOutwardService, OutwardService>();
         services.AddScoped<ISaleReturnService, SaleReturnService>();
         services.AddScoped<IColourService, ColourService>();
-
+        services.AddTransient<ISalesReportService, SalesReportService>();
         services.AddAuthorizationCore();
         services.AddScoped<ProtectedSessionStorage>();
         services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
         services.AddScoped<CustomAuthStateProvider>();
-
 
         return services;
     }

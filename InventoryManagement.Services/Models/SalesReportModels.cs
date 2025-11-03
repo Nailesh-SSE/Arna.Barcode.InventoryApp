@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace InventoryManagement.Services.Models;
 
 public class MonthlySalesModel

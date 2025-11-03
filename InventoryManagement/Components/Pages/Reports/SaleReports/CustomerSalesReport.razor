@@ -1,9 +1,11 @@
+@page "/reports/customer-wise"
 @using InventoryManagement.Services.Models
+@inject ISalesReportService SalesReportService
 
 <div class="card">
     <div class="card-header">
         <h5 class="card-title mb-0">
-            <Icon Name="IconName.People" /> Customer Wise Sales Report
+            <i class="fas fa-users"></i> Customer Wise Sales Report
         </h5>
     </div>
     <div class="card-body">
@@ -64,13 +66,13 @@
                             <th>@CustomerSalesData.Sum(c => c.TotalOrders)</th>
                             <th>@CustomerSalesData.Sum(c => c.TotalItemsPurchased)</th>
                             <th>@CustomerSalesData.Sum(c => c.TotalSpent).ToString("C")</th>
-                            <th>@CustomerSalesData.Where(c => c.AverageOrderValue > 0).DefaultIfEmpty().Average(c => c.AverageOrderValue).ToString("C")</th>
+                            <th>@(CustomerSalesData.Where(c => c.AverageOrderValue > 0).Any() ? CustomerSalesData.Where(c => c.AverageOrderValue > 0).Average(c => c.AverageOrderValue).ToString("C") : "0")</th>
                             <th>-</th>
                         </tr>
                     </tfoot>
                 </table>
             </div>
-            
+
             @if (CustomerSalesData.Count > 50)
             {
                 <div class="text-center mt-3">
@@ -81,7 +83,7 @@
         else
         {
             <div class="text-center text-muted py-4">
-                <Icon Name="IconName.People" Size="IconSize.x3" />
+                <i class="fas fa-users fa-3x"></i>
                 <p class="mt-2">No customer sales data available</p>
             </div>
         }
@@ -89,5 +91,27 @@
 </div>
 
 @code {
-    [Parameter] public List<CustomerSalesModel> CustomerSalesData { get; set; } = new();
+    [Parameter]
+    public List<CustomerSalesModel> CustomerSalesData { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomerSalesData();
+    }
+
+    private async Task LoadCustomerSalesData()
+    {
+        try
+        {
+            var endDate = DateTime.Now;
+            var startDate = endDate.AddDays(-30);
+
+            CustomerSalesData = await SalesReportService.GetCustomerWiseSalesReportAsync(startDate, endDate);
+        }
+        catch (Exception ex)
+        {
+            // Handle exception - you might want to show an error message
+            Console.WriteLine($"Error loading customer sales data: {ex.Message}");
+        }
+    }
 }

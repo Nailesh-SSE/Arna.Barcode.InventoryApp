@@ -1,0 +1,80 @@
+﻿@page "/reports"
+@inject NavigationManager NavigationManager
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2><Icon Name="IconName.BarChart" /> Reports & Analytics</h2>
+            <p class="text-muted">Select a report type to view detailed analytics</p>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-4 mb-3">
+            <div class="card report-card h-100">
+                <div class="card-body text-center">
+                    <Icon Name="IconName.GraphUp" Size="IconSize.x2" Class="text-primary mb-3" />
+                    <h5 class="card-title">Sales Summary</h5>
+                    <p class="card-text">Overview of total sales performance</p>
+                    <NavLink @onclick="@(() => NavigationManager.NavigateTo("/reports/sales-summary",true))" class="btn btn-primary">View Report</NavLink>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card report-card h-100">
+                <div class="card-body text-center">
+                    <Icon Name="IconName.People" Size="IconSize.x2" Class="text-success mb-3" />
+                    <h5 class="card-title">Customer Wise</h5>
+                    <p class="card-text">Sales analysis by customer</p>
+                    <NavLink @onclick="@(() => NavigationManager.NavigateTo("/reports/customer-wise",true))" class="btn btn-success">View Report</NavLink>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card report-card h-100">
+                <div class="card-body text-center">
+                    <Icon Name="IconName.BoxSeam" Size="IconSize.x2" Class="text-info mb-3" />
+                    <h5 class="card-title">Product Wise</h5>
+                    <p class="card-text">Sales analysis by product</p>
+                    <NavLink @onclick="@(() => NavigationManager.NavigateTo("/reports/product-wise", true))" class="btn btn-info">View Report</NavLink>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card report-card h-100">
+                <div class="card-body text-center">
+                    <Icon Name="IconName.CalendarMonth" Size="IconSize.x2" Class="text-warning mb-3" />
+                    <h5 class="card-title">Monthly Sales</h5>
+                    <p class="card-text">Monthly sales trends and patterns</p>
+                    <NavLink @onclick="@(() => NavigationManager.NavigateTo("/reports/monthly-sales",true))" class="btn btn-warning">View Report</NavLink>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card report-card h-100">
+                <div class="card-body text-center">
+                    <Icon Name="IconName.CalendarDay" Size="IconSize.x2" Class="text-danger mb-3" />
+                    <h5 class="card-title">Daily Sales</h5>
+                    <p class="card-text">Daily sales performance</p>
+                    <NavLink @onclick="@(() => NavigationManager.NavigateTo("/reports/daily-sales",true))" class="btn btn-danger">View Report</NavLink>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .report-card {
+        transition: transform 0.2s;
+        border: 1px solid #dee2e6;
+    }
+
+    .report-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+</style>
