@@ -1,39 +1,67 @@
-@inject AuthService AuthService
+@using InventoryManagement.Services.Auth
+@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 
-@if (AuthService.IsAuthenticated())
-{
-    <div class="dropdown">
-        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            <Icon Name="IconName.PersonCircle" />
-            @AuthService.GetCurrentUserName()
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-            <li>
-                <div class="dropdown-item-text">
-                    <small class="text-muted">Welcome back!</small><br>
-                    <strong>@AuthService.GetCurrentUserNameFull()</strong>
-                </div>
-            </li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-                <Button class="dropdown-item" Type="ButtonType.Link" To="/sales-reports">
-                    <Icon Name="IconName.BarChart" /> Reports
-                </Button>
-            </li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-                <Button class="dropdown-item text-danger" @onclick="HandleLogout">
-                    <Icon Name="IconName.BoxArrowRight" /> Logout
-                </Button>
-            </li>
-        </ul>
-    </div>
-}
+
+<AuthorizeView>
+    <Authorized>
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                    id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <Icon Name="IconName.PersonCircle" />
+                @context.User.Identity?.Name
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                <li>
+                    <div class="dropdown-item-text">
+                        <small class="text-muted">Welcome back!</small><br>
+                        <strong>@context.User.FindFirst("FullName")?.Value</strong>
+                    </div>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <Button class="dropdown-item" Type="ButtonType.Link" To="/sales-reports">
+                        <Icon Name="IconName.BarChart" /> Reports
+                    </Button>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <Button class="dropdown-item text-danger" @onclick="HandleLogout">
+                        <Icon Name="IconName.BoxArrowRight" /> Logout
+                    </Button>
+                </li>
+            </ul>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <!-- Show login button when user is not authenticated -->
+        <Button class="btn btn-outline-primary" @onclick="@(() => NavigationManager.NavigateTo("/login"))">
+            <Icon Name="IconName.Person" /> Login
+        </Button>
+
+
+    </NotAuthorized>
+</AuthorizeView>
+
+
 
 @code {
     private async Task HandleLogout()
     {
-        NavigationManager.NavigateTo("/logout", forceLoad: true);
+        try
+        {
+            var authProvider = AuthStateProvider as CustomAuthStateProvider;
+            if (authProvider != null)
+            {
+                await authProvider.MarkUserAsLoggedOut();
+            }
+            NavigationManager.NavigateTo("/login", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            // Log error or show notification
+            Console.WriteLine($"Logout error: {ex.Message}");
+            NavigationManager.NavigateTo("/login", forceLoad: true);
+        }
     }
 }

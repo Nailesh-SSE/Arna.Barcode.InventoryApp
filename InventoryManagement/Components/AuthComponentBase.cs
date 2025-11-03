@@ -1,40 +1,87 @@
+﻿using InventoryManagement.Services.Auth;
 using Microsoft.AspNetCore.Components;
-using InventoryManagement.Services.Auth;
+using Microsoft.AspNetCore.Components.Authorization;
+using System.Security.Claims;
 
-namespace InventoryManagement.Components;
+namespace InventoryManagement.Components.Auth;
 
-public class AuthComponentBase : ComponentBase
+public class AuthComponentBase : ComponentBase, IDisposable
 {
-    [Inject] protected AuthService AuthService { get; set; } = default!;
-    [Inject] protected NavigationManager Navigation { get; set; } = default!;
+    [Inject] protected AuthenticationStateProvider AuthenticationStateProvider { get; set; }
 
-    protected bool IsAuthenticated { get; private set; }
-    protected bool IsLoading { get; private set; } = true;
+    protected bool IsAuthenticated { get; set; }
+    protected bool IsLoading { get; set; } = true;
+    protected ClaimsPrincipal CurrentUser { get; set; }
+    protected string CurrentUserId => CurrentUser.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+    protected string CurrentUserName => CurrentUser.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? string.Empty;
+    protected string CurrentUserFullName => CurrentUser.FindFirst("FullName")?.Value ?? string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        await ValidateAuth();
+        await CheckAuthenticationState();
+
+        // Subscribe to authentication state changes
+        if (AuthenticationStateProvider != null)
+        {
+            AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        }
     }
 
-    protected virtual Task ValidateAuth()
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
     {
-        // Skip login page
-        if (Navigation.Uri.Contains("/login", StringComparison.OrdinalIgnoreCase))
+        await CheckAuthenticationState();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CheckAuthenticationState()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            CurrentUser = authState.User;
+            IsAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        }
+        catch (Exception ex)
+        {
+            // Log error if needed
+            Console.WriteLine($"Error checking authentication state: {ex.Message}");
+            CurrentUser = new ClaimsPrincipal(new ClaimsIdentity());
+            IsAuthenticated = false;
+        }
+        finally
         {
             IsLoading = false;
-            IsAuthenticated = false;
-            return Task.CompletedTask;
         }
+    }
 
-        IsAuthenticated = AuthService.IsAuthenticated();
-
-        if (!IsAuthenticated)
+    protected async Task LogoutAsync()
+    {
+        try
         {
-            Navigation.NavigateTo("/login", true);
+            var authProvider = AuthenticationStateProvider as CustomAuthStateProvider;
+            if (authProvider != null)
+            {
+                await authProvider.MarkUserAsLoggedOut();
+            }
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Logout error: {ex.Message}");
+        }
+    }
 
-        IsLoading = false;
-        StateHasChanged();
-        return Task.CompletedTask;
+    public void Dispose()
+    {
+        try
+        {
+            if (AuthenticationStateProvider != null)
+            {
+                AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Disposal error: {ex.Message}");
+        }
     }
 }

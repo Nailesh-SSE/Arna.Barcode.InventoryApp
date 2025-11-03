@@ -27,3 +27,8 @@
 /.vs/ProjectEvaluation/inventorymanagement.projects.v9.bin
 /.vs/ProjectEvaluation/inventorymanagement.strings.v9.bin
 /.vs
+/InventoryManagement/Properties/PublishProfiles
+/InventoryManagement.Core/bin/Release/net8.0
+/InventoryManagement.Infrastructure/bin/Release/net8.0
+/InventoryManagement.Services/bin/Release/net8.0
+/InventoryManagement/bin/Release/net8.0

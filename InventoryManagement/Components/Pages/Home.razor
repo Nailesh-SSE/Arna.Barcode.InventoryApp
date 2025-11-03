@@ -1,9 +1,11 @@
 @page "/"
 @layout Layout.MainLayout
-@inherits AuthComponentBase
+@inherits InventoryManagement.Components.Auth.AuthComponentBase
 @inject NavigationManager NavigationManager
 
+
 <PageTitle>Dashboard - Inventory Management</PageTitle>
+
 
 @if (IsLoading)
 {
@@ -27,11 +29,12 @@ else if (IsAuthenticated)
                     <hr class="my-4">
                     <p>Track inward and outward movements, manage products, categories, and companies all in one place.</p>
                     <p class="text-muted">
-                        <strong>Welcome back, @AuthService.GetCurrentUserNameFull()!</strong>
+                        <strong>Welcome back, @CurrentUserFullName</strong>
                     </p>
                 </div>
             </div>
         </div>
+
 
         <!-- Dashboard Summary Cards -->
         <div class="row g-4 mb-4">
@@ -165,6 +168,19 @@ else if (IsAuthenticated)
                     </CardBody>
                 </Card>
             </div>
+        </div>
+    </div>
+
+}
+else
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+        <div class="text-center">
+            <h3>Authentication Required</h3>
+            <p class="text-muted">Please log in to access the dashboard.</p>
+            <Button Color="ButtonColor.Primary" @onclick="@(() => NavigationManager.NavigateTo("/login"))">
+                Go to Login
+            </Button>
         </div>
     </div>
 }

@@ -4,7 +4,6 @@
 @inject IProductService ProductService
 @inject ICategoryService CategoryService
 @inject IJSRuntime JS
-@inject AuthService AuthService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Inward Management</PageTitle>
@@ -57,10 +56,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (!AuthService.IsAuthenticated())
-        {
-            NavigationManager.NavigateTo("/logout", forceLoad: true);
-        }
         await LoadData();
     }
 

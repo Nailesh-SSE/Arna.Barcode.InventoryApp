@@ -12,12 +12,12 @@
 /* Login Box */
 .login-box {
     background: white;
-    border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    border-radius: 14px;
+    padding: 45px 38px;
     width: 100%;
-    max-width: 400px;
-    padding: 40px 35px;
-    animation: slideUp 0.5s ease-out;
+    max-width: 420px;
+    box-shadow: 0 18px 32px rgba(0,0,0,.08);
+    border: 1px solid rgba(255,255,255,.2);
 }
 
 /* Header Styles */
@@ -44,41 +44,75 @@
 
 /* Input Group Styling */
 .input-group {
-    border: 1px solid #dce1e6;
-    border-radius: 6px;
-    transition: all 0.3s ease;
-    background: #fff;
+    background: #f8f9fc;
+    border: 1px solid #d9dce3;
+    border-radius: 8px;
+    overflow: hidden; /* ✅ makes all elements same height */
+    transition: all .25s ease;
+    display: flex;
+    align-items: stretch; /* Ensure all children stretch to same height */
 }
 
-    .input-group:focus-within {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        transform: translateY(-1px);
-    }
+.input-group:focus-within {
+    border-color: #6a63f6;
+    box-shadow: 0px 0px 6px rgba(106, 99, 246, .3);
+}
+
+.input-group.input-error {
+    border-color: #dc3545;
+    box-shadow: 0px 0px 6px rgba(220, 53, 69, 0.3);
+}
 
 .input-group-text {
-    background: transparent !important;
-    border: none !important;
-    padding: 12px 15px;
-    color: #6c757d !important;
+    background: transparent;
+    border: none;
+    padding: 12px 14px;
+    font-size: 16px;
+    color: #737a8d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .form-control {
     border: none !important;
-    padding: 12px 15px;
-    font-size: 14px;
     background: transparent !important;
+    padding: 12px 14px;
+    font-size: 15px;
+    color: #222;
+    flex: 1;
+    min-width: 0; /* Prevent flex item from overflowing */
+}
+
+.password-toggle-btn {
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: #737a8d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.password-toggle-btn:hover {
+    color: #4a4f69;
+}
+
+input:focus, input:valid {
+    outline: none !important;
     box-shadow: none !important;
 }
 
-    .form-control::placeholder {
-        color: #a0a4a8;
-    }
+.form-control::placeholder {
+    color: #a0a4a8;
+}
 
-    .form-control:focus {
-        background: transparent !important;
-        box-shadow: none !important;
-    }
+.form-control:focus {
+    background: transparent !important;
+    box-shadow: none !important;
+}
 
 /* Login Button */
 .login-btn {
@@ -94,19 +128,19 @@
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
-    .login-btn:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 7px 20px rgba(102, 126, 234, 0.4);
-    }
+.login-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 20px rgba(102, 126, 234, 0.4);
+}
 
-    .login-btn:active:not(:disabled) {
-        transform: translateY(0);
-    }
+.login-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
 
-    .login-btn:disabled {
-        opacity: 0.7;
-        cursor: not-allowed;
-    }
+.login-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
 
 /* Alert Styling */
 .alert-danger {

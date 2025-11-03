@@ -3,6 +3,8 @@ using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Auth;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Services;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagement.Services;
@@ -12,6 +14,7 @@ public static class ServiceExtensions
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddRazorPages();
+        services.AddHttpContextAccessor();
 
         services.AddDbContext<InventoryDbContext>(options =>
             options.UseSqlServer(configuration.GetConnectionString("ERP_Connection")));
@@ -21,8 +24,11 @@ public static class ServiceExtensions
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+        // Repository and Unit of Work
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+        // Business Services
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<ICompanyService, CompanyService>();
         services.AddScoped<ICategoryService, CategoryService>();
@@ -32,8 +38,11 @@ public static class ServiceExtensions
         services.AddScoped<ISaleReturnService, SaleReturnService>();
         services.AddScoped<IColourService, ColourService>();
 
-        // Simplified Authentication only
-        services.AddScoped<AuthService>();
+        services.AddAuthorizationCore();
+        services.AddScoped<ProtectedSessionStorage>();
+        services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+        services.AddScoped<CustomAuthStateProvider>();
+
 
         return services;
     }
@@ -48,6 +57,7 @@ public static class ServiceExtensions
 
         app.UseHttpsRedirection();
         app.UseStaticFiles();
+        app.UseRouting();
         app.UseAntiforgery();
 
         return app;

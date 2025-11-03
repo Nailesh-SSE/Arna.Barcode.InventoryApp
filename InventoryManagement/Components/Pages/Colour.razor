@@ -1,7 +1,6 @@
 ﻿@page "/colour"
 @inject IColourService ColourService
 @inject IJSRuntime JS
-@inject AuthService AuthService
 @inject NavigationManager NavigationManager
 
 <PageTitle>Colour</PageTitle>
@@ -121,10 +120,6 @@ else
     protected override async Task OnInitializedAsync()
     {
 
-        if (!AuthService.IsAuthenticated())
-        {
-            NavigationManager.NavigateTo("/logout", forceLoad: true);
-        }
         await LoadColour();
     }
 

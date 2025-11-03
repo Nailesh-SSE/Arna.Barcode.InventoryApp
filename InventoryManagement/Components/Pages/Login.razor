@@ -1,24 +1,28 @@
-@page "/login"
+﻿@page "/login"
 @layout LoginLayout
 @using System.ComponentModel.DataAnnotations
-@inject AuthService AuthService
+@using InventoryManagement.Services.Auth
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IUserService UserService
+@inject ILogger<Login> Logger
 
-<PageTitle>Arna Technosoft</PageTitle>
+
+<PageTitle>Arna Technosoft - Login</PageTitle>
+
 
 <div class="login-container">
     <div class="login-box">
-        <!-- Header with Logo -->
         <div class="login-header text-center mb-4">
             <img src="images/ArnaLogo.png" alt="Arna Technosoft" class="logo mb-3" />
         </div>
 
-        <!-- Login Message -->
+
+
         <div class="login-message text-center mb-4">
             <p class="text-muted">Sign in to start your session</p>
         </div>
 
-        <!-- Error Alert -->
         @if (!string.IsNullOrEmpty(errorMessage))
         {
             <div class="alert alert-danger mb-3" role="alert">
@@ -27,35 +31,35 @@
             </div>
         }
 
-        <!-- Login Form -->
         <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
             <DataAnnotationsValidator />
 
-            <!-- Username Field -->
             <div class="form-group mb-3">
-                <label class="form-label visually-hidden">User Name</label>
                 <div class="input-group">
                     <span class="input-group-text bg-transparent border-end-0">
                         <i class="bi bi-person text-muted"></i>
                     </span>
-                    <InputText @bind-Value="loginModel.Username" class="form-control border-start-0 ps-0" placeholder="User Name" />
+                    <InputText @bind-Value="loginModel.Username" class="form-control border-start-0 ps-0" placeholder="User Name" autofocus />
                 </div>
                 <ValidationMessage For="@(() => loginModel.Username)" class="text-danger small mt-1" />
             </div>
 
-            <!-- Password Field -->
             <div class="form-group mb-4">
-                <label class="form-label visually-hidden">Password</label>
                 <div class="input-group">
                     <span class="input-group-text bg-transparent border-end-0">
                         <i class="bi bi-lock text-muted"></i>
                     </span>
-                    <InputText type="password" @bind-Value="loginModel.Password" class="form-control border-start-0 ps-0" placeholder="Password" />
+                    <InputText @bind-Value="loginModel.Password"
+                               class="form-control border-start-0 ps-0"
+                               placeholder="Password"
+                               type="@passwordInputType" />
+                    <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordVisibility">
+                        <i class="@passwordToggleIcon"></i>
+                    </button>
                 </div>
                 <ValidationMessage For="@(() => loginModel.Password)" class="text-danger small mt-1" />
             </div>
 
-            <!-- Submit Button -->
             <div class="d-grid">
                 <button type="submit" class="btn btn-primary login-btn" disabled="@isLoading">
                     @if (isLoading)
@@ -67,12 +71,38 @@
             </div>
         </EditForm>
     </div>
+
 </div>
+
+
 
 @code {
     private LoginModel loginModel = new();
     private string? errorMessage;
     private bool isLoading;
+    private bool showPassword;
+
+
+    private string passwordInputType => showPassword ? "text" : "password";
+    private string passwordToggleIcon => showPassword ? "bi bi-eye-slash" : "bi bi-eye";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if user is already authenticated and redirect if needed
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity?.IsAuthenticated == true)
+            {
+                NavigationManager.NavigateTo("/", true);
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error checking initial authentication state");
+        }
+    }
 
     private async Task HandleLogin()
     {
@@ -80,26 +110,62 @@
         {
             isLoading = true;
             errorMessage = null;
+            StateHasChanged();
 
-            var success = await AuthService.LoginAsync(loginModel.Username, loginModel.Password);
+            // Validate credentials
+            var isValid = await UserService.AuthenticateAsync(loginModel.Username, loginModel.Password);
 
-            if (success)
+            if (isValid)
             {
-                NavigationManager.NavigateTo("/", forceLoad: true);
+                var user = await UserService.GetUserByUsernameAsync(loginModel.Username);
+                if (user == null)
+                {
+                    errorMessage = "User account not found";
+                    return;
+                }
+
+                // Mark user as authenticated using the AuthenticationStateProvider
+                var authProvider = AuthStateProvider as CustomAuthStateProvider;
+                if (authProvider != null)
+                {
+                    await authProvider.MarkUserAsAuthenticated(new AuthData
+                    {
+                        UserId = user.Id.ToString(),
+                        UserName = user.UserName ?? loginModel.Username,
+                        UserFullName = user.Name ?? loginModel.Username,
+                        IsAuthenticated = true,
+                        LoginTime = DateTime.UtcNow
+                    });
+
+                    Logger.LogInformation("User {Username} logged in successfully", loginModel.Username);
+                    NavigationManager.NavigateTo("/", true);
+                }
+                else
+                {
+                    errorMessage = "Authentication service not available";
+                }
             }
             else
             {
                 errorMessage = "Invalid username or password";
+                Logger.LogWarning("Failed login attempt for username: {Username}", loginModel.Username);
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Login failed: {ex.Message}";
+            Logger.LogError(ex, "Login failed for user {Username}", loginModel.Username);
+            errorMessage = "Login failed. Please try again later.";
         }
         finally
         {
             isLoading = false;
+            StateHasChanged();
         }
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        showPassword = !showPassword;
     }
 
     public class LoginModel

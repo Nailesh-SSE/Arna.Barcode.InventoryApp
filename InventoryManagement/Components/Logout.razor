@@ -1,23 +1,37 @@
 ﻿@page "/logout"
-@inject AuthService AuthService
+@using InventoryManagement.Services.Auth
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ILogger<Logout> Logger
 
-<p>Logging out...</p>
 
 @code {
-    private bool _loggedOut = false;
-
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        AuthService.Logout();
-        _loggedOut = true;
-    }
-
-    protected override void OnAfterRender(bool firstRender)
-    {
-        if (firstRender && _loggedOut)
+        try
         {
-            NavigationManager.NavigateTo("/login", forceLoad: true);
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity?.IsAuthenticated == true)
+            {
+                var username = authState.User.Identity.Name;
+                Logger.LogInformation("User {Username} is logging out", username);
+
+
+            var authProvider = AuthStateProvider as CustomAuthStateProvider;
+            if (authProvider != null)
+            {
+                await authProvider.MarkUserAsLoggedOut();
+            }
         }
     }
+    catch (Exception ex)
+    {
+        Logger.LogError(ex, "Error during logout");
+    }
+    finally
+    {
+        // Always redirect to login page
+        NavigationManager.NavigateTo("/login", forceLoad: true);
+    }
+}
 }
