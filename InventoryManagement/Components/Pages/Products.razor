@@ -99,7 +99,7 @@
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">MakeCompany <span class="text-danger">*</span></label>
-                    <InputSelect class="form-control" @bind-Value="productModel.MakeCompanyId" @oninput="(e) => HandleMakeCompanyChangeAsync(Convert.ToInt32(e.Value))">
+                    <InputSelect class="form-select" @bind-Value="productModel.MakeCompanyId" @oninput="(e) => HandleMakeCompanyChangeAsync(Convert.ToInt32(e.Value))">
 
                         <option value="0">-- Select MakeCompany -- </option>
                         @foreach (var company in companies)
@@ -126,7 +126,7 @@
 
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Unit <span class="text-danger">*</span></label>
-                    <InputSelect class="form-control" @bind-Value="productModel.UnitId" @oninput="(e) => HandleUnitChangeAsync(Convert.ToInt32(e.Value))">
+                    <InputSelect class="form-select" @bind-Value="productModel.UnitId" @oninput="(e) => HandleUnitChangeAsync(Convert.ToInt32(e.Value))">
                         <option value="0">-- Select Unit -- </option>
                         @foreach (var unit in units)
                         {
@@ -139,8 +139,8 @@
             <div class="row">
                 <div  class="col-md-6 mb-3">
                     <label class="form-label">Colour <span class="text-danger">*</span></label>
-                    <InputSelect class="form-control" @bind-Value="productModel.ColourId" @oninput="(e) => HandleColourChangeAsync(Convert.ToInt32(e.Value))">
-                        <option value="0">-- Select Unit -- </option>
+                    <InputSelect class="form-select" @bind-Value="productModel.ColourId" @oninput="(e) => HandleColourChangeAsync(Convert.ToInt32(e.Value))">
+                        <option value="0">-- Select Colour -- </option>
                         @foreach (var color in Colours)
                         {
                             <option value="@color.Id">@color.Name-@color.Code</option>
