@@ -20,6 +20,7 @@ public class Inward : Common
     [StringLength(500)]
     public string? Remarks { get; set; }
     public int? CategoryId { get; set; }
+    public virtual Category? Category { get; set; }
     public virtual Company ShipMentCompany { get; set; } = null!;
     public virtual ICollection<InwardItem> InwardItems { get; set; } = new List<InwardItem>();
     public virtual ICollection<InwardBarcodeItem> InwardBarcodeItems { get; set; } = new List<InwardBarcodeItem>();

@@ -21,6 +21,6 @@ public class OutwardDetail : Common
     [Required]
     [StringLength(20)]
     public string Unit { get; set; } = "PCS";
-
+    public virtual Product Product { get; set; }
     public virtual Outward Outward { get; set; } = null!;
 }
