@@ -148,7 +148,7 @@ public class OutwardService : IOutwardService
                 Id = detail.Id,
                 OutwardId = detail.OutwardId,
                 ProductId = detail.ProductId,
-                ProductName = product?.Name ?? "Unknown",
+                ProductName = product != null ? $"{product?.Name} ({product?.ColourName})" : "Unknown",
                 BarcodeNo = detail.BarcodeNo,
                 Quantity = detail.Quantity,
                 Unit = detail.Unit
