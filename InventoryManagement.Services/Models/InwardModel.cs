@@ -18,7 +18,10 @@ public class InwardModel
     public int? CategoryId { get; set; }
     public string? Remarks { get; set; }
     public bool IsActive { get; set; }
-
+    public int CreatedBy { get; set; }
+    public DateTime CreatedOn { get; set; }
+    public int? UpdatedBy { get; set; }
+    public DateTime? UpdatedOn { get; set; }
     public List<InwardItemModel> InwardItems { get; set; } = new();
 }
 
@@ -30,4 +33,8 @@ public class InwardItemModel
     public decimal Quantity { get; set; }
     public string? Unit { get; set; }
     public string? BatchNo { get; set; }
+    public int CreatedBy { get; set; }
+    public DateTime CreatedOn { get; set; }
+    public int? UpdatedBy { get; set; }
+    public DateTime? UpdatedOn { get; set; }
 }

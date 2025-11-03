@@ -64,7 +64,7 @@
 
             <GridColumn TItem="OutwardModel" HeaderText="Actions">
                 <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
-                    <Icon Name="IconName.PlusCircle" /> Items
+                    <Icon Name="IconName.PlusCircle" /> Add Items
                 </Button>
                 <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                     <Icon Name="IconName.PencilSquare" /> Edit
@@ -162,7 +162,7 @@
                     <h5 class="mb-0">Items List (@itemList.Count)</h5>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive">
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
                         <table class="table table-bordered table-striped table-hover mb-0">
                             <thead>
                                 <tr>

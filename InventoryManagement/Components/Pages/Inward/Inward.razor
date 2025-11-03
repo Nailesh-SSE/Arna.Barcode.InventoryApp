@@ -1,4 +1,6 @@
 ﻿@page "/inward"
+@using InventoryManagement.Components.Auth
+@inherits AuthComponentBase
 @inject IInwardService InwardService
 @inject ICompanyService CompanyService
 @inject IProductService ProductService
@@ -15,7 +17,7 @@
         </div>
         <div class="col-auto">
             <button class="btn btn-primary" @onclick="ShowAddModal">
-              <Icon Name="IconName.Plus"/>  Add New Inward
+                <Icon Name="IconName.Plus" />  Add New Inward
             </button>
         </div>
     </div>
@@ -53,16 +55,17 @@
     private InwardFormModal inwardFormModal = new();
     private InwardItemsModal itemsModal = new();
     private InwardModel? selectedInward;
-    private int userId = 0;
+
     protected override async Task OnInitializedAsync()
     {
-        isLoading = true;
-        await base.OnInitializedAsync(); 
+        await base.OnInitializedAsync(); // This will call the base authentication check
+
         if (!IsAuthenticated)
         {
             NavigationManager.NavigateTo("/logout", forceLoad: true);
             return;
         }
+
         await LoadData();
     }
 
@@ -72,7 +75,7 @@
         inwards = (await InwardService.GetAllAsync()).ToList();
         shipCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
         categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
-        products = (await ProductService.GetAllProductsAsync()).ToList();
+        products = (await ProductService.GetAllProductsAsync()).Where(e => e.IsActive == true).ToList();
         filteredProducts = products;
 
         isLoading = false;
@@ -87,7 +90,9 @@
         {
             InwardDate = DateTime.Now,
             InwardTime = DateTime.Now.TimeOfDay,
-            IsActive = true
+            IsActive = true,
+            CreatedBy = Convert.ToInt32(CurrentUserId), // Set CreatedBy from current user
+            CreatedOn = DateTime.Now
         };
         inwardItems = new();
         filteredProducts = products;
@@ -100,6 +105,8 @@
         isEditMode = true;
         inward = edit;
         inward.InwardTime = inward.InwardDate.TimeOfDay;
+        inward.UpdatedBy = Convert.ToInt32(CurrentUserId); // Set UpdatedBy from current user
+        inward.UpdatedOn = DateTime.Now;
         inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(edit.Id);
         filteredProducts = products;
         inwardFormModal?.Show();
@@ -110,10 +117,19 @@
         inward.InwardDate = inward.InwardDate.Date.Add(inward.InwardTime);
         inward.InwardItems = inwardItems;
 
+        // Ensure user fields are set before saving
         if (isEditMode)
+        {
+            inward.UpdatedBy = Convert.ToInt32(CurrentUserId);
+            inward.UpdatedOn = DateTime.Now;
             await InwardService.UpdateAsync(inward);
+        }
         else
+        {
+            inward.CreatedBy = Convert.ToInt32(CurrentUserId);
+            inward.CreatedOn = DateTime.Now;
             await InwardService.CreateAsync(inward);
+        }
 
         await HideModal();
         await LoadData();
@@ -153,7 +169,11 @@
     {
         if (selectedInward == null) return;
 
+        // Update the updated by fields when saving items
+        selectedInward.UpdatedBy = Convert.ToInt32(CurrentUserId);
+        selectedInward.UpdatedOn = DateTime.Now;
         selectedInward.InwardItems = inwardItems;
+
         await InwardService.UpdateAsync(selectedInward);
         await HideItemModal();
         await LoadData();
@@ -178,6 +198,20 @@
 
         item.InwardId = selectedInward.Id;
 
+        // Set user fields for inward items if your model supports them
+        if (item.Id == 0)
+        {
+            // For new items
+            item.CreatedBy = Convert.ToInt32(CurrentUserId);
+            item.CreatedOn = DateTime.Now;
+        }
+        else
+        {
+            // For existing items being updated
+            item.UpdatedBy = Convert.ToInt32(CurrentUserId);
+            item.UpdatedOn = DateTime.Now;
+        }
+
         bool success = item.Id == 0
             ? await InwardService.CreateInwardItemAsync(item)
             : await InwardService.UpdateInwardItemAsync(item);
@@ -198,6 +232,7 @@
         inwardItems.Remove(item);
         StateHasChanged();
     }
+
     private async Task DeleteSingleItem(int itemId)
     {
         if (await InwardService.DeleteInwardItemAsync(itemId))
