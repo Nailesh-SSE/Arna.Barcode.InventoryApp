@@ -10,7 +10,7 @@ namespace InventoryManagement.Services.Auth
         private readonly ILogger<CustomAuthStateProvider> _logger;
         private const string SessionKey = "UserAuth";
         private AuthenticationState _authenticationState;
-        private readonly TimeSpan _sessionTimeout = TimeSpan.FromHours(24);
+        private readonly TimeSpan _sessionTimeout = TimeSpan.FromHours(2);
 
         public CustomAuthStateProvider(
             ProtectedSessionStorage storage,

@@ -5,6 +5,7 @@
 @inject ICategoryService CategoryService
 @inject IJSRuntime JS
 @inject NavigationManager NavigationManager
+@inherits InventoryManagement.Components.Auth.AuthComponentBase
 
 <PageTitle>Inward Management</PageTitle>
 
@@ -53,17 +54,22 @@
     private InwardFormModal inwardFormModal = new();
     private InwardItemsModal itemsModal = new();
     private InwardModel? selectedInward;
-
+    private int userId = 0;
     protected override async Task OnInitializedAsync()
     {
+        isLoading = true;
+        await base.OnInitializedAsync(); 
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
         await LoadData();
     }
 
     private async Task LoadData()
     {
-        isLoading = true;
         StateHasChanged();
-
         inwards = (await InwardService.GetAllAsync()).ToList();
         shipCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
         categories = (await CategoryService.GetAllCategoriesAsync()).ToList();

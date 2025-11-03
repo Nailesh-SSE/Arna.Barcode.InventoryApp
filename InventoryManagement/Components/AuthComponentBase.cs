@@ -7,13 +7,13 @@ namespace InventoryManagement.Components.Auth;
 
 public class AuthComponentBase : ComponentBase, IDisposable
 {
-    [Inject] protected AuthenticationStateProvider AuthenticationStateProvider { get; set; }
+    [Inject] protected AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
 
     protected bool IsAuthenticated { get; set; }
     protected bool IsLoading { get; set; } = true;
-    protected ClaimsPrincipal CurrentUser { get; set; }
-    protected string CurrentUserId => CurrentUser.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
-    protected string CurrentUserName => CurrentUser.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? string.Empty;
+    protected ClaimsPrincipal CurrentUser { get; set; } = default!;
+    protected string CurrentUserId => CurrentUser.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+    protected string CurrentUserName => CurrentUser.FindFirst(ClaimTypes.Name)?.Value ?? string.Empty;
     protected string CurrentUserFullName => CurrentUser.FindFirst("FullName")?.Value ?? string.Empty;
 
     protected override async Task OnInitializedAsync()

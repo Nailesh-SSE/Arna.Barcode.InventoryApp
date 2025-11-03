@@ -28,7 +28,7 @@ public class UserService : IUserService
     public async Task<Users?> GetUserByUsernameAsync(string username)
     {
         var userRepository = _unitOfWork.GetRepository<Users>();
-        return (await userRepository.FindAsync(u => u.UserName == username && u.IsActive && !u.IsDeleted)).FirstOrDefault();
+        return (await userRepository.FindAsync(u => u.UserName.ToLower() == username.ToLower() && u.IsActive && !u.IsDeleted)).FirstOrDefault();
     }
 
     public async Task<bool> CreateUserAsync(Users user)
