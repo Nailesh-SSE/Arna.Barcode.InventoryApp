@@ -5,6 +5,9 @@
 @inject ICategoryService CategoryService
 @inject ICompanyService CompanyService
 @inject IColourService  ColourService
+@inject NavigationManager NavigationManager
+@using InventoryManagement.Components.Auth
+@inherits AuthComponentBase
 
 <PageTitle>Products</PageTitle>
 
@@ -199,6 +202,13 @@
 };
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
+
         await LoadData();
     }
     private void InitializeEditContext()
@@ -231,7 +241,12 @@
     {
         modalTitle = "Add Product";
         isEditMode = false;
-        productModel = new ProductModel { IsActive = true };
+        productModel = new ProductModel 
+        { 
+            IsActive = true,
+            CreatedBy=Convert.ToInt32(CurrentUserId),
+            CreatedOn=DateTime.UtcNow
+        };
         InitializeEditContext();
         modal.ShowAsync();
     }
@@ -255,7 +270,9 @@
             MakeCompany = editProduct.MakeCompany,
             SerialNumber = editProduct.SerialNumber,
             ColourId=editProduct.ColourId,
-            ColourName=editProduct.ColourName
+            ColourName=editProduct.ColourName,
+            UpdatedBy = Convert.ToInt32(CurrentUserId),
+            UpdatedOn = DateTime.UtcNow
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -305,7 +322,8 @@
             {
                 return;
             }
-            await ProductService.DeleteProductAsync(id);
+            var userid = Convert.ToInt32(CurrentUserId);
+            await ProductService.DeleteProductAsync(id,userid);
             await LoadData();
             await productGrid.RefreshDataAsync();
 
