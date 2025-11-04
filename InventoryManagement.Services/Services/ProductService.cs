@@ -159,7 +159,7 @@ public class ProductService : IProductService
             existingProduct.ColourId = productModel.ColourId;
             existingProduct.ColourName = productModel.ColourName;  
             existingProduct.UpdatedBy= productModel.UpdatedBy;
-            existingProduct.UpdatedOn= productModel.UpdatedOn;
+            existingProduct.UpdatedOn= DateTime.UtcNow;
 
             var productRepository = _unitOfWork.GetRepository<Product>();
             productRepository.Update(existingProduct);
@@ -190,7 +190,7 @@ public class ProductService : IProductService
             product.IsDeleted = true;
             product.IsActive = false;
             product.UpdatedBy = userid;
-            product.UpdatedOn = DateTime.Now;
+            product.UpdatedOn = DateTime.UtcNow;
             productRepository.Update(product);
             await _unitOfWork.SaveChangesAsync();
             return true;

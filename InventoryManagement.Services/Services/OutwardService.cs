@@ -79,7 +79,7 @@ public class OutwardService : IOutwardService
             existing.Remarks = model.Remarks;
             existing.IsActive = model.IsActive;
             existing.UpdatedBy = model.UpdatedBy;
-            existing.UpdatedOn = model.UpdatedOn;
+            existing.UpdatedOn = DateTime.UtcNow;
 
             outwardRepository.Update(existing);
             await _unitOfWork.SaveChangesAsync();
@@ -112,7 +112,7 @@ public class OutwardService : IOutwardService
 
             outward.IsDeleted = true;
             outward.IsActive = false;
-            outward.UpdatedOn = DateTime.Now;
+            outward.UpdatedOn = DateTime.UtcNow;
             outward.UpdatedBy = userid;
             outwardRepository.Update(outward);
 
@@ -121,7 +121,7 @@ public class OutwardService : IOutwardService
             foreach (var detail in outwardDetails)
             {
                 detail.IsDeleted = true;
-                detail.UpdatedOn = DateTime.Now;
+                detail.UpdatedOn = DateTime.UtcNow;
                 detail.UpdatedBy = userid;
                 detailRepository.Update(detail);
             }
@@ -240,7 +240,7 @@ public class OutwardService : IOutwardService
                 Quantity = 1,
                 Unit = "PCS",
                 BarcodeNo = barcodeNo,
-                CreatedOn=DateTime.Now,
+                CreatedOn=DateTime.UtcNow,
                 CreatedBy=userid,
                 IsDeleted = false,
                 IsActive= true
@@ -285,7 +285,7 @@ public class OutwardService : IOutwardService
                 return false;
 
             detail.IsDeleted = true;
-            detail.UpdatedOn = DateTime.Now;
+            detail.UpdatedOn = DateTime.UtcNow;
             detail.UpdatedBy = userid;
             detailRepository.Update(detail);
 

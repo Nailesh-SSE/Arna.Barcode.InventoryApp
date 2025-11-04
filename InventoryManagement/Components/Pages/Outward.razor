@@ -295,7 +295,7 @@
             OutwardDate = DateTime.Now,
             IsActive = true,
             CreatedBy=Convert.ToInt32(CurrentUserId),
-            CreatedOn=DateTime.Now
+            CreatedOn=DateTime.UtcNow
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -314,7 +314,7 @@
             Remarks = editOutward.Remarks,
             IsActive = editOutward.IsActive,
             UpdatedBy=Convert.ToInt32(CurrentUserId),
-            UpdatedOn=DateTime.Now
+            UpdatedOn=DateTime.UtcNow
         };
         InitializeEditContext();
         await modal.ShowAsync();

@@ -169,7 +169,7 @@ public class CategoryService : ICategoryService
             existingCategory.Description = categoryModel.Description;
             existingCategory.ParentCategoryId = categoryModel.ParentCategoryId;
             existingCategory.UpdatedBy = categoryModel.UpdatedBy;
-            existingCategory.UpdatedOn = categoryModel.UpdatedOn;
+            existingCategory.UpdatedOn = DateTime.UtcNow;
             existingCategory.IsActive = categoryModel.IsActive;
             existingCategory.IsDeleted = categoryModel.IsDeleted;
 
@@ -201,8 +201,8 @@ public class CategoryService : ICategoryService
 
             category.IsDeleted = true;
             category.IsActive = false;
-            category.UpdatedBy = userid  ;
-            category.UpdatedOn = DateTime.Now;
+            category.UpdatedBy = userid;
+            category.UpdatedOn = DateTime.UtcNow;
             categoryRepository.Update(category);
             await _unitOfWork.SaveChangesAsync();
             return true;
