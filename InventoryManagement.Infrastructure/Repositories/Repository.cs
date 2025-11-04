@@ -15,6 +15,7 @@ public interface IRepository<T> where T : class
     Task<int> CountAsync();
     Task<bool> ExistsAsync(int id);
     IQueryable<T> GetQueryable(); // Added GetQueryable method
+    IQueryable<T> GetQueryableWithIncludes(params Expression<Func<T, object>>[] includes);
 }
 
 public class Repository<T> : IRepository<T> where T : class
@@ -32,7 +33,20 @@ public class Repository<T> : IRepository<T> where T : class
     {
         return _dbSet.AsQueryable();
     }
+    public IQueryable<T> GetQueryableWithIncludes(params Expression<Func<T, object>>[] includes)
+    {
+        IQueryable<T> query = _dbSet;
 
+        if (includes != null)
+        {
+            foreach (var include in includes)
+            {
+                query = query.Include(include);
+            }
+        }
+
+        return query;
+    }
     public async Task<T?> GetByIdAsync(int id, params Expression<Func<T, object>>[]? includes)
     {
         IQueryable<T> query = _dbSet;

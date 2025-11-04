@@ -1,6 +1,8 @@
 using InventoryManagement.Core.Data;
+using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Auth;
+using InventoryManagement.Services.Filters;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Services;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -37,7 +39,15 @@ public static class ServiceExtensions
         services.AddScoped<IOutwardService, OutwardService>();
         services.AddScoped<ISaleReturnService, SaleReturnService>();
         services.AddScoped<IColourService, ColourService>();
-        services.AddTransient<ISalesReportService, SalesReportService>();
+
+        // Register generators
+        services.AddTransient<IInstockReportGenerator, InstockReportGenerator>();
+        services.AddTransient<IOutstockReportGenerator, OutstockReportGenerator>();
+        services.AddTransient<IReturnSaleReportGenerator, ReturnSaleReportGenerator>();
+
+        // Register main service
+        services.AddTransient<IReportService, ReportService>();
+
         services.AddAuthorizationCore();
         services.AddScoped<ProtectedSessionStorage>();
         services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();

@@ -2,6 +2,8 @@
 @inject IJSRuntime JS
 @inject ICategoryService CategoryService
 @inject NavigationManager NavigationManager
+@using InventoryManagement.Components.Auth
+@inherits AuthComponentBase
 
 <PageTitle>Categories</PageTitle>
 
@@ -127,6 +129,13 @@ else
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
+
         await LoadCategories();
     }
 
@@ -147,7 +156,12 @@ else
     {
         modalTitle = "Add Category";
         isEditMode = false;
-        categoryModel = new CategoryModel { IsActive = true };
+        categoryModel = new CategoryModel 
+        {
+            IsActive = true,
+            CreatedBy = Convert.ToInt32(CurrentUserId),
+            CreatedOn = DateTime.Now
+        };
         InitializeEditContext();
         modal.ShowAsync();
     }
@@ -163,7 +177,9 @@ else
             Description = editCategory.Description,
             ParentCategoryId = editCategory.ParentCategoryId,
             IsActive = editCategory.IsActive,
-            SerialNumber = editCategory.SerialNumber
+            SerialNumber = editCategory.SerialNumber,
+            UpdatedBy=Convert.ToInt32(CurrentUserId),
+            UpdatedOn=DateTime.Now
         };
         InitializeEditContext();
         modal?.ShowAsync();
@@ -206,8 +222,8 @@ else
             bool confirmed = await JS.InvokeAsync<bool>("confirm", "Do you want to delete this category?");
             if (!confirmed)
                 return;
-
-            await CategoryService.DeleteCategoryAsync(id);
+            var updatedbyuser = Convert.ToInt32(CurrentUserId);
+            await CategoryService.DeleteCategoryAsync(id,updatedbyuser);
             await LoadCategories();
             await categoryGrid.RefreshDataAsync();
         }

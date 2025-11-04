@@ -157,7 +157,9 @@ public class ProductService : IProductService
             existingProduct.MakeCompany = productModel.MakeCompany;
             existingProduct.MakeCompanyId = productModel.MakeCompanyId; 
             existingProduct.ColourId = productModel.ColourId;
-            existingProduct.ColourName = productModel.ColourName;   
+            existingProduct.ColourName = productModel.ColourName;  
+            existingProduct.UpdatedBy= productModel.UpdatedBy;
+            existingProduct.UpdatedOn= productModel.UpdatedOn;
 
             var productRepository = _unitOfWork.GetRepository<Product>();
             productRepository.Update(existingProduct);
@@ -170,7 +172,7 @@ public class ProductService : IProductService
         }
     }
 
-    public async Task<bool> DeleteProductAsync(int id)
+    public async Task<bool> DeleteProductAsync(int id, int userid)
     {
         try
         {
@@ -187,6 +189,8 @@ public class ProductService : IProductService
 
             product.IsDeleted = true;
             product.IsActive = false;
+            product.UpdatedBy = userid;
+            product.UpdatedOn = DateTime.Now;
             productRepository.Update(product);
             await _unitOfWork.SaveChangesAsync();
             return true;
