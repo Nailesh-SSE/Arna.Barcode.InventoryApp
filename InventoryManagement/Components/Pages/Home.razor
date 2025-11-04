@@ -52,12 +52,12 @@ else if (IsAuthenticated)
                                 </NavLink>                
                             </Button>
                             <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
-                                <NavLink class="nav-link text-white" href="companies/make-to">
+                                <NavLink class="nav-link text-white" href="/companies/make-to">
                                     <Icon Name="IconName.House" />&nbsp; Make To Companies
                                 </NavLink>
                                 </Button>
                                 <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
-                                    <NavLink class="nav-link text-white" href="companies/bill-to">
+                                    <NavLink class="nav-link text-white" href="/companies/bill-to">
                                         <Icon Name="IconName.Receipt" />&nbsp; Bill To Companies
                                     </NavLink>
                                 </Button>
@@ -70,24 +70,85 @@ else if (IsAuthenticated)
                 <Card>
                     <CardBody>
                         <h5 class="card-title">
+                            <Icon Name="IconName.Layers" Color="IconColor.Primary" />                        
+                            Product Master Data
+                        </h5>
+                        <p class="card-text">Configure and maintain categories, products, and colours.</p>
+                        <div class="d-grid gap-2">
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link" href="/categories">
+                                    <Icon Name="IconName.Tags" />&nbsp;  Categories
+                                </NavLink>
+                            </Button>
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link text-white" href="/products">
+                                    <Icon Name="IconName.Box" />&nbsp; Products
+                                </NavLink>
+                            </Button>
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link text-white" href="/colour">
+                                    <Icon Name="IconName.Palette" />&nbsp; Colours
+                                </NavLink>
+                            </Button>
+                        </div>
+                    </CardBody>
+                </Card>
+            </div>
+        </div>
+        <div class="row g-4 mt-3">
+            
+
+            <div class="col-md-6">
+                <Card>
+                    <CardBody>
+                        <h5 class="card-title">
+                            <Icon Name="IconName.ArrowRepeat" Color="IconColor.Info" />
+                            Inventory Operations
+                        </h5>
+                        <p class="card-text">Track inward, outward, and sales return transactions efficiently.</p>
+                        <div class="d-grid gap-2">
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link text-white" href="/inward">
+                                    <Icon Name="IconName.BoxArrowInDown" /> Inward
+                                </NavLink>
+                            </Button>
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link text-white" href="/outward">
+                                    <Icon Name="IconName.BoxArrowUp" /> Outward
+                                </NavLink>
+                            </Button>
+
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link text-white" href="/sales-report">
+                                    <Icon Name="IconName.ArrowReturnLeft" />  Sales Return
+                                </NavLink>
+                            </Button>
+                        </div>
+                    </CardBody>
+                </Card>
+            </div>
+            <div class="col-md-6">
+                <Card>
+                    <CardBody>
+                        <h5 class="card-title">
                             <Icon Name="IconName.BarChart" Color="IconColor.Info" />
                             Reports & Analytics
                         </h5>
                         <p class="card-text">View comprehensive reports and business analytics</p>
                         <div class="d-grid gap-2">
                             <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
-                                <NavLink class="nav-link text-white" href="/inward">
-                                    <Icon Name="IconName.BoxSeam" /> InStock
+                                <NavLink class="nav-link text-white" href="/reports/instock">
+                                    <Icon Name="IconName.BoxSeam" /> InStock Reports
                                 </NavLink>
                             </Button>
                             <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
-                                <NavLink class="nav-link text-white" href="/outward">
-                                    <Icon Name="IconName.CartDash" /> OutStock
+                                <NavLink class="nav-link text-white" href="/reports/outstock">
+                                    <Icon Name="IconName.CartDash" /> OutStock Reports
                                 </NavLink>
                             </Button>
 
                             <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
-                                <NavLink class="nav-link text-white" href="/sale-returns">
+                                <NavLink class="nav-link text-white" href="/reports/salereport">
                                     <Icon Name="IconName.GraphUp" /> Sales Reports
                                 </NavLink>
                             </Button>
