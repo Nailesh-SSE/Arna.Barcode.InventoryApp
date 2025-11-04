@@ -184,7 +184,7 @@ public class CategoryService : ICategoryService
         }
     }
 
-    public async Task<bool> DeleteCategoryAsync(int id)
+    public async Task<bool> DeleteCategoryAsync(int id,int userid)
     {
         try
         {
@@ -201,6 +201,8 @@ public class CategoryService : ICategoryService
 
             category.IsDeleted = true;
             category.IsActive = false;
+            category.UpdatedBy = userid  ;
+            category.UpdatedOn = DateTime.Now;
             categoryRepository.Update(category);
             await _unitOfWork.SaveChangesAsync();
             return true;
