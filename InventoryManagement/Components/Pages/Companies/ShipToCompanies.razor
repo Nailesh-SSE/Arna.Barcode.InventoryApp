@@ -1,7 +1,9 @@
 @page "/companies/ship-to"
+@using InventoryManagement.Components.Auth
+@inherits AuthComponentBase
 @inject ICompanyService CompanyService
 @inject IJSRuntime JS
-@inject NavigationManager Navigation
+@inject NavigationManager NavigationManager
 
 <PageTitle>Ship To Companies</PageTitle>
 
@@ -113,6 +115,13 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync(); // This will call the base authentication check
+
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
         await LoadCompanies();
     }
 
@@ -132,9 +141,14 @@
     {
         modalTitle = "Add Ship To Company";
         isEditMode = false;
-        companyModel = new CompanyModel { CompanyType = CompanyType.ShipTo, IsActive = true };
-        InitializeEditContext();
-        modal?.ShowAsync();
+        companyModel = new CompanyModel 
+        {
+            CompanyType = CompanyType.ShipTo, IsActive = true ,
+            CreatedBy = Convert.ToInt32(CurrentUserId),
+
+        };        
+            InitializeEditContext();
+            modal?.ShowAsync();
     }
 
     private void ShowEditModal(CompanyModel editCompany)
@@ -148,7 +162,8 @@
             Name = editCompany.Name,
             CompanyType = CompanyType.ShipTo,
             IsActive = editCompany.IsActive,
-            Remark = editCompany.Remark
+            Remark = editCompany.Remark,
+            UpdatedBy = Convert.ToInt32(CurrentUserId),
         };
         InitializeEditContext();
         modal?.ShowAsync();
@@ -192,7 +207,8 @@
             var isConfirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
             if (isConfirm)
             {
-                await CompanyService.DeleteCompanyAsync(id);
+                var deletedBy = Convert.ToInt32(CurrentUserId);
+                await CompanyService.DeleteCompanyAsync(id, deletedBy);
                 await LoadCompanies();
                 if (shipToCompanyGrid != null)
                     await shipToCompanyGrid.RefreshDataAsync();

@@ -72,7 +72,9 @@ public class CompanyService : ICompanyService
                 IsActive = true,
                 CompanyType = companyModel.CompanyType,
                 SerialNumber = companyModel.SerialNumber,
-                Remark = companyModel.Remark
+                Remark = companyModel.Remark,
+                CreatedBy = companyModel.CreatedBy,
+                CreatedOn = DateTime.UtcNow
             };
 
 
@@ -103,6 +105,8 @@ public class CompanyService : ICompanyService
             entity.IsActive = companyModel.IsActive;
             entity.IsDeleted = false;
             entity.Remark = companyModel.Remark;
+            entity.UpdatedBy = companyModel.UpdatedBy;
+            entity.UpdatedOn = DateTime.UtcNow;
 
             companyRepository.Update(entity);
             await _unitOfWork.SaveChangesAsync();
@@ -114,7 +118,7 @@ public class CompanyService : ICompanyService
         }
     }
 
-    public async Task<bool> DeleteCompanyAsync(int id)
+    public async Task<bool> DeleteCompanyAsync(int id,int deletedBy)
     {
         try
         {
@@ -124,6 +128,8 @@ public class CompanyService : ICompanyService
 
             company.IsDeleted = true;
             company.IsActive = false;
+            company.UpdatedBy = deletedBy;
+            company.UpdatedOn = DateTime.UtcNow;
             companyRepository.Update(company);
             await _unitOfWork.SaveChangesAsync();
             return true;

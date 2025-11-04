@@ -15,7 +15,7 @@ namespace InventoryManagement.Services.Interfaces
         Task<Colour?> GetColourByIdAsync(int id);
         Task<bool> CreateColourAsync(ColourModel colourModel);
         Task<bool> UpdateColourAsync(ColourModel colourModel);
-        Task<bool> DeleteColourAsync(int id);
+        Task<bool> DeleteColourAsync(int id,int deletedBy);
         Task<bool> IsColourAndNameUniqueAsync(string name, string code, int? id = null);
 
     }
