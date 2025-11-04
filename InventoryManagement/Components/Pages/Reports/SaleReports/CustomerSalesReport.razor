@@ -1,456 +1,117 @@
-@page "/reports/instock"
-@using InventoryManagement.Services.Interfaces
-@using InventoryManagement.Services.Models.ReportModels
-@inject IReportService ReportService
-@inject NavigationManager NavigationManager
+@page "/reports/customer-wise"
+@using InventoryManagement.Services.Models
+@inject ISalesReportService SalesReportService
 
-
-<PageTitle>Instock Report</PageTitle>
-
-
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="row mb-3">
-        <div class="col">
-            <Button Color="ButtonColor.Secondary" @onclick="GoBack">
-                <Icon Name="IconName.ArrowLeft" /> Back to Reports
-            </Button>
-        </div>
-        <div class="col-auto">
-            <Button Color="ButtonColor.Primary" @onclick="ResetFilters">
-                <Icon Name="IconName.ArrowClockwise" /> Reset Filters
-            </Button>
-            <Button Color="ButtonColor.Primary" @onclick="GenerateReport">
-                <Icon Name="IconName.Search" /> Generate Report
-            </Button>
-        </div>
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-users"></i> Customer Wise Sales Report
+        </h5>
     </div>
-
-
-
-<div class="row">
-    <!-- Filter Panel -->
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0"><Icon Name="IconName.Funnel" /> Filter Options</h6>
-            </div>
-            <div class="card-body">
-                <EditForm Model="@filter" OnValidSubmit="GenerateReport">
-                    <!-- Date Range -->
-                    <div class="mb-3">
-                        <label class="form-label">Start Date</label>
-                        <InputDate class="form-control" @bind-Value="filter.StartDate" />
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">End Date</label>
-                        <InputDate class="form-control" @bind-Value="filter.EndDate" />
-                    </div>
-
-                    <!-- Category Filter -->
-                    <div class="mb-3">
-                        <label class="form-label">Category</label>
-                        <InputSelect class="form-select" @bind-Value="filter.CategoryId">
-                            <option value="">All Categories</option>
-                            <option value="1">Electronics</option>
-                            <option value="2">Accessories</option>
-                            <option value="3">Furniture</option>
-                        </InputSelect>
-                    </div>
-
-                    <!-- Company Filter -->
-                    <div class="mb-3">
-                        <label class="form-label">Supplier</label>
-                        <InputSelect class="form-select" @bind-Value="filter.CompanyId">
-                            <option value="">All Suppliers</option>
-                            <option value="101">Tech Corp</option>
-                            <option value="102">Digital Solutions</option>
-                            <option value="103">Innovation Ltd</option>
-                        </InputSelect>
-                    </div>
-
-                    <!-- Quantity Range -->
-                    <div class="mb-3">
-                        <label class="form-label">Min Quantity</label>
-                        <InputNumber class="form-control" @bind-Value="filter.MinQuantity" />
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Max Quantity</label>
-                        <InputNumber class="form-control" @bind-Value="filter.MaxQuantity" />
-                    </div>
-
-                    <!-- Product SKUs -->
-                    <div class="mb-3">
-                        <label class="form-label">Product SKUs (comma-separated)</label>
-                        <InputText class="form-control" @bind-Value="filter.ProductSKUs" 
-                            placeholder="SKU001, SKU002, SKU003" />
-                    </div>
-
-                    <!-- Batch Numbers -->
-                    <div class="mb-3">
-                        <label class="form-label">Batch Numbers (comma-separated)</label>
-                        <InputText class="form-control" @bind-Value="filter.BatchNumbers" 
-                            placeholder="BATCH001, BATCH002" />
-                    </div>
-
-                    <!-- Special Filters -->
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <InputCheckbox class="form-check-input" @bind-Value="filter.IncludeLowStock" />
-                            <label class="form-check-label">Include Low Stock Items</label>
-                        </div>
-                    </div>
-
-                    @if (filter.IncludeLowStock)
-                    {
-                        <div class="mb-3 ms-3">
-                            <label class="form-label">Low Stock Threshold</label>
-                            <InputNumber class="form-control" @bind-Value="filter.LowStockThreshold" />
-                        </div>
-                    }
-
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <InputCheckbox class="form-check-input" @bind-Value="filter.IncludeExpired" />
-                            <label class="form-check-label">Include Expired Items</label>
-                        </div>
-                    </div>
-
-                    <!-- Location Filter -->
-                    <div class="mb-3">
-                        <label class="form-label">Location</label>
-                        <InputSelect class="form-select" @bind-Value="filter.Location">
-                            <option value="">All Locations</option>
-                            <option value="Warehouse-A">Warehouse A</option>
-                            <option value="Warehouse-B">Warehouse B</option>
-                            <option value="Showroom">Showroom</option>
-                        </InputSelect>
-                    </div>
-
-                    <!-- Sorting Options -->
-                    <div class="mb-3">
-                        <label class="form-label">Sort By</label>
-                        <InputSelect class="form-select" @bind-Value="filter.SortBy">
-                            <option value="quantity">Quantity</option>
-                            <option value="productname">Product Name</option>
-                            <option value="sku">SKU</option>
-                            <option value="category">Category</option>
-                            <option value="value">Total Value</option>
-                        </InputSelect>
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <InputCheckbox class="form-check-input" @bind-Value="filter.SortDescending" />
-                            <label class="form-check-label">Sort Descending</label>
-                        </div>
-                    </div>
-
-                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit" class="w-100">
-                        <Icon Name="IconName.Search" /> Apply Filters
-                    </Button>
-                </EditForm>
-            </div>
-        </div>
-    </div>
-
-    <!-- Report Content -->
-    <div class="col-md-9">
-        <!-- Summary Cards -->
-        @if (reportResult != null)
+    <div class="card-body">
+        @if (CustomerSalesData.Any())
         {
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <div class="card border-primary">
-                        <div class="card-body text-center">
-                            <h5 class="text-primary">@reportResult.TotalRecords</h5>
-                            <p class="text-muted mb-0">Total Items</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-success">
-                        <div class="card-body text-center">
-                            <h5 class="text-success">@reportResult.TotalQuantity</h5>
-                            <p class="text-muted mb-0">Total Quantity</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-info">
-                        <div class="card-body text-center">
-                            <h5 class="text-info">@reportResult.TotalValue.ToString("C")</h5>
-                            <p class="text-muted mb-0">Total Value</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-warning">
-                        <div class="card-body text-center">
-                            <h5 class="text-warning">@reportResult.LowStockItemsCount</h5>
-                            <p class="text-muted mb-0">Low Stock Items</p>
-                        </div>
-                    </div>
-                </div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Customer Name</th>
+                            <th>Code</th>
+                            <th>Type</th>
+                            <th>Total Orders</th>
+                            <th>Items Purchased</th>
+                            <th>Total Spent</th>
+                            <th>Avg Order Value</th>
+                            <th>Top Products</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var customer in CustomerSalesData.Take(50))
+                        {
+                            <tr>
+                                <td><strong>@customer.CustomerName</strong></td>
+                                <td><code>@customer.CustomerCode</code></td>
+                                <td>
+                                    <span class="badge bg-info">@customer.CustomerType</span>
+                                </td>
+                                <td class="text-center">@customer.TotalOrders</td>
+                                <td class="text-center">@customer.TotalItemsPurchased</td>
+                                <td>@customer.TotalSpent.ToString("C")</td>
+                                <td>@customer.AverageOrderValue.ToString("C")</td>
+                                <td>
+                                    @if (customer.TopProducts.Any())
+                                    {
+                                        <div>
+                                            @foreach (var product in customer.TopProducts.Take(2))
+                                            {
+                                                <span class="badge bg-light text-dark me-1">@product</span>
+                                            }
+                                            @if (customer.TopProducts.Count > 2)
+                                            {
+                                                <span class="text-muted">+@(customer.TopProducts.Count - 2) more</span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-secondary">
+                        <tr>
+                            <th colspan="3">Total</th>
+                            <th>@CustomerSalesData.Sum(c => c.TotalOrders)</th>
+                            <th>@CustomerSalesData.Sum(c => c.TotalItemsPurchased)</th>
+                            <th>@CustomerSalesData.Sum(c => c.TotalSpent).ToString("C")</th>
+                            <th>@(CustomerSalesData.Where(c => c.AverageOrderValue > 0).Any() ? CustomerSalesData.Where(c => c.AverageOrderValue > 0).Average(c => c.AverageOrderValue).ToString("C") : "0")</th>
+                            <th>-</th>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
 
-            <!-- Warnings -->
-            @if (reportResult.Warnings.Any())
+            @if (CustomerSalesData.Count > 50)
             {
-                <div class="alert alert-warning" role="alert">
-                    <Icon Name="IconName.ExclamationTriangle" />
-                    <strong>Warnings:</strong>
-                    <ul class="mb-0 mt-2">
-                        @foreach (var warning in reportResult.Warnings)
-                        {
-                            <li>@warning</li>
-                        }
-                    </ul>
+                <div class="text-center mt-3">
+                    <p class="text-muted">Showing top 50 of @CustomerSalesData.Count customers</p>
                 </div>
             }
-
-            <!-- Export Buttons -->
-            <div class="mb-3">
-                <Button Color="ButtonColor.Success" @onclick="ExportToCsv">
-                    <Icon Name="IconName.FileEarmark" /> Export to CSV
-                </Button>
-                <Button Color="ButtonColor.Primary" @onclick="PrintReport">
-                    <Icon Name="IconName.Printer" /> Print
-                </Button>
-            </div>
         }
-
-        <!-- Loading State -->
-        @if (isLoading)
+        else
         {
-            <div class="text-center py-5">
-                <Spinner Type="SpinnerType.Border" />
-                <p class="mt-2">Generating report...</p>
-            </div>
-        }
-
-        <!-- Report Grid -->
-        @if (reportResult != null && reportResult.Items.Any())
-        {
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">Instock Report Results</h6>
-                    <small class="text-muted">
-                        Generated in @reportResult.GenerationTime.TotalSeconds.ToString("F2") seconds
-                    </small>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Product</th>
-                                    <th>SKU</th>
-                                    <th>Category</th>
-                                    <th>Batch</th>
-                                    <th>Quantity</th>
-                                    <th>Unit</th>
-                                    <th>Unit Cost</th>
-                                    <th>Total Value</th>
-                                    <th>Status</th>
-                                    <th>Location</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var item in reportResult.Items)
-                                {
-                                    <tr>
-                                        <td>
-                                            <div>
-                                                <strong>@item.ProductName</strong>
-                                                @if (item.IsLowStock)
-                                                {
-                                                    <Badge Color="BadgeColor.Warning" class="ms-1">Low Stock</Badge>
-                                                }
-                                                @if (item.IsExpired)
-                                                {
-                                                    <Badge Color="BadgeColor.Danger" class="ms-1">Expired</Badge>
-                                                }
-                                            </div>
-                                        </td>
-                                        <td>@item.SKU</td>
-                                        <td>@item.CategoryName</td>
-                                        <td>@item.BatchNumber</td>
-                                        <td>
-                                            <span class="@(item.IsLowStock ? "text-warning fw-bold" : "")">
-                                                @item.CurrentQuantity
-                                            </span>
-                                        </td>
-                                        <td>@item.Unit</td>
-                                        <td>@item.UnitCost.ToString("C")</td>
-                                        <td>@item.TotalValue.ToString("C")</td>
-                                        <td>
-                                            @if (item.IsLowStock)
-                                            {
-                                                <Badge Color="BadgeColor.Warning">Low Stock</Badge>
-                                            }
-                                            else if (item.IsExpired)
-                                            {
-                                                <Badge Color="BadgeColor.Danger">Expired</Badge>
-                                            }
-                                            else
-                                            {
-                                                <Badge Color="BadgeColor.Success">Good</Badge>
-                                            }
-                                        </td>
-                                        <td>@item.Location</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Pagination -->
-                    @if (reportResult.TotalRecords > filter.PageSize)
-                    {
-                        <div class="card-footer">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted">
-                                    Showing @((reportResult.PageNumber - 1) * filter.PageSize + 1) to 
-                                    @(Math.Min(reportResult.PageNumber * filter.PageSize, reportResult.TotalRecords)) 
-                                    of @reportResult.TotalRecords records
-                                </small>
-                                <div>
-                                    <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" 
-                                            disabled="@(reportResult.PageNumber <= 1)"
-                                            @onclick="() => GoToPage(reportResult.PageNumber - 1)">
-                                        <Icon Name="IconName.ChevronLeft" />
-                                    </Button>
-                                    <span class="mx-2">Page @reportResult.PageNumber</span>
-                                    <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small"
-                                            disabled="@(reportResult.PageNumber * filter.PageSize >= reportResult.TotalRecords)"
-                                            @onclick="() => GoToPage(reportResult.PageNumber + 1)">
-                                        <Icon Name="IconName.ChevronRight" />
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-        }
-
-        <!-- No Data State -->
-        @if (reportResult != null && !reportResult.Items.Any() && !isLoading)
-        {
-            <div class="text-center py-5">
-                <Icon Name="IconName.Inbox" style="font-size: 3rem;" class="text-muted" />
-                <h5 class="text-muted mt-3">No data found</h5>
-                <p class="text-muted">Try adjusting your filter criteria</p>
-            </div>
-        }
-
-        <!-- Initial State -->
-        @if (reportResult == null && !isLoading)
-        {
-            <div class="text-center py-5">
-                <Icon Name="IconName.Search" style="font-size: 3rem;" class="text-muted" />
-                <h5 class="text-muted mt-3">Generate Your Report</h5>
-                <p class="text-muted">Configure filters and click "Generate Report" to view instock data</p>
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-users fa-3x"></i>
+                <p class="mt-2">No customer sales data available</p>
             </div>
         }
     </div>
 </div>
 
-</div>
-
-
-
 @code {
-    private InstockFilter filter = new();
-    private InstockReportResult? reportResult;
-    private bool isLoading = false;
+    [Parameter]
+    public List<CustomerSalesModel> CustomerSalesData { get; set; } = new();
 
-
-protected override async Task OnInitializedAsync()
-{
-    // Set default filter values
-    filter.PageSize = 50;
-    filter.SortBy = "quantity";
-    filter.SortDescending = true;
-    filter.LowStockThreshold = 10m;
-}
-
-private async Task GenerateReport()
-{
-    isLoading = true;
-    try
+    protected override async Task OnInitializedAsync()
     {
-        reportResult = await ReportService.GenerateInstockReportAsync(filter);
+        await LoadCustomerSalesData();
     }
-    catch (Exception ex)
+
+    private async Task LoadCustomerSalesData()
     {
-        // Handle error (show toast or alert)
-        reportResult = new InstockReportResult
+        try
         {
-            Warnings = new List<string> { $"Error generating report: {ex.Message}" }
-        };
+            var endDate = DateTime.Now;
+            var startDate = endDate.AddDays(-30);
+
+            CustomerSalesData = await SalesReportService.GetCustomerWiseSalesReportAsync(startDate, endDate);
+        }
+        catch (Exception ex)
+        {
+            // Handle exception - you might want to show an error message
+            Console.WriteLine($"Error loading customer sales data: {ex.Message}");
+        }
     }
-    finally
-    {
-        isLoading = false;
-    }
-}
-
-private void ResetFilters()
-{
-    filter = new InstockFilter
-    {
-        PageSize = 50,
-        SortBy = "quantity",
-        SortDescending = true,
-        LowStockThreshold = 10m
-    };
-    reportResult = null;
-}
-
-private void GoBack()
-{
-    NavigationManager.NavigateTo("/reports");
-}
-
-private async Task GoToPage(int pageNumber)
-{
-    filter.PageNumber = pageNumber;
-    await GenerateReport();
-}
-
-private async Task ExportToCsv()
-{
-    if (reportResult == null) return;
-
-    var csv = new System.Text.StringBuilder();
-    
-    // Header
-    csv.AppendLine("Product Name,SKU,Category,Batch Number,Quantity,Unit,Unit Cost,Total Value,Status,Location");
-    
-    // Data rows
-    foreach (var item in reportResult.Items)
-    {
-        var status = item.IsLowStock ? "Low Stock" : (item.IsExpired ? "Expired" : "Good");
-        csv.AppendLine($"{item.ProductName},{item.SKU},{item.CategoryName},{item.BatchNumber},{item.CurrentQuantity},{item.Unit},{item.UnitCost},{item.TotalValue},{status},{item.Location}");
-    }
-
-    // Create download
-    var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
-    var fileName = $"Instock_Report_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-    
-    // In a real app, you'd use JavaScript interop to trigger download
-    // For now, we'll just show a message
-    await Task.CompletedTask;
-}
-
-private async Task PrintReport()
-{
-    // In a real app, you'd use JavaScript interop to trigger print
-    await Task.CompletedTask;
-}
-
 }

@@ -3,11 +3,6 @@ using InventoryManagement.Services.Models.ReportModels;
 
 namespace InventoryManagement.Services.Services
 {
-    /// <summary>
-    /// Main ReportService implementing SOLID principles
-    /// Dependency Inversion: Depends on abstractions, not concretions
-    /// Single Responsibility: Orchestrates report generation, doesn't implement business logic
-    /// </summary>
     public class ReportService : IReportService
     {
         private readonly IInstockReportGenerator _instockReportGenerator;
@@ -24,9 +19,6 @@ namespace InventoryManagement.Services.Services
             _returnSaleReportGenerator = returnSaleReportGenerator ?? throw new ArgumentNullException(nameof(returnSaleReportGenerator));
         }
 
-        /// <summary>
-        /// Generates an instock report using the dedicated generator
-        /// </summary>
         public async Task<InstockReportResult> GenerateInstockReportAsync(InstockFilter filter)
         {
             if (filter == null)

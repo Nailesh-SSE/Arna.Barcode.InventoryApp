@@ -2,15 +2,10 @@ using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models.ReportModels;
-using Microsoft.EntityFrameworkCore;
 using CoreReturnType = InventoryManagement.Core.Enums.ReturnType;
 
 namespace InventoryManagement.Services.Services
 {
-    /// <summary>
-    /// Return Sale report generator implementing Single Responsibility Principle
-    /// Includes mock data implementation as requested
-    /// </summary>
     public class ReturnSaleReportGenerator : IReturnSaleReportGenerator
     {
         private readonly IUnitOfWork _unitOfWork;

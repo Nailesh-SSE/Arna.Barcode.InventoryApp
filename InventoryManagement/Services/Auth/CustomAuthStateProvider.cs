@@ -6,14 +6,14 @@ namespace InventoryManagement.Services.Auth
 {
     public class CustomAuthStateProvider : AuthenticationStateProvider
     {
-        private readonly ProtectedSessionStorage _storage;
+        private readonly ProtectedLocalStorage _storage; 
         private readonly ILogger<CustomAuthStateProvider> _logger;
         private const string SessionKey = "UserAuth";
         private AuthenticationState _authenticationState;
         private readonly TimeSpan _sessionTimeout = TimeSpan.FromHours(2);
 
         public CustomAuthStateProvider(
-            ProtectedSessionStorage storage,
+            ProtectedLocalStorage storage,
             ILogger<CustomAuthStateProvider> logger)
         {
             _storage = storage;
@@ -45,7 +45,7 @@ namespace InventoryManagement.Services.Auth
                         new Claim(ClaimTypes.Name, user.UserName),
                         new Claim("FullName", user.UserFullName),
                         new Claim("LoginTime", user.LoginTime.ToString("O"))
-                    }, "SessionAuth");
+                    }, "LocalStorageAuth");
 
                     _authenticationState = new AuthenticationState(new ClaimsPrincipal(identity));
                     return _authenticationState;
@@ -73,7 +73,7 @@ namespace InventoryManagement.Services.Auth
                     new Claim(ClaimTypes.Name, user.UserName),
                     new Claim("FullName", user.UserFullName),
                     new Claim("LoginTime", user.LoginTime.ToString("O"))
-                }, "SessionAuth");
+                }, "LocalStorageAuth");
 
                 _authenticationState = new AuthenticationState(new ClaimsPrincipal(identity));
                 NotifyAuthenticationStateChanged(Task.FromResult(_authenticationState));

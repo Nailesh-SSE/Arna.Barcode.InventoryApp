@@ -26,6 +26,69 @@ public abstract class BaseReportResult
 
 #endregion
 
+
+#region Inward Report Models
+
+public class InwardFilter : BaseReportFilter
+{
+    public string? InwardNumbers { get; set; }
+    public int? ShipmentCompanyId { get; set; }
+    public decimal? MinQuantity { get; set; }
+    public decimal? MaxQuantity { get; set; }
+    public string? ProductSKUs { get; set; }
+    public string? BatchNumbers { get; set; }
+    public bool IncludeInactive { get; set; }
+    public bool GroupByProduct { get; set; }
+    public bool GroupBySupplier { get; set; }
+    public bool SummaryOnly { get; set; }
+}
+
+public class InwardReportItem
+{
+    public int InwardId { get; set; }
+    public string InwardNumber { get; set; } = string.Empty;
+    public DateTime InwardDate { get; set; }
+    public int ProductId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
+    public string SKU { get; set; } = string.Empty;
+    public string CategoryName { get; set; } = string.Empty;
+    public decimal Quantity { get; set; }
+    public string Unit { get; set; } = string.Empty;
+    public decimal UnitCost { get; set; }
+    public decimal TotalCost { get; set; }
+    public string? BatchNumber { get; set; }
+    public string? SerialNumber { get; set; }
+    public int ShipmentCompanyId { get; set; }
+    public string ShipmentCompanyName { get; set; } = string.Empty;
+    public string? Remarks { get; set; }
+    public bool IsActive { get; set; }
+    public int CreatedBy { get; set; }
+    public DateTime CreatedOn { get; set; }
+}
+
+public class InwardReportSummary
+{
+    public int TotalInwards { get; set; }
+    public decimal TotalQuantity { get; set; }
+    public decimal TotalValue { get; set; }
+    public int UniqueProductsCount { get; set; }
+    public int UniqueSuppliersCount { get; set; }
+    public decimal AverageQuantityPerInward { get; set; }
+    public decimal AverageValuePerInward { get; set; }
+    public Dictionary<string, decimal> QuantityByCategory { get; set; } = new();
+    public Dictionary<string, decimal> ValueBySupplier { get; set; } = new();
+    public Dictionary<string, int> CountByProduct { get; set; } = new();
+}
+
+public class InwardReportResult : BaseReportResult
+{
+    public List<InwardReportItem> Items { get; set; } = new();
+    public InwardReportSummary Summary { get; set; } = new();
+    public int PageCount { get; set; }
+    public bool HasNextPage { get; set; }
+    public bool HasPreviousPage { get; set; }
+}
+#endregion
 #region Instock Report Models
 
 public class InstockFilter : BaseReportFilter

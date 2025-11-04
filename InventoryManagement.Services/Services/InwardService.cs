@@ -2,6 +2,7 @@ using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagement.Services;
 
@@ -19,7 +20,13 @@ public class InwardService : IInwardService
     public async Task<List<InwardModel>> GetAllAsync()
     {
         var inwardRepo = _unitOfWork.GetRepository<Inward>();
-        var inwards = await inwardRepo.FindAsync(i => !i.IsDeleted);
+        var inwards = await inwardRepo.GetQueryable()
+              .Include(i => i.ShipMentCompany)
+              .Include(i => i.Category)
+              .Where(i => !i.IsDeleted)
+              .OrderByDescending(i => i.InwardDate)
+              .AsNoTracking()
+              .ToListAsync();
         return inwards.Select(MapToModel).ToList();
     }
 
