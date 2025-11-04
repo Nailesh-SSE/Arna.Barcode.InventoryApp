@@ -6,75 +6,262 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IUserService UserService
 @inject ILogger<Login> Logger
+<style>
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
 
+    .login-box {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 400px;
+        overflow: hidden;
+    }
+
+    .login-header {
+        padding: 30px 20px 20px;
+        text-align: center;
+    }
+
+    .logo {
+        max-width: 160px;
+        height: auto;
+    }
+
+    .company-name {
+        color: #2c3e50;
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0;
+        letter-spacing: 0.5px;
+    }
+
+    .login-body {
+        padding: 30px;
+    }
+
+    .login-message {
+        text-align: center;
+        color: #6c757d;
+        margin-bottom: 30px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+        position: relative;
+    }
+
+    .input-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-icon {
+        position: absolute;
+        left: 15px;
+        color: #6c757d;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 14px 45px 14px 45px;
+        border: 1px solid #dcdfe6;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        background: #fff;
+        color: #333;
+    }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .form-input::placeholder {
+            color: #a0a4a8;
+        }
+
+    .password-toggle {
+        position: absolute;
+        right: 15px;
+        background: none;
+        border: none;
+        color: #6c757d;
+        cursor: pointer;
+        padding: 0;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 3;
+    }
+
+        .password-toggle:hover {
+            color: #667eea;
+        }
+
+    .login-button {
+        width: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .login-button:active {
+            transform: translateY(0);
+        }
+
+    .alert {
+        padding: 12px 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        text-align: center;
+    }
+
+    .alert-error {
+        background-color: #fee;
+        color: #c33;
+        border: 1px solid #fdd;
+        font-weight: 500;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 480px) {
+        .login-box {
+            margin: 10px;
+        }
+
+        .login-body {
+            padding: 25px 20px;
+        }
+
+        .login-header {
+            padding: 30px 20px 15px;
+        }
+
+        .company-name {
+            font-size: 22px;
+        }
+    }
+
+    /* Add some smooth animations */
+    .login-box {
+        animation: slideUp 0.5s ease-out;
+    }
+
+    @@keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
 
 <PageTitle>Arna Technosoft - Login</PageTitle>
 
-
 <div class="login-container">
     <div class="login-box">
-        <div class="login-header text-center mb-4">
-            <img src="images/ArnaLogo.png" alt="Arna Technosoft" class="logo mb-3" />
-        </div>
-
-
-
-        <div class="login-message text-center mb-4">
-            <p class="text-muted">Sign in to start your session</p>
-        </div>
-
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger mb-3" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                @errorMessage
+        <div class="login-header">
+            <div class="logo-container">
+                <img src="images/ArnaLogo.png" alt="Arna Technosoft" class="logo" />
             </div>
-        }
+        </div>
 
-        <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
-            <DataAnnotationsValidator />
+        <div class="login-body">
+            <p class="login-message">Sign in to start your session</p>
 
-            <div class="form-group mb-3">
-                <div class="input-group">
-                    <span class="input-group-text bg-transparent border-end-0">
-                        <i class="bi bi-person text-muted"></i>
-                    </span>
-                    <InputText @bind-Value="loginModel.Username" class="form-control border-start-0 ps-0" placeholder="User Name" autofocus />
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger mb-3" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    @errorMessage
                 </div>
-                <ValidationMessage For="@(() => loginModel.Username)" class="text-danger small mt-1" />
-            </div>
+            }
 
-            <div class="form-group mb-4">
-                <div class="input-group">
-                    <span class="input-group-text bg-transparent border-end-0">
-                        <i class="bi bi-lock text-muted"></i>
-                    </span>
-                    <InputText @bind-Value="loginModel.Password"
-                               class="form-control border-start-0 ps-0"
-                               placeholder="Password"
-                               type="@passwordInputType" />
-                    <button type="button" class="btn btn-outline-secondary" @onclick="TogglePasswordVisibility">
-                        <i class="@passwordToggleIcon"></i>
+            <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+                <DataAnnotationsValidator />
+
+                <div class="form-group">
+                    <div class="input-container">
+                        <span class="input-icon">
+                            <Icon Name="IconName.Envelope" />
+                        </span>
+                        <InputText @bind-Value="loginModel.Username"
+                                   class="form-input"
+                                   placeholder="User Name" autofocus />
+                    </div>
+                    <ValidationMessage For="@(() => loginModel.Username)" class="text-danger small mt-1" />
+                </div>
+
+                <div class="form-group">
+                    <div class="input-container">
+                        <span class="input-icon">
+                            <Icon Name="IconName.Lock" />
+                        </span>
+                        <InputText @bind-Value="loginModel.Password"
+                                   class="form-input"
+                                   placeholder="Password"
+                                   type="@passwordInputType" />
+                        <button type="button" class="password-toggle" @onclick="TogglePasswordVisibility">
+                            <i class="@passwordToggleIcon"></i>
+                        </button>
+                    </div>
+                    <ValidationMessage For="@(() => loginModel.Password)" class="text-danger small mt-1" />
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary login-btn" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        SIGN IN
                     </button>
                 </div>
-                <ValidationMessage For="@(() => loginModel.Password)" class="text-danger small mt-1" />
-            </div>
-
-            <div class="d-grid">
-                <button type="submit" class="btn btn-primary login-btn" disabled="@isLoading">
-                    @if (isLoading)
-                    {
-                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                    }
-                    SIGN IN
-                </button>
-            </div>
-        </EditForm>
+            </EditForm>
+        </div>
     </div>
-
 </div>
-
-
 
 @code {
     private LoginModel loginModel = new();

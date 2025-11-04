@@ -2,7 +2,6 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 
-
 <AuthorizeView>
     <Authorized>
         <div class="dropdown">
@@ -38,12 +37,8 @@
         <Button class="btn btn-outline-primary" @onclick="@(() => NavigationManager.NavigateTo("/login"))">
             <Icon Name="IconName.Person" /> Login
         </Button>
-
-
     </NotAuthorized>
 </AuthorizeView>
-
-
 
 @code {
     private async Task HandleLogout()
