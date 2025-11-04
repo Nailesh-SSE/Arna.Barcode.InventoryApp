@@ -46,7 +46,9 @@ public class ColourService: IColourService
             Name = colourModel.Name,
             Code = colourModel.Code,
             IsActive = true,
-            IsDeleted = false
+            IsDeleted = false,
+            CreatedBy=colourModel.CreatedBy,
+            CreatedOn = DateTime.UtcNow
         };
         await colourRepository.AddAsync(colour);
         await _unitOfWork.SaveChangesAsync();
@@ -74,7 +76,7 @@ public class ColourService: IColourService
         await _unitOfWork.SaveChangesAsync();
         return true;
     }
-    public async Task<bool> DeleteColourAsync(int id)
+    public async Task<bool> DeleteColourAsync(int id, int deletedBy)
     {
         try
         {
@@ -85,6 +87,7 @@ public class ColourService: IColourService
             colour.IsDeleted = true;
             colour.IsActive = false;
             colour.UpdatedOn = DateTime.UtcNow;
+            colour.UpdatedBy = deletedBy;
             colourRepository.Update(colour);
             await _unitOfWork.SaveChangesAsync();
             return true;

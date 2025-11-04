@@ -1,4 +1,6 @@
 ﻿@page "/colour"
+@using InventoryManagement.Components.Auth
+@inherits AuthComponentBase
 @inject IColourService ColourService
 @inject IJSRuntime JS
 @inject NavigationManager NavigationManager
@@ -119,7 +121,13 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync(); // This will call the base authentication check
 
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
         await LoadColour();
     }
 
@@ -139,7 +147,10 @@ else
     {
         modalTitle = "Add Colour";
         isEditMode = false;
-        colourModel = new ColourModel();
+        colourModel = new ColourModel()
+        {
+            CreatedBy = Convert.ToInt32(CurrentUserId),           
+        };
         InitializeEditContextAsync();
         modal.ShowAsync();
     }
@@ -153,6 +164,7 @@ else
             Code = editColour.Code,
             Name = editColour.Name,
             IsActive = editColour.IsActive,
+            UpdatedBy = Convert.ToInt32(CurrentUserId),
         };
         InitializeEditContextAsync();
         modal.ShowAsync();
@@ -190,7 +202,9 @@ else
             bool isConfirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
             if (isConfirm)
             {
-                await ColourService.DeleteColourAsync(id);
+                var deletedBy = Convert.ToInt32(CurrentUserId);
+
+                await ColourService.DeleteColourAsync(id, deletedBy);
                 await LoadColour();
                 await ColourGrid.RefreshDataAsync();
             }

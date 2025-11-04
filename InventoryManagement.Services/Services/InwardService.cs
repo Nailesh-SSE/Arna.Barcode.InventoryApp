@@ -86,7 +86,7 @@ public class InwardService : IInwardService
         }
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id,int deletedBy)
     {
         try
         {
@@ -270,7 +270,8 @@ public class InwardService : IInwardService
                 Unit = itemModel.Unit,
                 SerialNo = serialNo.ToString(),
                 BatchNo = GenerateBatchNo(serialNo),
-                IsDeleted = false
+                IsDeleted = false,
+                CreatedBy = itemModel.CreatedBy,
             });
         }
 
@@ -400,10 +401,11 @@ public class InwardService : IInwardService
         return new InwardBarcodeItem
         {
             InwardId = item.InwardId,
+            CreatedBy = item.CreatedBy,
             InwardItemId = item.Id,
             BarcodeNo = GenerateBarcodeNumber(transactionDate, item.InwardId, counter),
             TransactionDate = transactionDate,
-            IsInStock = true
+            IsInStock = true           
         };
     }
 
@@ -456,7 +458,8 @@ public class InwardService : IInwardService
             ShipMentCompanyId = entity.ShipMentCompanyId,
             Remarks = entity.Remarks,
             IsActive = entity.IsActive,
-            CategoryId=entity.CategoryId
+            CategoryId=entity.CategoryId,
+            CreatedBy = entity.CreatedBy,
         };
     }
 
@@ -469,7 +472,8 @@ public class InwardService : IInwardService
             ProductId = entity.ProductId,
             Quantity = entity.Quantity,
             Unit = entity.Unit,
-            BatchNo = entity.BatchNo
+            BatchNo = entity.BatchNo,
+            CreatedBy = entity.CreatedBy,
         };
     }
 
