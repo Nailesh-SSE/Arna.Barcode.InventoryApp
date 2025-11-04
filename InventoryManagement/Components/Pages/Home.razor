@@ -70,37 +70,6 @@ else if (IsAuthenticated)
                 <Card>
                     <CardBody>
                         <h5 class="card-title">
-                            <Icon Name="IconName.BarChart" Color="IconColor.Info" />
-                            Reports & Analytics
-                        </h5>
-                        <p class="card-text">View comprehensive reports and business analytics</p>
-                        <div class="d-grid gap-2">
-                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
-                                <NavLink class="nav-link text-white" href="/reports/instock">
-                                    <Icon Name="IconName.BoxSeam" /> InStock
-                                </NavLink>
-                            </Button>
-                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
-                                <NavLink class="nav-link text-white" href="/reports/outstock">
-                                    <Icon Name="IconName.CartDash" /> OutStock
-                                </NavLink>
-                            </Button>
-
-                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
-                                <NavLink class="nav-link text-white" href="/reports/salereport">
-                                    <Icon Name="IconName.GraphUp" /> Sales Reports
-                                </NavLink>
-                            </Button>
-                        </div>
-                    </CardBody>
-                </Card>
-            </div>
-        </div>
-        <div class="row g-4 mt-3">
-            <div class="col-md-6">
-                <Card>
-                    <CardBody>
-                        <h5 class="card-title">
                             <Icon Name="IconName.Layers" Color="IconColor.Primary" />                        
                             Product Master Data
                         </h5>
@@ -125,6 +94,9 @@ else if (IsAuthenticated)
                     </CardBody>
                 </Card>
             </div>
+        </div>
+        <div class="row g-4 mt-3">
+            
 
             <div class="col-md-6">
                 <Card>
@@ -149,6 +121,35 @@ else if (IsAuthenticated)
                             <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
                                 <NavLink class="nav-link text-white" href="/sales-report">
                                     <Icon Name="IconName.ArrowReturnLeft" />  Sales Return
+                                </NavLink>
+                            </Button>
+                        </div>
+                    </CardBody>
+                </Card>
+            </div>
+            <div class="col-md-6">
+                <Card>
+                    <CardBody>
+                        <h5 class="card-title">
+                            <Icon Name="IconName.BarChart" Color="IconColor.Info" />
+                            Reports & Analytics
+                        </h5>
+                        <p class="card-text">View comprehensive reports and business analytics</p>
+                        <div class="d-grid gap-2">
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link text-white" href="/reports/instock">
+                                    <Icon Name="IconName.BoxSeam" /> InStock Reports
+                                </NavLink>
+                            </Button>
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link text-white" href="/reports/outstock">
+                                    <Icon Name="IconName.CartDash" /> OutStock Reports
+                                </NavLink>
+                            </Button>
+
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link text-white" href="/reports/salereport">
+                                    <Icon Name="IconName.GraphUp" /> Sales Reports
                                 </NavLink>
                             </Button>
                         </div>
