@@ -46,7 +46,9 @@ public class OutwardService : IOutwardService
                 BillToCompanyId = model.BillToCompanyId,
                 Remarks = model.Remarks,
                 IsActive = true,
-                IsDeleted = false
+                IsDeleted = false,
+                CreatedBy = model.CreatedBy,
+                CreatedOn = model.CreatedOn
             };
 
             await outwardRepository.AddAsync(newOutward);
@@ -76,6 +78,8 @@ public class OutwardService : IOutwardService
             existing.BillToCompanyId = model.BillToCompanyId;
             existing.Remarks = model.Remarks;
             existing.IsActive = model.IsActive;
+            existing.UpdatedBy = model.UpdatedBy;
+            existing.UpdatedOn = DateTime.UtcNow;
 
             outwardRepository.Update(existing);
             await _unitOfWork.SaveChangesAsync();
@@ -88,7 +92,7 @@ public class OutwardService : IOutwardService
         }
     }
 
-    public async Task<bool> DeleteOutwardAsync(int id)
+    public async Task<bool> DeleteOutwardAsync(int id, int userid)
     {
         try
         {
@@ -108,6 +112,8 @@ public class OutwardService : IOutwardService
 
             outward.IsDeleted = true;
             outward.IsActive = false;
+            outward.UpdatedOn = DateTime.UtcNow;
+            outward.UpdatedBy = userid;
             outwardRepository.Update(outward);
 
             var detailRepository = _unitOfWork.GetRepository<OutwardDetail>();
@@ -115,6 +121,8 @@ public class OutwardService : IOutwardService
             foreach (var detail in outwardDetails)
             {
                 detail.IsDeleted = true;
+                detail.UpdatedOn = DateTime.UtcNow;
+                detail.UpdatedBy = userid;
                 detailRepository.Update(detail);
             }
 
@@ -202,7 +210,7 @@ public class OutwardService : IOutwardService
         return new BarcodeValidationResult { IsValid = true };
     }
 
-    public async Task<OutWardItemModel?> AddOutwardItemAsync(int outwardId, string barcodeNo)
+    public async Task<OutWardItemModel?> AddOutwardItemAsync(int outwardId, string barcodeNo,int userid)
     {
         try
         {
@@ -232,6 +240,8 @@ public class OutwardService : IOutwardService
                 Quantity = 1,
                 Unit = "PCS",
                 BarcodeNo = barcodeNo,
+                CreatedOn=DateTime.UtcNow,
+                CreatedBy=userid,
                 IsDeleted = false,
                 IsActive= true
             };
@@ -262,7 +272,7 @@ public class OutwardService : IOutwardService
         }
     }
 
-    public async Task<bool> DeleteOutwardItemAsync(int outwardDetailId, string barcodeNo)
+    public async Task<bool> DeleteOutwardItemAsync(int outwardDetailId, string barcodeNo, int userid)
     {
         try
         {
@@ -275,6 +285,8 @@ public class OutwardService : IOutwardService
                 return false;
 
             detail.IsDeleted = true;
+            detail.UpdatedOn = DateTime.UtcNow;
+            detail.UpdatedBy = userid;
             detailRepository.Update(detail);
 
             await UpdateBarcodeStockStatus(barcodeNo, true);

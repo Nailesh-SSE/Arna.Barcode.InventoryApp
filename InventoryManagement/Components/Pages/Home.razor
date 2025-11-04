@@ -34,60 +34,7 @@ else if (IsAuthenticated)
 
 
         <!-- Dashboard Summary Cards -->
-        <div class="row g-4 mb-4">
-            <div class="col-md-3">
-                <Card>
-                    <CardBody class="text-center">
-                        <Icon Name="IconName.Box" Color="IconColor.Primary" Size="IconSize.x2" />
-                        <h5 class="card-title mt-2">Master Data</h5>
-                        <p class="card-text">Manage companies, categories, and products</p>
-                        <Button Color="ButtonColor.Primary" To="/categories" Size="ButtonSize.Small">
-                            Manage
-                        </Button>
-                    </CardBody>
-                </Card>
-            </div>
-
-            <div class="col-md-3">
-                <Card>
-                    <CardBody class="text-center">
-                        <Icon Name="IconName.ArrowDownCircle" Color="IconColor.Success" Size="IconSize.x2" />
-                        <h5 class="card-title mt-2">Inward Management</h5>
-                        <p class="card-text">Track incoming inventory and shipments</p>
-                        <Button Color="ButtonColor.Success" To="/inward" Size="ButtonSize.Small">
-                            Inward
-                        </Button>
-                    </CardBody>
-                </Card>
-            </div>
-
-            <div class="col-md-3">
-                <Card>
-                    <CardBody class="text-center">
-                        <Icon Name="IconName.ArrowUpCircle" Color="IconColor.Warning" Size="IconSize.x2" />
-                        <h5 class="card-title mt-2">Outward Management</h5>
-                        <p class="card-text">Manage outgoing inventory and deliveries</p>
-                        <Button Color="ButtonColor.Warning" To="/outward" Size="ButtonSize.Small">
-                            Outward
-                        </Button>
-                    </CardBody>
-                </Card>
-            </div>
-
-            <div class="col-md-3">
-                <Card>
-                    <CardBody class="text-center">
-                        <Icon Name="IconName.ArrowReturnLeft" Color="IconColor.Danger" Size="IconSize.x2" />
-                        <h5 class="card-title mt-2">Sales Return</h5>
-                        <p class="card-text">Handle product returns and exchanges</p>
-                        <Button Color="ButtonColor.Danger" To="/sale-returns" Size="ButtonSize.Small">
-                            Returns
-                        </Button>
-                    </CardBody>
-                </Card>
-            </div>
-        </div>
-
+     
         <!-- Quick Actions Section -->
         <div class="row g-4">
             <div class="col-md-6">
@@ -99,17 +46,23 @@ else if (IsAuthenticated)
                         </h5>
                         <p class="card-text">Manage your company relationships and contacts</p>
                         <div class="d-grid gap-2">
-                            <Button Color="ButtonColor.Secondary" To="/companies/shipto" Size="ButtonSize.Small">
-                                <Icon Name="IconName.Truck" /> Ship To Companies
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" >
+                                <NavLink class="nav-link"  href="companies/ship-to">
+                                    <Icon Name="IconName.Truck" />&nbsp;  Ship To Companies
+                                </NavLink>                
                             </Button>
-                            <Button Color="ButtonColor.Secondary" To="/companies/maketo" Size="ButtonSize.Small">
-                                <Icon Name="IconName.House" /> Make To Companies
-                            </Button>
-                            <Button Color="ButtonColor.Secondary" To="/companies/billto" Size="ButtonSize.Small">
-                                <Icon Name="IconName.Receipt" /> Bill To Companies
-                            </Button>
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link text-white" href="companies/make-to">
+                                    <Icon Name="IconName.House" />&nbsp; Make To Companies
+                                </NavLink>
+                                </Button>
+                                <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                    <NavLink class="nav-link text-white" href="companies/bill-to">
+                                        <Icon Name="IconName.Receipt" />&nbsp; Bill To Companies
+                                    </NavLink>
+                                </Button>
                         </div>
-                    </CardBody>
+                    </CardBody> 
                 </Card>
             </div>
 
@@ -122,14 +75,21 @@ else if (IsAuthenticated)
                         </h5>
                         <p class="card-text">View comprehensive reports and business analytics</p>
                         <div class="d-grid gap-2">
-                            <Button Color="ButtonColor.Info" To="/sales-reports" Size="ButtonSize.Small">
-                                <Icon Name="IconName.GraphUp" /> Sales Reports
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link text-white" href="/inward">
+                                    <Icon Name="IconName.BoxSeam" /> InStock
+                                </NavLink>
                             </Button>
-                            <Button Color="ButtonColor.Secondary" To="/inventory-reports" Size="ButtonSize.Small">
-                                <Icon Name="IconName.Boxes" /> Inventory Reports
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link text-white" href="/outward">
+                                    <Icon Name="IconName.CartDash" /> OutStock
+                                </NavLink>
                             </Button>
-                            <Button Color="ButtonColor.Secondary" To="/product-reports" Size="ButtonSize.Small">
-                                <Icon Name="IconName.Tags" /> Product Reports
+
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link text-white" href="/sale-returns">
+                                    <Icon Name="IconName.GraphUp" /> Sales Reports
+                                </NavLink>
                             </Button>
                         </div>
                     </CardBody>

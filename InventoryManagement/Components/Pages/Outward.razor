@@ -245,6 +245,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
         await LoadData();
     }
 
@@ -287,7 +293,9 @@
         outward = new OutwardModel
         {
             OutwardDate = DateTime.Now,
-            IsActive = true
+            IsActive = true,
+            CreatedBy=Convert.ToInt32(CurrentUserId),
+            CreatedOn=DateTime.UtcNow
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -304,7 +312,9 @@
             OutwardDate = editOutward.OutwardDate,
             BillToCompanyId = editOutward.BillToCompanyId,
             Remarks = editOutward.Remarks,
-            IsActive = editOutward.IsActive
+            IsActive = editOutward.IsActive,
+            UpdatedBy=Convert.ToInt32(CurrentUserId),
+            UpdatedOn=DateTime.UtcNow
         };
         InitializeEditContext();
         await modal.ShowAsync();
@@ -355,7 +365,8 @@
             var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this outward?");
             if (!confirmed) return;
 
-            var result = await OutwardService.DeleteOutwardAsync(id);
+            var userid = Convert.ToInt32(CurrentUserId);
+            var result = await OutwardService.DeleteOutwardAsync(id,userid);
             if (result)
             {
                 await LoadData();
@@ -431,9 +442,9 @@
                 barcodeErrorMessage = validationResult.ErrorMessage;
                 return;
             }
-
+            var userid = Convert.ToInt32(CurrentUserId);
             // Add item
-            var item = await OutwardService.AddOutwardItemAsync(selectedOutward.Id, newItem.BarcodeNo);
+            var item = await OutwardService.AddOutwardItemAsync(selectedOutward.Id, newItem.BarcodeNo,userid);
 
             if (item != null)
             {
@@ -464,8 +475,8 @@
                 $"Are you sure you want to remove item with barcode {item.BarcodeNo}?");
 
             if (!confirmed) return;
-
-            var result = await OutwardService.DeleteOutwardItemAsync(item.Id, item.BarcodeNo);
+            var userid = Convert.ToInt32(CurrentUserId);
+            var result = await OutwardService.DeleteOutwardItemAsync(item.Id, item.BarcodeNo,userid);
 
             if (result)
             {

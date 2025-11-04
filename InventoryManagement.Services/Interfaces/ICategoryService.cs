@@ -10,6 +10,6 @@ public interface ICategoryService
     Task<CategoryModel?> GetCategoryByIdAsync(int id);
     Task<bool> CreateCategoryAsync(CategoryModel category);
     Task<bool> UpdateCategoryAsync(CategoryModel category);
-    Task<bool> DeleteCategoryAsync(int id);
+    Task<bool> DeleteCategoryAsync(int id,int userid);
     Task<bool> IsCategoryNameUniqueAsync(string name, int? excludeId = null);
  }
