@@ -119,14 +119,21 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await base.OnInitializedAsync(); // This will call the base authentication check
+        await base.OnInitializedAsync(); 
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
 
         if (!IsAuthenticated)
         {
             NavigationManager.NavigateTo("/logout", forceLoad: true);
             return;
         }
+
         await LoadColour();
+        StateHasChanged();
     }
 
     private async Task LoadColour()
