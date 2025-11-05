@@ -1,34 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
-namespace InventoryManagement.Services.Models
+namespace InventoryManagement.Services.Models;
+
+public class OutwardDetailModel:CommonModel
 {
-    public class OutwardDetailModel:CommonModel
-    {
-        public int Id { get; set; }
+    public int Id { get; set; }
 
-        [Required]
-        public int OutwardId { get; set; }
+    [Required]
+    public int OutwardId { get; set; }
 
-        [Required]
-        public int InwardItemId { get; set; }
-        public int ProductId { get; set; }
+    [Required]
+    public int InwardItemId { get; set; }
+    public int ProductId { get; set; }
 
-        [Required(ErrorMessage = "Barcode number is required")]
-        [StringLength(100)]
-        public string BarcodeNo { get; set; } = string.Empty;
+    [Required(ErrorMessage = "Barcode number is required")]
+    [StringLength(100)]
+    public string BarcodeNo { get; set; } = string.Empty;
 
-        [Required]
-        public int Quantity { get; set; } = 1;
+    [Required]
+    public int Quantity { get; set; } = 1;
 
-        [Required]
-        [StringLength(20)]
-        public string Unit { get; set; } = "PCS";
-        [StringLength(100)]
-        public string Remark { get; set; }
-    }
+    [Required]
+    [StringLength(20)]
+    public string Unit { get; set; } = "PCS";
+    [StringLength(100)]
+    public string Remark { get; set; }
 }

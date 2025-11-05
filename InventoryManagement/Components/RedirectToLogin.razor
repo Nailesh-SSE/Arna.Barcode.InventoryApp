@@ -1,8 +1,61 @@
-@inject NavigationManager Navigation
+@using Microsoft.AspNetCore.Components.Authorization
 
 @code {
-    protected override void OnInitialized()
+    [Parameter]
+    public string CurrentUrl { get; set; } = string.Empty;
+
+
+protected override async Task OnInitializedAsync()
+{
+    // Check if user is actually not authenticated
+    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    
+    if (authState.User.Identity?.IsAuthenticated != true)
     {
-        Navigation.NavigateTo("/login", true);
+        // Store the intended URL for redirect after login
+        var returnUrl = GetReturnUrl();
+        
+        // Navigate to login with return URL - use client-side navigation
+        NavigationManager.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(returnUrl)}", false);
     }
+    else
+    {
+        // User is authenticated, redirect to intended page or home
+        var returnUrl = GetReturnUrl();
+        if (!string.IsNullOrEmpty(returnUrl) && returnUrl != "/" && !returnUrl.Contains("/login"))
+        {
+            NavigationManager.NavigateTo(returnUrl, false);
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/", false);
+        }
+    }
+}
+
+private string GetReturnUrl()
+{
+    if (!string.IsNullOrEmpty(CurrentUrl))
+    {
+        try
+        {
+            var uri = new Uri(CurrentUrl);
+            var path = uri.AbsolutePath;
+            
+            // Don't return to login page itself
+            if (path != "/login" && path != "/")
+            {
+                return path;
+            }
+        }
+        catch
+        {
+            // If URL parsing fails, fall back to current path
+            return NavigationManager.ToBaseRelativePath(CurrentUrl);
+        }
+    }
+    
+    return string.Empty;
+}
+
 }

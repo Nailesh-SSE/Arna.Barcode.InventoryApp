@@ -1,8 +1,11 @@
 @page "/"
 @layout Layout.MainLayout
-@inject NavigationManager NavigationManager
+@using InventoryManagement.Components.Auth
+@inherits AuthComponentBase
+
 
 <PageTitle>Dashboard - Inventory Management</PageTitle>
+
 
 @if (IsLoading)
 {
@@ -10,7 +13,7 @@
         <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Loading...</span>
         </div>
-        <span class="ms-2">authenticating user...</span>
+        <span class="ms-2">Authenticating user...</span>
     </div>
 }
 else if (IsAuthenticated)
@@ -34,7 +37,6 @@ else if (IsAuthenticated)
 
 
         <!-- Dashboard Summary Cards -->
-     
         <!-- Quick Actions Section -->
         <div class="row g-4">
             <div class="col-md-6">
@@ -46,23 +48,23 @@ else if (IsAuthenticated)
                         </h5>
                         <p class="card-text">Manage your company relationships and contacts</p>
                         <div class="d-grid gap-2">
-                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" >
-                                <NavLink class="nav-link"  href="companies/ship-to">
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link" href="companies/ship-to">
                                     <Icon Name="IconName.Truck" />&nbsp;  Ship To Companies
-                                </NavLink>                
+                                </NavLink>
                             </Button>
                             <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
                                 <NavLink class="nav-link text-white" href="/companies/make-to">
                                     <Icon Name="IconName.House" />&nbsp; Make To Companies
                                 </NavLink>
-                                </Button>
-                                <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
-                                    <NavLink class="nav-link text-white" href="/companies/bill-to">
-                                        <Icon Name="IconName.Receipt" />&nbsp; Bill To Companies
-                                    </NavLink>
-                                </Button>
+                            </Button>
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
+                                <NavLink class="nav-link text-white" href="/companies/bill-to">
+                                    <Icon Name="IconName.Receipt" />&nbsp; Bill To Companies
+                                </NavLink>
+                            </Button>
                         </div>
-                    </CardBody> 
+                    </CardBody>
                 </Card>
             </div>
 
@@ -70,7 +72,7 @@ else if (IsAuthenticated)
                 <Card>
                     <CardBody>
                         <h5 class="card-title">
-                            <Icon Name="IconName.Layers" Color="IconColor.Primary" />                        
+                            <Icon Name="IconName.Layers" Color="IconColor.Primary" />
                             Product Master Data
                         </h5>
                         <p class="card-text">Configure and maintain categories, products, and colours.</p>
@@ -96,7 +98,7 @@ else if (IsAuthenticated)
             </div>
         </div>
         <div class="row g-4 mt-3">
-            
+
 
             <div class="col-md-6">
                 <Card>
@@ -119,7 +121,7 @@ else if (IsAuthenticated)
                             </Button>
 
                             <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
-                                <NavLink class="nav-link text-white" href="/sales-report">
+                                <NavLink class="nav-link text-white" href="/sale-returns">
                                     <Icon Name="IconName.ArrowReturnLeft" />  Sales Return
                                 </NavLink>
                             </Button>
@@ -192,13 +194,37 @@ else if (IsAuthenticated)
 }
 else
 {
-    <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
-        <div class="text-center">
-            <h3>Authentication Required</h3>
-            <p class="text-muted">Please log in to access the dashboard.</p>
-            <Button Color="ButtonColor.Primary" @onclick="@(() => NavigationManager.NavigateTo("/login",true))">
-                Go to Login
-            </Button>
+    @if (hasCheckedAuth)
+    {
+        <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+            <div class="text-center">
+                <h3>Authentication Required</h3>
+                <p class="text-muted">Please log in to access the dashboard.</p>
+                <Button Color="ButtonColor.Primary" @onclick="@(() => NavigationManager.NavigateTo("/login?returnUrl=" + Uri.EscapeDataString("/"), false))">
+                    Go to Login
+                </Button>
+            </div>
         </div>
-    </div>
+    }
+    else
+    {
+        <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Checking authentication...</span>
+            </div>
+        </div>
+    }
+}
+
+
+@code {
+    private bool hasCheckedAuth = false;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        hasCheckedAuth = true;
+    }
+
 }
