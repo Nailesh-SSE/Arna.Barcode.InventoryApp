@@ -1,4 +1,6 @@
 @using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
 
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(Program).Assembly">

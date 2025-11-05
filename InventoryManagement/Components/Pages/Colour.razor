@@ -3,6 +3,7 @@
 @inherits AuthComponentBase
 @inject IColourService ColourService
 @inject IJSRuntime JS
+
 <PageTitle>Colour</PageTitle>
 
 @if (isLoading)
@@ -120,18 +121,11 @@ else
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync(); 
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender) return;
-
         if (!IsAuthenticated)
         {
             NavigationManager.NavigateTo("/logout", forceLoad: true);
             return;
         }
-
         await LoadColour();
         StateHasChanged();
     }
