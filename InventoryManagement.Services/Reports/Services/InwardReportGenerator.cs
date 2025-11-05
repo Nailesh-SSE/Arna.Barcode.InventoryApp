@@ -26,11 +26,12 @@ public class InwardReportGenerator : IInwardReportService
         try
         {
             var query = BuildBaseQuery(filter);
-            
+
+            var items = await ExecuteQuery(query, filter);
+
             // Apply paging
-            var pagedQuery = ApplyPaging(query, filter);
-            var items = await ExecuteQuery(pagedQuery, filter);
-       
+            var pagedItems = items.Skip((filter.PageNumber - 1) * filter.PageSize).Take(filter.PageSize).ToList();
+
             // Generate summary
             var summary = await GenerateSummaryAsync(filter);
 
@@ -38,7 +39,7 @@ public class InwardReportGenerator : IInwardReportService
 
             return new InwardReportResult
             {
-                Items = items,
+                Items = pagedItems,
                 Summary = summary,
                 TotalRecords = items.Count,
                 PageNumber = filter.PageNumber,
@@ -104,9 +105,9 @@ public class InwardReportGenerator : IInwardReportService
             row.CreateCell(4).SetCellValue(item.CategoryName);
             row.CreateCell(5).SetCellValue((double)item.Quantity);
             row.CreateCell(6).SetCellValue(item.Unit);
-            row.CreateCell(9).SetCellValue(item.ShipmentCompanyName);
-            row.CreateCell(10).SetCellValue(item.BatchNumber);
-            row.CreateCell(11).SetCellValue(item.IsActive ? "Active" : "Inactive");
+            row.CreateCell(7).SetCellValue(item.ShipmentCompanyName);
+            row.CreateCell(8).SetCellValue(item.BatchNumber);
+            row.CreateCell(9).SetCellValue(item.IsActive ? "Active" : "Inactive");
         }
 
         // Autosize all columns
@@ -252,12 +253,6 @@ public class InwardReportGenerator : IInwardReportService
         if (!filter.IncludeInactive)
             query = query.Where(i => i.IsActive);
 
-        if (!string.IsNullOrEmpty(filter.InwardNumbers))
-        {
-            var numbers = filter.InwardNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries);
-            query = query.Where(i => numbers.Contains(i.InwardNo));
-        }
-
         // Apply sorting
         query = ApplySorting(query, filter);
 
@@ -276,11 +271,6 @@ public class InwardReportGenerator : IInwardReportService
         };
     }
 
-    private IQueryable<Inward> ApplyPaging(IQueryable<Inward> query, InwardFilter filter)
-    {
-        return query.Skip((filter.PageNumber - 1) * filter.PageSize).Take(filter.PageSize);
-    }
-
     private async Task<List<InwardReportItem>> ExecuteQuery(IQueryable<Inward> query, InwardFilter filter)
     {
         var inwards = await query.ToListAsync();
@@ -293,6 +283,8 @@ public class InwardReportGenerator : IInwardReportService
                 // Apply additional item-level filters
                 if (filter.MinQuantity.HasValue && item.Quantity < filter.MinQuantity.Value) continue;
                 if (filter.MaxQuantity.HasValue && item.Quantity > filter.MaxQuantity.Value) continue;
+                if (!string.IsNullOrEmpty(filter.InwardNumbers) &&
+                    !filter.InwardNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries).Contains(item.Inward?.InwardNo)) continue;
                 if (!string.IsNullOrEmpty(filter.ProductSKUs) &&
                     !filter.ProductSKUs.Split(',', StringSplitOptions.RemoveEmptyEntries).Contains(item.Product?.SKU)) continue;
                 if (!string.IsNullOrEmpty(filter.BatchNumbers) &&
