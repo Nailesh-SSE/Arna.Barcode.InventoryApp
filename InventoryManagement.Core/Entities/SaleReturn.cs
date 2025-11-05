@@ -21,7 +21,6 @@ public class SaleReturn : Common
     [Required]
     public ReturnType ReturnType { get; set; }
 
-    [Required]
     [StringLength(100)]
     public string BarcodeNo { get; set; } = string.Empty;
 

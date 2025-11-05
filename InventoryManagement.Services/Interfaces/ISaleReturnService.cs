@@ -1,13 +1,14 @@
 using InventoryManagement.Core.Entities;
+using InventoryManagement.Services.Models;
 namespace InventoryManagement.Services.Interfaces;
 
 public interface ISaleReturnService
 {
-    Task<IEnumerable<SaleReturn>> GetAllSaleReturnsAsync();
-    Task<SaleReturn?> GetSaleReturnByIdAsync(int id);
-    Task<bool> CreateSaleReturnAsync(SaleReturn saleReturn);
-    Task<bool> UpdateSaleReturnAsync(SaleReturn saleReturn);
-    Task<bool> DeleteSaleReturnAsync(int id);
-    Task<IEnumerable<SaleReturn>> GetSaleReturnsByCompanyAsync(int companyId);
-  
+    Task<List<SaleReturnModel>> GetAllSaleReturnsAsync();
+    Task<SaleReturnModel?> GetSaleReturnByIdAsync(int id);
+    Task<bool> CreateSaleReturnAsync(SaleReturnModel model);
+    Task<bool> UpdateSaleReturnAsync(SaleReturnModel model);
+    Task<bool> DeleteSaleReturnAsync(int id, int userId);
+    Task<SaleReturnValidationResult> ValidateBarcodeForSaleReturnAsync(string barcodeNo, int companyId);
+    Task<IEnumerable<SaleReturnModel>> GetSaleReturnsByCompanyAsync(int companyId);
 }

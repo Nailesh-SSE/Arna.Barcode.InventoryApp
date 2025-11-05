@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
+﻿
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using System.Security.Claims;
 
@@ -6,11 +7,12 @@ namespace InventoryManagement.Services.Auth
 {
     public class CustomAuthStateProvider : AuthenticationStateProvider
     {
-        private readonly ProtectedLocalStorage _storage; 
+        private readonly ProtectedLocalStorage _storage;
         private readonly ILogger<CustomAuthStateProvider> _logger;
         private const string SessionKey = "UserAuth";
         private AuthenticationState _authenticationState;
         private readonly TimeSpan _sessionTimeout = TimeSpan.FromHours(2);
+        private AuthData? _cachedAuthData;
 
         public CustomAuthStateProvider(
             ProtectedLocalStorage storage,
@@ -25,11 +27,29 @@ namespace InventoryManagement.Services.Auth
         {
             try
             {
+                // Use cached data if available to avoid async delays
+                if (_cachedAuthData?.IsAuthenticated == true)
+                {
+                    // Check if cache is still valid
+                    if (DateTime.UtcNow - _cachedAuthData.LoginTime <= _sessionTimeout)
+                    {
+                        return CreateAuthenticationState(_cachedAuthData);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Cached session expired for user {UserId}", _cachedAuthData.UserId);
+                        _cachedAuthData = null;
+                        await MarkUserAsLoggedOut();
+                        return _authenticationState;
+                    }
+                }
+
                 var session = await _storage.GetAsync<AuthData>(SessionKey);
 
                 if (session.Success && session.Value?.IsAuthenticated == true)
                 {
                     var user = session.Value;
+                    _cachedAuthData = user; // Cache the data
 
                     // Check session timeout
                     if (DateTime.UtcNow - user.LoginTime > _sessionTimeout)
@@ -39,15 +59,7 @@ namespace InventoryManagement.Services.Auth
                         return _authenticationState;
                     }
 
-                    var identity = new ClaimsIdentity(new[]
-                    {
-                        new Claim(ClaimTypes.NameIdentifier, user.UserId),
-                        new Claim(ClaimTypes.Name, user.UserName),
-                        new Claim("FullName", user.UserFullName),
-                        new Claim("LoginTime", user.LoginTime.ToString("O"))
-                    }, "LocalStorageAuth");
-
-                    _authenticationState = new AuthenticationState(new ClaimsPrincipal(identity));
+                    _authenticationState = CreateAuthenticationState(user);
                     return _authenticationState;
                 }
             }
@@ -60,22 +72,28 @@ namespace InventoryManagement.Services.Auth
             return _authenticationState;
         }
 
+        private AuthenticationState CreateAuthenticationState(AuthData user)
+        {
+            var identity = new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.UserId),
+                new Claim(ClaimTypes.Name, user.UserName),
+                new Claim("FullName", user.UserFullName),
+                new Claim("LoginTime", user.LoginTime.ToString("O"))
+            }, "LocalStorageAuth");
+
+            return new AuthenticationState(new ClaimsPrincipal(identity));
+        }
+
         public async Task MarkUserAsAuthenticated(AuthData user)
         {
             try
             {
                 await _storage.SetAsync(SessionKey, user);
+                _cachedAuthData = user; // Cache the data immediately
                 _logger.LogInformation("User {UserId} authenticated successfully", user.UserId);
 
-                var identity = new ClaimsIdentity(new[]
-                {
-                    new Claim(ClaimTypes.NameIdentifier, user.UserId),
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim("FullName", user.UserFullName),
-                    new Claim("LoginTime", user.LoginTime.ToString("O"))
-                }, "LocalStorageAuth");
-
-                _authenticationState = new AuthenticationState(new ClaimsPrincipal(identity));
+                _authenticationState = CreateAuthenticationState(user);
                 NotifyAuthenticationStateChanged(Task.FromResult(_authenticationState));
             }
             catch (Exception ex)
@@ -90,6 +108,7 @@ namespace InventoryManagement.Services.Auth
             try
             {
                 await _storage.DeleteAsync(SessionKey);
+                _cachedAuthData = null; // Clear cache
                 _logger.LogInformation("User logged out successfully");
 
                 _authenticationState = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
@@ -106,6 +125,12 @@ namespace InventoryManagement.Services.Auth
         {
             try
             {
+                // Use cached data for faster response
+                if (_cachedAuthData?.IsAuthenticated == true)
+                {
+                    return DateTime.UtcNow - _cachedAuthData.LoginTime <= _sessionTimeout;
+                }
+
                 var authState = await GetAuthenticationStateAsync();
                 return authState.User.Identity?.IsAuthenticated ?? false;
             }
@@ -119,6 +144,12 @@ namespace InventoryManagement.Services.Auth
         {
             try
             {
+                // Use cached data for faster response
+                if (_cachedAuthData?.IsAuthenticated == true)
+                {
+                    return _cachedAuthData.UserId;
+                }
+
                 var authState = await GetAuthenticationStateAsync();
                 return authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
             }
@@ -132,6 +163,12 @@ namespace InventoryManagement.Services.Auth
         {
             try
             {
+                // Use cached data for faster response
+                if (_cachedAuthData?.IsAuthenticated == true)
+                {
+                    return _cachedAuthData.UserName;
+                }
+
                 var authState = await GetAuthenticationStateAsync();
                 return authState.User.Identity?.Name ?? string.Empty;
             }
@@ -145,6 +182,12 @@ namespace InventoryManagement.Services.Auth
         {
             try
             {
+                // Use cached data for faster response
+                if (_cachedAuthData?.IsAuthenticated == true)
+                {
+                    return _cachedAuthData.UserFullName;
+                }
+
                 var authState = await GetAuthenticationStateAsync();
                 return authState.User.FindFirst("FullName")?.Value ?? string.Empty;
             }

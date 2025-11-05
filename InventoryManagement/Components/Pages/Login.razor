@@ -2,10 +2,12 @@
 @layout LoginLayout
 @using System.ComponentModel.DataAnnotations
 @using InventoryManagement.Services.Auth
-@inject NavigationManager NavigationManager
+@using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IUserService UserService
 @inject ILogger<Login> Logger
+
+
 <style>
     .login-container {
         min-height: 100vh;
@@ -197,7 +199,10 @@
     }
 </style>
 
+
+
 <PageTitle>Arna Technosoft - Login</PageTitle>
+
 
 <div class="login-container">
     <div class="login-box">
@@ -206,6 +211,8 @@
                 <img src="images/ArnaLogo.png" alt="Arna Technosoft" class="logo" />
             </div>
         </div>
+
+
 
         <div class="login-body">
             <p class="login-message">Sign in to start your session</p>
@@ -261,13 +268,17 @@
             </EditForm>
         </div>
     </div>
+
 </div>
+
+
 
 @code {
     private LoginModel loginModel = new();
     private string? errorMessage;
     private bool isLoading;
     private bool showPassword;
+    private string? returnUrl;
 
 
     private string passwordInputType => showPassword ? "text" : "password";
@@ -275,13 +286,17 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Check if user is already authenticated and redirect if needed
         try
         {
+            // Get return URL from query parameters
+            var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+            returnUrl = System.Web.HttpUtility.ParseQueryString(uri.Query).Get("returnUrl");
+
+            // Check if user is already authenticated and redirect if needed
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             if (authState.User.Identity?.IsAuthenticated == true)
             {
-                NavigationManager.NavigateTo("/", true);
+                await NavigateToReturnUrl();
                 return;
             }
         }
@@ -325,7 +340,7 @@
                     });
 
                     Logger.LogInformation("User {Username} logged in successfully", loginModel.Username);
-                    NavigationManager.NavigateTo("/", true);
+                    await NavigateToReturnUrl();
                 }
                 else
                 {
@@ -350,6 +365,39 @@
         }
     }
 
+    private async Task NavigateToReturnUrl()
+    {
+        if (!string.IsNullOrEmpty(returnUrl))
+        {
+            // Validate the return URL to prevent open redirect attacks
+            if (IsValidReturnUrl(returnUrl))
+            {
+                NavigationManager.NavigateTo(returnUrl, false);
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/", false);
+            }
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/", false);
+        }
+    }
+
+    private bool IsValidReturnUrl(string url)
+    {
+        if (string.IsNullOrEmpty(url))
+            return false;
+
+        // Ensure the URL is relative and doesn't contain suspicious characters
+        return url.StartsWith("/") &&
+               !url.Contains("://") &&
+               !url.Contains("..") &&
+               !url.ToLower().Contains("<script") &&
+               !url.ToLower().Contains("javascript:");
+    }
+
     private void TogglePasswordVisibility()
     {
         showPassword = !showPassword;
@@ -363,4 +411,5 @@
         [Required(ErrorMessage = "Password is required")]
         public string Password { get; set; } = "";
     }
+
 }
