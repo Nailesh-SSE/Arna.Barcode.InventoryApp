@@ -529,5 +529,12 @@
     {
         alertType = type;
         alertMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+    private async Task AutoHideAlertAsync()
+    {
+        await Task.Delay(5000);
+        alertMessage = null;
+        await InvokeAsync(StateHasChanged);
     }
 }
