@@ -312,6 +312,7 @@
         {
             isLoading = true;
             errorMessage = null;
+            await Task.Yield();
             StateHasChanged();
 
             // Validate credentials
