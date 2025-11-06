@@ -39,4 +39,6 @@ public class SaleReturn : Common
     [Required]
     public int ProductId { get; set; } 
     public virtual Company BillToCompany { get; set; } = null!;
+
+    public virtual Product Product { get; set; }
 }

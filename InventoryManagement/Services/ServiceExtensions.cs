@@ -40,12 +40,9 @@ public static class ServiceExtensions
         services.AddScoped<IColourService, ColourService>();
 
         // Register generators
-        services.AddTransient<IInstockReportGenerator, InstockReportGenerator>();
-        services.AddTransient<IOutstockReportGenerator, OutstockReportGenerator>();
-        services.AddTransient<IReturnSaleReportGenerator, ReturnSaleReportGenerator>();
         services.AddTransient<IInwardReportService, InwardReportGenerator>();
-        // Register main service
-        services.AddTransient<IReportService, ReportService>();
+        services.AddTransient<IOutwardReportService, OutwardReportGenerator>();
+        services.AddTransient<ISaleReturnReportService, SaleReturnReportGenerator>();
 
         services.AddAuthorizationCore();
         services.AddScoped<ProtectedLocalStorage>();

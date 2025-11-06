@@ -68,7 +68,7 @@ public class CompanyService : ICompanyService
             {
                 Id = companyModel.Id,
                 Code = companyModel.Code,
-                Name = companyModel.Name.Trim().ToLower(),
+                Name = companyModel.Name.Trim(),
                 IsActive = true,
                 CompanyType = companyModel.CompanyType,
                 SerialNumber = companyModel.SerialNumber,
@@ -99,7 +99,7 @@ public class CompanyService : ICompanyService
             var entity = await companyRepository.GetByIdAsync(companyModel.Id);
 
             entity.Code = companyModel.Code;
-            entity.Name = companyModel.Name.Trim().ToLower();
+            entity.Name = companyModel.Name.Trim();
             entity.CompanyType = companyModel.CompanyType;
             entity.Id = companyModel.Id;
             entity.IsActive = companyModel.IsActive;

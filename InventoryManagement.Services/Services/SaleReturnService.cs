@@ -155,7 +155,6 @@ public class SaleReturnService : ISaleReturnService
             };
         }
 
-        // Check outward detail exists for this barcode
         var outwardDetailRepository = _unitOfWork.GetRepository<OutwardDetail>();
         var outwardDetails = await outwardDetailRepository.FindAsync(od =>
             od.BarcodeNo == barcodeNo && !od.IsDeleted);
@@ -170,7 +169,6 @@ public class SaleReturnService : ISaleReturnService
             };
         }
 
-        // verify outward's billing company
         var outward = outwardDetail.Outward;
         if (outward == null || outward.BillToCompanyId != companyId)
         {
@@ -181,7 +179,6 @@ public class SaleReturnService : ISaleReturnService
             };
         }
 
-        // verify InwardBarcodeItem.IsInStock == false (i.e., item was sold)
         if (barcodeItem.IsInStock)
         {
             return new SaleReturnValidationResult

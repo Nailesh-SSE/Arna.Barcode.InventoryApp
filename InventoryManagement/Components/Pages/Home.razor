@@ -3,9 +3,7 @@
 @using InventoryManagement.Components.Auth
 @inherits AuthComponentBase
 
-
 <PageTitle>Dashboard - Inventory Management</PageTitle>
-
 
 @if (IsLoading)
 {
@@ -35,9 +33,6 @@ else if (IsAuthenticated)
             </div>
         </div>
 
-
-        <!-- Dashboard Summary Cards -->
-        <!-- Quick Actions Section -->
         <div class="row g-4">
             <div class="col-md-6">
                 <Card>
@@ -144,13 +139,13 @@ else if (IsAuthenticated)
                                 </NavLink>
                             </Button>
                             <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
-                                <NavLink class="nav-link text-white" href="/reports/outstock">
+                                <NavLink class="nav-link text-white" href="/reports/outward">
                                     <Icon Name="IconName.CartDash" /> OutStock Reports
                                 </NavLink>
                             </Button>
 
                             <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small">
-                                <NavLink class="nav-link text-white" href="/reports/salereport">
+                                <NavLink class="nav-link text-white" href="/reports/sale-return">
                                     <Icon Name="IconName.GraphUp" /> Sales Reports
                                 </NavLink>
                             </Button>
@@ -160,7 +155,6 @@ else if (IsAuthenticated)
             </div>
         </div>
 
-        <!-- Welcome Information -->
         <div class="row mt-4">
             <div class="col-12">
                 <Card>
