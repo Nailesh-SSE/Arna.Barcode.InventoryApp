@@ -191,56 +191,7 @@
                     </div>
                 </div>
 
-                <!-- Detailed Statistics -->
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="mb-0">Top Categories by Quantity</h6>
-                            </div>
-                            <div class="card-body">
-                                @if (reportResult.Summary.QuantityByCategory.Any())
-                                {
-                                    foreach (var category in reportResult.Summary.QuantityByCategory.Take(5))
-                                    {
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span>@category.Key</span>
-                                            <span class="badge bg-primary">@category.Value.ToString("N2")</span>
-                                        </div>
-                                    }
-                                }
-                                else
-                                {
-                                    <p class="text-muted">No data available</p>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="mb-0">Top Suppliers by Value</h6>
-                            </div>
-                            <div class="card-body">
-                                @if (reportResult.Summary.ValueBySupplier.Any())
-                                {
-                                    foreach (var supplier in reportResult.Summary.ValueBySupplier.Take(5))
-                                    {
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span>@supplier.Key</span>
-                                            <span class="badge bg-success">@supplier.Value.ToString("C2")</span>
-                                        </div>
-                                    }
-                                }
-                                else
-                                {
-                                    <p class="text-muted">No data available</p>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
+       
                 <!-- Data Table -->
                 @if (!filter.SummaryOnly && reportResult.Items.Any())
                 {

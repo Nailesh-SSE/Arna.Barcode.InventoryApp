@@ -43,8 +43,10 @@ public class SaleReturnService : ISaleReturnService
             {
                 ReturnNo = model.ReturnNo,
                 ReturnDate = model.ReturnDate,
+                BillingDate = model.BillingDate, 
                 BillToCompanyId = model.BillToCompanyId,
-                ReturnType = model.ReturnType,
+                ProductId = model.ProductId, 
+                ReturnType = model.ReturnType.GetValueOrDefault(),
                 BarcodeNo = model.BarcodeNo,
                 Quantity = model.Quantity,
                 Reason = model.Reason,
@@ -79,8 +81,10 @@ public class SaleReturnService : ISaleReturnService
                 return false;
 
             existing.ReturnDate = model.ReturnDate;
+            existing.BillingDate = model.BillingDate;
             existing.BillToCompanyId = model.BillToCompanyId;
-            existing.ReturnType = model.ReturnType;
+            existing.ProductId = model.ProductId;
+            existing.ReturnType = model.ReturnType.GetValueOrDefault();
             existing.BarcodeNo = model.BarcodeNo;
             existing.Quantity = model.Quantity;
             existing.Reason = model.Reason;
@@ -127,58 +131,77 @@ public class SaleReturnService : ISaleReturnService
 
     public async Task<SaleReturnValidationResult> ValidateBarcodeForSaleReturnAsync(string barcodeNo, int companyId)
     {
-        if (!string.IsNullOrWhiteSpace(barcodeNo))
-        {
-            var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
-            var barcodeItems = await barcodeItemRepository.FindAsync(bi =>
-                bi.BarcodeNo == barcodeNo && !bi.IsDeleted);
-
-            var barcodeItem = barcodeItems.FirstOrDefault();
-
-            if (barcodeItem == null)
-            {
-                return new SaleReturnValidationResult
-                {
-                    IsValid = false,
-                    ErrorMessage = "Invalid barcode. Barcode does not exist in inventory."
-                };
-            }
-
-            // Check if barcode was originally sold to this company
-            var outwardDetailRepository = _unitOfWork.GetRepository<OutwardDetail>();
-            var outwardDetails = await outwardDetailRepository.FindAsync(od =>
-                od.BarcodeNo == barcodeNo && !od.IsDeleted);
-
-            var outwardDetail = outwardDetails.FirstOrDefault();
-            if (outwardDetail == null || outwardDetail.Outward.BillToCompanyId != companyId)
-            {
-                return new SaleReturnValidationResult
-                {
-                    IsValid = false,
-                    ErrorMessage = "This barcode was not sold to the selected company."
-                };
-            }
-
-            // Get product name for UI
-            var productRepository = _unitOfWork.GetRepository<Product>();
-
-
-            return new SaleReturnValidationResult
-            {
-                IsValid = true,
-                ProductName = "Unknown Product"
-            };
-        }
-        else
+        if (string.IsNullOrWhiteSpace(barcodeNo))
         {
             return new SaleReturnValidationResult
             {
                 IsValid = false,
                 ErrorMessage = "Please Scan Barcode."
             };
-
         }
+
+        var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
+        var barcodeItems = await barcodeItemRepository.FindAsync(bi =>
+            bi.BarcodeNo == barcodeNo && !bi.IsDeleted);
+
+        var barcodeItem = barcodeItems.FirstOrDefault();
+
+        if (barcodeItem == null)
+        {
+            return new SaleReturnValidationResult
+            {
+                IsValid = false,
+                ErrorMessage = "Invalid barcode. Barcode does not exist in inventory."
+            };
+        }
+
+        // Check outward detail exists for this barcode
+        var outwardDetailRepository = _unitOfWork.GetRepository<OutwardDetail>();
+        var outwardDetails = await outwardDetailRepository.FindAsync(od =>
+            od.BarcodeNo == barcodeNo && !od.IsDeleted);
+
+        var outwardDetail = outwardDetails.FirstOrDefault();
+        if (outwardDetail == null)
+        {
+            return new SaleReturnValidationResult
+            {
+                IsValid = false,
+                ErrorMessage = "This barcode was not sold (no outward record found)."
+            };
+        }
+
+        // verify outward's billing company
+        var outward = outwardDetail.Outward;
+        if (outward == null || outward.BillToCompanyId != companyId)
+        {
+            return new SaleReturnValidationResult
+            {
+                IsValid = false,
+                ErrorMessage = "This barcode was not sold to the selected company."
+            };
+        }
+
+        // verify InwardBarcodeItem.IsInStock == false (i.e., item was sold)
+        if (barcodeItem.IsInStock)
+        {
+            return new SaleReturnValidationResult
+            {
+                IsValid = false,
+                ErrorMessage = "Barcode indicates item is still in stock. Can't accept return for an item that was not sold."
+            };
+        }
+
+        var productRepository = _unitOfWork.GetRepository<Product>();
+        var product = await productRepository.GetByIdAsync(outwardDetail.ProductId);
+        var productName = product != null ? product.Name : "Unknown Product";
+
+        return new SaleReturnValidationResult
+        {
+            IsValid = true,
+            ProductName = productName
+        };
     }
+
 
     public async Task<IEnumerable<SaleReturnModel>> GetSaleReturnsByCompanyAsync(int companyId)
     {
@@ -215,7 +238,9 @@ public class SaleReturnService : ISaleReturnService
             Id = entity.Id,
             ReturnNo = entity.ReturnNo,
             ReturnDate = entity.ReturnDate,
+            BillingDate = entity.BillingDate,
             BillToCompanyId = entity.BillToCompanyId,
+            ProductId = entity.ProductId,
             ReturnType = entity.ReturnType,
             BarcodeNo = entity.BarcodeNo,
             Quantity = entity.Quantity,
@@ -229,4 +254,5 @@ public class SaleReturnService : ISaleReturnService
             UpdatedOn = entity.UpdatedOn
         };
     }
+
 }

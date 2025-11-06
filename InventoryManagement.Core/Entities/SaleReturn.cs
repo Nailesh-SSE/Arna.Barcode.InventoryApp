@@ -33,5 +33,10 @@ public class SaleReturn : Common
     [StringLength(500)]
     public string? Remarks { get; set; }
 
+    [Required]
+    public DateTime BillingDate { get; set; }
+
+    [Required]
+    public int ProductId { get; set; } 
     public virtual Company BillToCompany { get; set; } = null!;
 }

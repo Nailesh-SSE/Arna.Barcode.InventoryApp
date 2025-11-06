@@ -1,6 +1,7 @@
 @page "/sale-returns"
 @inject ISaleReturnService SaleReturnService
 @inject ICompanyService CompanyService
+@inject IProductService ProductService
 @inject IJSRuntime JSRuntime
 
 @inherits InventoryManagement.Components.Auth.AuthComponentBase
@@ -50,13 +51,21 @@
                 @context.ReturnDate.ToString("dd/MM/yyyy")
             </GridColumn>
 
+            <GridColumn TItem="SaleReturnModel" HeaderText="Billing Date" PropertyName="BillingDate">
+                @(context.BillingDate == DateTime.MinValue ? "-" : context.BillingDate.ToString("dd/MM/yyyy"))
+            </GridColumn>
+
             <GridColumn TItem="SaleReturnModel" HeaderText="Company" PropertyName="CompanyName">
                 @context.CompanyName
             </GridColumn>
 
+            <GridColumn TItem="SaleReturnModel" HeaderText="Product" PropertyName="ProductName">
+                @context.ProductName
+            </GridColumn>
+
             <GridColumn TItem="SaleReturnModel" HeaderText="Return Type" PropertyName="ReturnType">
-                <Badge Color="@GetReturnTypeBadgeColor(context.ReturnType)">
-                    @context.ReturnType
+                <Badge Color="@GetReturnTypeBadgeColor(context.ReturnType ?? InventoryManagement.Core.Enums.ReturnType.Other)">
+                    @(context.ReturnType?.ToString() ?? "-")
                 </Badge>
             </GridColumn>
 
@@ -106,6 +115,14 @@
                 </div>
 
                 <div class="col-md-6 mb-3">
+                    <label class="form-label">Billing Date</label>
+                    <InputDate class="form-control" @bind-Value="saleReturn.BillingDate" />
+                    <ValidationMessage For="@(() => saleReturn.BillingDate)" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
                     <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
                     <InputSelect class="form-select" @bind-Value="saleReturn.BillToCompanyId"
                                  @oninput="(e) => HandleCompanyChange(Convert.ToInt32(e.Value))">
@@ -117,6 +134,23 @@
                     </InputSelect>
                     <ValidationMessage For="@(() => saleReturn.BillToCompanyId)" />
                 </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Product <span class="text-danger">*</span></label>
+                    @{
+                        var productClass = $"form-select form-select-sm {GetValidationClass(saleReturn, "product")}";
+                    }
+                    <InputSelect class="@productClass"
+                                 @bind-Value="saleReturn.ProductId"
+                                 @onchange="@(() => ClearMessages())">
+                        <option value="0">-- Select Product --</option>
+                        @foreach (var product in FilteredProducts)
+                        {
+                            <option value="@product.Id">@($"{product.Name} ({product.ColourName.ToUpper()}) ({product.SKU})-{product.Unit}")</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => saleReturn.ProductId)" />
+                </div>
             </div>
 
             <div class="row">
@@ -124,10 +158,10 @@
                     <label class="form-label">Return Type <span class="text-danger">*</span></label>
                     <InputSelect class="form-select" @bind-Value="saleReturn.ReturnType">
                         <option value="">-- Select Return Type --</option>
-                        <option value="@ReturnType.Defective">Defective</option>
-                        <option value="@ReturnType.Excess">Excess</option>
-                        <option value="@ReturnType.Damaged">Damaged</option>
-                        <option value="@ReturnType.Other">Other</option>
+                        <option value="@InventoryManagement.Core.Enums.ReturnType.Defective">Defective</option>
+                        <option value="@InventoryManagement.Core.Enums.ReturnType.Excess">Excess</option>
+                        <option value="@InventoryManagement.Core.Enums.ReturnType.Damaged">Damaged</option>
+                        <option value="@InventoryManagement.Core.Enums.ReturnType.Other">Other</option>
                     </InputSelect>
                     <ValidationMessage For="@(() => saleReturn.ReturnType)" />
                 </div>
@@ -141,7 +175,7 @@
 
             <div class="row">
                 <div class="col-md-12 mb-3">
-                    <label class="form-label">Barcode <span class="text-danger">*</span></label>
+                    <label class="form-label">Barcode</label> <!-- not required now -->
                     <div class="input-group">
                         <InputText class="form-control" @bind-Value="saleReturn.BarcodeNo"
                                    placeholder="Scan or enter barcode" />
@@ -194,6 +228,8 @@
 
     private List<SaleReturnModel> saleReturns = new();
     private List<CompanyModel> billCompanies = new();
+    public List<ProductModel> FilteredProducts { get; set; } = new();
+
     private SaleReturnModel saleReturn = new();
 
     private EditContext editContext = default!;
@@ -209,6 +245,8 @@
 
     private string validationMessage = string.Empty;
     private bool validationIsValid = false;
+
+    private bool showValidation = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -234,9 +272,10 @@
             isLoading = true;
             saleReturns = (await SaleReturnService.GetAllSaleReturnsAsync()).ToList();
             billCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
+            FilteredProducts = (await ProductService.GetAllProductsAsync()).ToList();
             InitializeEditContext();
         }
-        catch (Exception ex)
+        catch
         {
             ShowError("Connectivity issue happened, operation failed");
         }
@@ -255,7 +294,8 @@
         saleReturn = new SaleReturnModel
         {
             ReturnDate = DateTime.Now,
-            ReturnType = ReturnType.Other,
+            BillingDate = DateTime.Now,
+            ReturnType = null,
             Quantity = 1,
             IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
@@ -263,6 +303,7 @@
         };
         validationMessage = string.Empty;
         validationIsValid = false;
+        showValidation = false;
         InitializeEditContext();
         modal.ShowAsync();
     }
@@ -276,7 +317,9 @@
             Id = editSaleReturn.Id,
             ReturnNo = editSaleReturn.ReturnNo,
             ReturnDate = editSaleReturn.ReturnDate,
+            BillingDate = editSaleReturn.BillingDate,
             BillToCompanyId = editSaleReturn.BillToCompanyId,
+            ProductId = editSaleReturn.ProductId,
             ReturnType = editSaleReturn.ReturnType,
             BarcodeNo = editSaleReturn.BarcodeNo,
             Quantity = editSaleReturn.Quantity,
@@ -288,6 +331,7 @@
         };
         validationMessage = string.Empty;
         validationIsValid = false;
+        showValidation = false;
         InitializeEditContext();
         await modal.ShowAsync();
     }
@@ -296,11 +340,31 @@
     {
         try
         {
-            if (!editContext.Validate()) return;
+            ClearMessages();
+            showValidation = true;
 
+            // Validate all annotations first
+            if (!editContext.Validate())
+                return;
+
+            // Business validations (company/product/returntype)
             ValidateCompany();
             if (editContext.GetValidationMessages().Any())
                 return;
+
+            // If barcode present, validate it (this will set validationIsValid + message)
+            if (!string.IsNullOrWhiteSpace(saleReturn.BarcodeNo))
+            {
+                await ValidateBarcode();
+                if (!validationIsValid)
+                {
+                    // show a validation error for barcode on the form
+                    messageStore.Clear(() => saleReturn.BarcodeNo);
+                    messageStore.Add(() => saleReturn.BarcodeNo, validationMessage);
+                    editContext.NotifyValidationStateChanged();
+                    return;
+                }
+            }
 
             bool result;
             if (isEditMode)
@@ -323,7 +387,7 @@
                 ShowError("Connectivity issue happened, operation failed");
             }
         }
-        catch (Exception ex)
+        catch
         {
             await HideModal();
             ShowError("Connectivity issue happened, operation failed");
@@ -349,7 +413,7 @@
                 ShowError("Connectivity issue happened, operation failed");
             }
         }
-        catch (Exception ex)
+        catch
         {
             ShowError("Connectivity issue happened, operation failed");
         }
@@ -394,7 +458,7 @@
 
             StateHasChanged();
         }
-        catch (Exception ex)
+        catch
         {
             validationMessage = "Connectivity issue happened, validation failed";
             validationIsValid = false;
@@ -413,6 +477,20 @@
         {
             messageStore.Add(() => saleReturn.BillToCompanyId, "Please select a company");
         }
+
+        messageStore.Clear(() => saleReturn.ProductId);
+        if (saleReturn.ProductId == 0)
+        {
+            messageStore.Add(() => saleReturn.ProductId, "Please select a product");
+        }
+
+        // ReturnType is nullable now so ensure it's selected
+        messageStore.Clear(() => saleReturn.ReturnType.GetValueOrDefault());
+        if (!saleReturn.ReturnType.HasValue)
+        {
+            messageStore.Add(() => saleReturn.ReturnType.GetValueOrDefault(), "Please select a return type");
+        }
+
         editContext.NotifyValidationStateChanged();
     }
 
@@ -420,17 +498,18 @@
     {
         saleReturn.BillToCompanyId = id;
         validationMessage = string.Empty; // Clear validation when company changes
+        ClearMessages();
         ValidateCompany();
     }
 
-    private BadgeColor GetReturnTypeBadgeColor(ReturnType returnType)
+    private BadgeColor GetReturnTypeBadgeColor(InventoryManagement.Core.Enums.ReturnType returnType)
     {
         return returnType switch
         {
-            ReturnType.Defective => BadgeColor.Danger,
-            ReturnType.Excess => BadgeColor.Warning,
-            ReturnType.Damaged => BadgeColor.Danger,
-            ReturnType.Other => BadgeColor.Secondary,
+            InventoryManagement.Core.Enums.ReturnType.Defective => BadgeColor.Danger,
+            InventoryManagement.Core.Enums.ReturnType.Excess => BadgeColor.Warning,
+            InventoryManagement.Core.Enums.ReturnType.Damaged => BadgeColor.Danger,
+            InventoryManagement.Core.Enums.ReturnType.Other => BadgeColor.Secondary,
             _ => BadgeColor.Secondary
         };
     }
@@ -454,9 +533,33 @@
         }, null, 4000, System.Threading.Timeout.Infinite);
     }
 
-    public void Dispose()
+    public new void Dispose()
     {
         errorTimer?.Dispose();
+        base.Dispose();
+    }
+    #endregion
+
+    #region Helpers from modal example
+
+    private void ClearMessages()
+    {
+        validationMessage = string.Empty;
+        validationIsValid = false;
+        showValidation = false;
+    }
+
+    private string GetValidationClass(SaleReturnModel model, string field)
+    {
+        if (!showValidation)
+            return "";
+
+        return field switch
+        {
+            "product" => model.ProductId == 0 ? "is-invalid" : "is-valid",
+            "quantity" => model.Quantity <= 0 ? "is-invalid" : "is-valid",
+            _ => ""
+        };
     }
 
     #endregion

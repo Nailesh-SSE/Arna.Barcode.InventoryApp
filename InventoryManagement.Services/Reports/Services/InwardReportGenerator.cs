@@ -352,8 +352,6 @@ public class InwardReportGenerator : IInwardReportService
             UniqueSuppliersCount = items.Select(i => i.ShipmentCompanyId).Distinct().Count(),
             AverageQuantityPerInward = inwards.Any() ? items.Sum(i => i.Quantity) / inwards.Count : 0,
             AverageValuePerInward = inwards.Any() ? items.Sum(i => i.TotalCost) / inwards.Count : 0,
-            QuantityByCategory = items.GroupBy(i => i.CategoryName).ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity)),
-            ValueBySupplier = items.GroupBy(i => i.ShipmentCompanyName).ToDictionary(g => g.Key, g => g.Sum(i => i.TotalCost)),
             CountByProduct = items.GroupBy(i => i.ProductName).ToDictionary(g => g.Key, g => g.Count())
         };
     }

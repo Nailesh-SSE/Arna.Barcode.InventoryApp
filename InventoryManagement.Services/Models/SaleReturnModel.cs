@@ -17,7 +17,7 @@ public class SaleReturnModel : CommonModel
     public int BillToCompanyId { get; set; }
 
     [Required]
-    public ReturnType ReturnType { get; set; }
+    public ReturnType? ReturnType { get; set; }
 
     [Required(ErrorMessage = "Barcode is required")]
     public string BarcodeNo { get; set; } = string.Empty;
@@ -32,6 +32,10 @@ public class SaleReturnModel : CommonModel
     // Navigation properties for UI
     public string CompanyName { get; set; } = string.Empty;
     public string ProductName { get; set; } = string.Empty;
+    [Required]
+    public DateTime BillingDate { get; set; }
+    [Required(ErrorMessage = "Product is required")]
+    public int ProductId { get; set; } // new
 }
 
 public class SaleReturnValidationResult
