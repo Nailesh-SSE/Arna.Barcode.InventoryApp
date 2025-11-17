@@ -478,19 +478,6 @@
             messageStore.Add(() => saleReturn.BillToCompanyId, "Please select a company");
         }
 
-        messageStore.Clear(() => saleReturn.ProductId);
-        if (saleReturn.ProductId == 0)
-        {
-            messageStore.Add(() => saleReturn.ProductId, "Please select a product");
-        }
-
-        // ReturnType is nullable now so ensure it's selected
-        messageStore.Clear(() => saleReturn.ReturnType.GetValueOrDefault());
-        if (!saleReturn.ReturnType.HasValue)
-        {
-            messageStore.Add(() => saleReturn.ReturnType.GetValueOrDefault(), "Please select a return type");
-        }
-
         editContext.NotifyValidationStateChanged();
     }
 
