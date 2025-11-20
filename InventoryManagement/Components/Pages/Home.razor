@@ -192,11 +192,10 @@ else
     {
         <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
             <div class="text-center">
-                <h3>Authentication Required</h3>
-                <p class="text-muted">Please log in to access the dashboard.</p>
-                <Button Color="ButtonColor.Primary" @onclick="@(() => NavigationManager.NavigateTo("/login?returnUrl=" + Uri.EscapeDataString("/"), false))">
-                    Go to Login
-                </Button>
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Redirecting to login...</span>
+                </div>
+                <p class="text-muted">Redirecting to login page...</p>
             </div>
         </div>
     }
@@ -210,10 +209,8 @@ else
     }
 }
 
-
 @code {
     private bool hasCheckedAuth = false;
-
 
     protected override async Task OnInitializedAsync()
     {
@@ -221,4 +218,11 @@ else
         hasCheckedAuth = true;
     }
 
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && hasCheckedAuth && !IsAuthenticated && !IsLoading)
+        {
+            NavigationManager.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}", true);
+        }
+    }
 }
