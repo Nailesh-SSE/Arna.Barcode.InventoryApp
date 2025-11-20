@@ -43,7 +43,7 @@ public class SaleReturnService : ISaleReturnService
             {
                 ReturnNo = model.ReturnNo,
                 ReturnDate = model.ReturnDate,
-                BillingDate = model.BillingDate, 
+                BillingDate = model.BillingDate ?? DateTime.Now, 
                 BillToCompanyId = model.BillToCompanyId,
                 ProductId = model.ProductId, 
                 ReturnType = model.ReturnType.GetValueOrDefault(),
@@ -81,7 +81,7 @@ public class SaleReturnService : ISaleReturnService
                 return false;
 
             existing.ReturnDate = model.ReturnDate;
-            existing.BillingDate = model.BillingDate;
+            existing.BillingDate = model.BillingDate ?? DateTime.Now;
             existing.BillToCompanyId = model.BillToCompanyId;
             existing.ProductId = model.ProductId;
             existing.ReturnType = model.ReturnType.GetValueOrDefault();
