@@ -22,9 +22,9 @@
                 <button class="btn btn-outline-primary" @onclick="RefreshReport">
                     <Icon Name="IconName.ArrowClockwise" /> Refresh
                 </button>
-                <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
+              @*   <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
                     <Icon Name="IconName.Download" /> Export
-                </button>
+                </button> *@
             </div>
         </div>
     </div>
@@ -75,22 +75,22 @@
                                     }
                                 </InputSelect>
                             </div>
-                            <div class="col-6">
+                       @*      <div class="col-6">
                                 <label class="form-label">Min Quantity</label>
                                 <InputNumber class="form-control" @bind-Value="filter.MinQuantity" />
                             </div>
                             <div class="col-6">
                                 <label class="form-label">Max Quantity</label>
                                 <InputNumber class="form-control" @bind-Value="filter.MaxQuantity" />
-                            </div>
+                            </div> *@
                             <div class="col-12">
                                 <label class="form-label">Outward No</label>
                                 <InputText class="form-control" @bind-Value="filter.OutwardNumbers" placeholder="comma-separated" />
                             </div>
-                            <div class="col-12">
+                          @*   <div class="col-12">
                                 <label class="form-label">Product SKUs</label>
                                 <InputText class="form-control" @bind-Value="filter.ProductSKUs" placeholder="comma-separated" />
-                            </div>
+                            </div> *@
                             <div class="col-12">
                                 <label class="form-label">Batch Numbers</label>
                                 <InputText class="form-control" @bind-Value="filter.BatchNumbers" placeholder="comma-separated" />

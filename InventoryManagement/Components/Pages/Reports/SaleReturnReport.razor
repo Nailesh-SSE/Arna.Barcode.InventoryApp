@@ -22,9 +22,9 @@
                 <button class="btn btn-outline-primary" @onclick="RefreshReport">
                     <Icon Name="IconName.ArrowClockwise" /> Refresh
                 </button>
-                <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
+               @*  <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
                     <Icon Name="IconName.Download" /> Export
-                </button>
+                </button> *@
             </div>
         </div>
     </div>
@@ -77,22 +77,22 @@
                                     }
                                 </InputSelect>
                             </div>
-                            <div class="col-6">
+                           @*  <div class="col-6">
                                 <label class="form-label">Min Quantity</label>
                                 <InputNumber class="form-control" @bind-Value="filter.MinQuantity" />
                             </div>
                             <div class="col-6">
                                 <label class="form-label">Max Quantity</label>
                                 <InputNumber class="form-control" @bind-Value="filter.MaxQuantity" />
-                            </div>
+                            </div> *@
                             <div class="col-12">
                                 <label class="form-label">Return Numbers</label>
                                 <InputText class="form-control" @bind-Value="filter.ReturnNumbers" placeholder="comma-separated" />
                             </div>
-                            <div class="col-12">
+                          @*   <div class="col-12">
                                 <label class="form-label">Product SKUs</label>
                                 <InputText class="form-control" @bind-Value="filter.ProductSKUs" placeholder="comma-separated" />
-                            </div>
+                            </div> *@
                             <div class="col-12">
                                 <label class="form-label">Sort By</label>
                                 <InputSelect class="form-select" @bind-Value="filter.SortBy">
@@ -120,7 +120,7 @@
                                     <label class="form-check-label">Descending</label>
                                 </div>
                             </div>
-                            <div class="col-12">
+                           @*  <div class="col-12">
                                 <label class="form-label">Options</label>
                                 <div class="form-check">
                                     <InputCheckbox class="form-check-input" @bind-Value="filter.IncludeInactive" />
@@ -138,7 +138,7 @@
                                     <InputCheckbox class="form-check-input" @bind-Value="filter.SummaryOnly" />
                                     <label class="form-check-label">Summary Only</label>
                                 </div>
-                            </div>
+                            </div> *@
                             <div class="col-12 d-grid gap-2">
                                 <button type="submit" class="btn btn-primary">
                                     <Icon Name="IconName.Search" /> Generate Report
@@ -345,16 +345,13 @@
 </div>
 
 @code {
-    // Alert message and type
     private string? alertMessage;
     private string alertType = "info";
 
-    // Filter model
     private SaleReturnFilter filter = new();
     private List<CompanyModel> billCompanies = new();
     private List<CategoryModel> categories = new();
 
-    // Report result and loading state
     private SaleReturnReportResult? reportResult;
     private bool isLoading = false;
     private int loadingProgress = 0;
