@@ -14,12 +14,12 @@ public class SaleReturnModel : CommonModel
     public DateTime ReturnDate { get; set; } = DateTime.UtcNow.Date;
 
     [Required]
+    [Range(1, int.MaxValue, ErrorMessage = "Bill To Company is required.")]
     public int BillToCompanyId { get; set; }
 
     [Required]
     public ReturnType? ReturnType { get; set; }
 
-    [Required(ErrorMessage = "Barcode is required")]
     public string BarcodeNo { get; set; } = string.Empty;
 
     [Required]
@@ -32,10 +32,15 @@ public class SaleReturnModel : CommonModel
     // Navigation properties for UI
     public string CompanyName { get; set; } = string.Empty;
     public string ProductName { get; set; } = string.Empty;
+
     [Required]
-    public DateTime BillingDate { get; set; }
-    [Required(ErrorMessage = "Product is required")]
+    public DateTime? BillingDate { get; set; }
+
+    [Required]
+    [Range(1, int.MaxValue, ErrorMessage = "Product is required")]
     public int ProductId { get; set; } // new
+
+    public bool IsChecked { get; set; }
 }
 
 public class SaleReturnValidationResult

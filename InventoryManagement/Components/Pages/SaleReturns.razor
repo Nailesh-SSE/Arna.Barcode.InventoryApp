@@ -52,7 +52,7 @@
             </GridColumn>
 
             <GridColumn TItem="SaleReturnModel" HeaderText="Billing Date" PropertyName="BillingDate">
-                @(context.BillingDate == DateTime.MinValue ? "-" : context.BillingDate.ToString("dd/MM/yyyy"))
+                @(context.BillingDate.HasValue? context.BillingDate.Value.ToString("dd/MM/yyyy"): "-")
             </GridColumn>
 
             <GridColumn TItem="SaleReturnModel" HeaderText="Company" PropertyName="CompanyName">
@@ -108,24 +108,22 @@
             <DataAnnotationsValidator />
 
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label class="form-label">Return Date <span class="text-danger">*</span></label>
                     <InputDate class="form-control" @bind-Value="saleReturn.ReturnDate" />
                     <ValidationMessage For="@(() => saleReturn.ReturnDate)" />
                 </div>
 
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Billing Date</label>
-                    <InputDate class="form-control" @bind-Value="saleReturn.BillingDate" />
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Billing Date <span class="text-danger">*</span></label>
+                    <InputDate class="form-control" @bind-Value="saleReturn.BillingDate" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
                     <ValidationMessage For="@(() => saleReturn.BillingDate)" />
                 </div>
-            </div>
 
-            <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
                     <InputSelect class="form-select" @bind-Value="saleReturn.BillToCompanyId"
-                                 @oninput="(e) => HandleCompanyChange(Convert.ToInt32(e.Value))">
+                                 @onchange="(e) => HandleCompanyChange(Convert.ToInt32(e.Value))">
                         <option value="0">-- Select Company --</option>
                         @foreach (var company in billCompanies)
                         {
@@ -134,14 +132,15 @@
                     </InputSelect>
                     <ValidationMessage For="@(() => saleReturn.BillToCompanyId)" />
                 </div>
+            </div>
 
-                <div class="col-md-6 mb-3">
+            <div class="row">
+                <div class="col-md-4 mb-3">
                     <label class="form-label">Product <span class="text-danger">*</span></label>
                     @{
-                        var productClass = $"form-select form-select-sm {GetValidationClass(saleReturn, "product")}";
+                        var productClass = $"form-select {GetValidationClass(saleReturn, "product")}";
                     }
-                    <InputSelect class="@productClass"
-                                 @bind-Value="saleReturn.ProductId"
+                    <InputSelect class="@productClass" @bind-Value="saleReturn.ProductId"
                                  @onchange="@(() => ClearMessages())">
                         <option value="0">-- Select Product --</option>
                         @foreach (var product in FilteredProducts)
@@ -151,10 +150,8 @@
                     </InputSelect>
                     <ValidationMessage For="@(() => saleReturn.ProductId)" />
                 </div>
-            </div>
 
-            <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label class="form-label">Return Type <span class="text-danger">*</span></label>
                     <InputSelect class="form-select" @bind-Value="saleReturn.ReturnType">
                         <option value="">-- Select Return Type --</option>
@@ -166,54 +163,65 @@
                     <ValidationMessage For="@(() => saleReturn.ReturnType)" />
                 </div>
 
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label class="form-label">Quantity <span class="text-danger">*</span></label>
                     <InputNumber class="form-control" @bind-Value="saleReturn.Quantity" />
                     <ValidationMessage For="@(() => saleReturn.Quantity)" />
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-12 mb-3">
-                    <label class="form-label">Barcode</label> <!-- not required now -->
+            <div class="row align-items-center">
+                <div class="@(saleReturn.ReturnType == ReturnType.Excess || saleReturn.ReturnType == ReturnType.Other ? "col-md-8" : "col-md-12") mb-3">
+                    <label class="form-label">Barcode</label>
                     <div class="input-group">
-                        <InputText class="form-control" @bind-Value="saleReturn.BarcodeNo"
+                        <InputText class="form-control"
+                                   @bind-Value="saleReturn.BarcodeNo"
                                    placeholder="Scan or enter barcode" />
-                        <Button Color="ButtonColor.Secondary" @onclick="ValidateBarcode"
+
+                        <Button Color="ButtonColor.Secondary"
+                                @onclick="ValidateBarcode"
                                 Disabled="@(saleReturn.BillToCompanyId == 0)">
                             <Icon Name="IconName.CheckCircle" /> Validate
                         </Button>
                     </div>
-                    <ValidationMessage For="@(() => saleReturn.BarcodeNo)" />
-                    @if (!string.IsNullOrEmpty(validationMessage))
-                    {
-                        <div class="mt-1 @(validationIsValid ? "text-success" : "text-danger")">
-                            @validationMessage
+                </div>
+
+                @if (saleReturn.ReturnType == ReturnType.Excess || saleReturn.ReturnType == ReturnType.Other)
+                {
+                    <div class="col-md-4 mb-3">
+                        <br/>
+                        <div class="mt-1">
+                            <InputCheckbox class="form-check-input"
+                                           @bind-Value="saleReturn.IsChecked"
+                                           id="isChecked" />
+                            <label class="form-label mb-0" for="isChecked">IsChecked</label>
                         </div>
-                    }
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Reason</label>
-                <InputText class="form-control" @bind-Value="saleReturn.Reason"
-                           placeholder="Reason for return" />
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Remarks</label>
-                <InputTextArea class="form-control" rows="3" @bind-Value="saleReturn.Remarks" />
-            </div>
-
-            @if (saleReturn.Id > 0)
-            {
-                <div class="mb-3">
-                    <div class="form-check">
-                        <InputCheckbox class="form-check-input" @bind-Value="saleReturn.IsActive" id="isActive" />
-                        <label class="form-check-label" for="isActive">Active</label>
                     </div>
+                }
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Reason</label>
+                    <InputText class="form-control" @bind-Value="saleReturn.Reason"
+                               placeholder="Reason for return" />
                 </div>
-            }
+
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Remarks</label>
+                    <InputText class="form-control" rows="3" @bind-Value="saleReturn.Remarks" />
+                </div>
+
+                @if (saleReturn.Id > 0)
+                {
+                    <div class="col-md-4 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="saleReturn.IsActive" id="isActive" />
+                            <label class="form-check-label" for="isActive">Active</label>
+                        </div>
+                    </div>
+                }
+            </div>
 
             <div class="text-end mt-3">
                 <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
@@ -292,15 +300,14 @@
         modalTitle = "Add New Sale Return";
         isEditMode = false;
         saleReturn = new SaleReturnModel
-        {
-            ReturnDate = DateTime.Now,
-            BillingDate = DateTime.Now,
-            ReturnType = null,
-            Quantity = 1,
-            IsActive = true,
-            CreatedBy = Convert.ToInt32(CurrentUserId),
-            CreatedOn = DateTime.UtcNow
-        };
+            {
+                ReturnDate = DateTime.Now,
+                ReturnType = null,
+                Quantity = 1,
+                IsActive = true,
+                CreatedBy = Convert.ToInt32(CurrentUserId),
+                CreatedOn = DateTime.UtcNow
+            };
         validationMessage = string.Empty;
         validationIsValid = false;
         showValidation = false;
@@ -313,22 +320,22 @@
         modalTitle = "Edit Sale Return";
         isEditMode = true;
         saleReturn = new SaleReturnModel
-        {
-            Id = editSaleReturn.Id,
-            ReturnNo = editSaleReturn.ReturnNo,
-            ReturnDate = editSaleReturn.ReturnDate,
-            BillingDate = editSaleReturn.BillingDate,
-            BillToCompanyId = editSaleReturn.BillToCompanyId,
-            ProductId = editSaleReturn.ProductId,
-            ReturnType = editSaleReturn.ReturnType,
-            BarcodeNo = editSaleReturn.BarcodeNo,
-            Quantity = editSaleReturn.Quantity,
-            Reason = editSaleReturn.Reason,
-            Remarks = editSaleReturn.Remarks,
-            IsActive = editSaleReturn.IsActive,
-            UpdatedBy = Convert.ToInt32(CurrentUserId),
-            UpdatedOn = DateTime.UtcNow
-        };
+            {
+                Id = editSaleReturn.Id,
+                ReturnNo = editSaleReturn.ReturnNo,
+                ReturnDate = editSaleReturn.ReturnDate,
+                BillingDate = editSaleReturn.BillingDate,
+                BillToCompanyId = editSaleReturn.BillToCompanyId,
+                ProductId = editSaleReturn.ProductId,
+                ReturnType = editSaleReturn.ReturnType,
+                BarcodeNo = editSaleReturn.BarcodeNo,
+                Quantity = editSaleReturn.Quantity,
+                Reason = editSaleReturn.Reason,
+                Remarks = editSaleReturn.Remarks,
+                IsActive = editSaleReturn.IsActive,
+                UpdatedBy = Convert.ToInt32(CurrentUserId),
+                UpdatedOn = DateTime.UtcNow
+            };
         validationMessage = string.Empty;
         validationIsValid = false;
         showValidation = false;
@@ -484,7 +491,7 @@
     private void HandleCompanyChange(int id)
     {
         saleReturn.BillToCompanyId = id;
-        validationMessage = string.Empty; // Clear validation when company changes
+        // validationMessage = string.Empty; // Clear validation when company changes
         ClearMessages();
         ValidateCompany();
     }
