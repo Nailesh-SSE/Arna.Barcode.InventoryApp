@@ -54,10 +54,11 @@
     private InwardFormModal inwardFormModal = new();
     private InwardItemsModal itemsModal = new();
     private InwardModel? selectedInward;
+    private List<UnitModel> Units => CommonUtils.UnitList;
 
     protected override async Task OnInitializedAsync()
     {
-        await base.OnInitializedAsync(); // This will call the base authentication check
+        await base.OnInitializedAsync(); 
 
         if (!IsAuthenticated)
         {
@@ -90,7 +91,7 @@
             InwardDate = DateTime.Now,
             InwardTime = DateTime.Now.TimeOfDay,
             IsActive = true,
-            CreatedBy = Convert.ToInt32(CurrentUserId), // Set CreatedBy from current user
+            CreatedBy = Convert.ToInt32(CurrentUserId), 
             CreatedOn = DateTime.Now
         };
         inwardItems = new();
@@ -104,7 +105,7 @@
         isEditMode = true;
         inward = edit;
         inward.InwardTime = inward.InwardDate.TimeOfDay;
-        inward.UpdatedBy = Convert.ToInt32(CurrentUserId); // Set UpdatedBy from current user
+        inward.UpdatedBy = Convert.ToInt32(CurrentUserId);
         inward.UpdatedOn = DateTime.Now;
         inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(edit.Id);
         filteredProducts = products;
@@ -169,7 +170,6 @@
     {
         if (selectedInward == null) return;
 
-        // Update the updated by fields when saving items
         selectedInward.UpdatedBy = Convert.ToInt32(CurrentUserId);
         selectedInward.UpdatedOn = DateTime.Now;
         selectedInward.InwardItems = inwardItems;
@@ -181,14 +181,14 @@
 
     private void AddNewItemRow()
     {
-        var hasBlankRow = inwardItems.Any(item => item.Id == 0 && (item.ProductId == 0 || item.Quantity == 0));
+        var hasBlankRow = inwardItems.Any(item => item.Id == 0 && (item.ProductId == 0 || item.ItemQuantity == 0));
 
         if (hasBlankRow)
         {
             return;
         }
 
-        inwardItems.Add(new InwardItemModel { Unit = "PCS" });
+        inwardItems.Add(new());
         StateHasChanged();
     }
 
@@ -197,17 +197,15 @@
         if (selectedInward == null) return;
 
         item.InwardId = selectedInward.Id;
+        item.InwardUnitName = Units.Where(u => u.Id == item.InwardUnitId).Select(u => u.Name).FirstOrDefault() ?? string.Empty;
 
-        // Set user fields for inward items if your model supports them
         if (item.Id == 0)
         {
-            // For new items
             item.CreatedBy = Convert.ToInt32(CurrentUserId);
             item.CreatedOn = DateTime.Now;
         }
         else
         {
-            // For existing items being updated
             item.UpdatedBy = Convert.ToInt32(CurrentUserId);
             item.UpdatedOn = DateTime.Now;
         }

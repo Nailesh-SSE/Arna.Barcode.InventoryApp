@@ -115,7 +115,7 @@ public class InventoryDbContext : DbContext
 
         // Configure decimal precision
         modelBuilder.Entity<InwardItem>()
-            .Property(ii => ii.Quantity)
+            .Property(ii => ii.ItemQuantity)
             .HasPrecision(18, 2);
 
         // Configure indexes

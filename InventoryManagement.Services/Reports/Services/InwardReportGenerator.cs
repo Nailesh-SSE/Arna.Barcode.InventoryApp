@@ -281,8 +281,8 @@ public class InwardReportGenerator : IInwardReportService
             foreach (var item in inward.InwardItems.Where(ii => !ii.IsDeleted))
             {
                 // Apply additional item-level filters
-                if (filter.MinQuantity.HasValue && item.Quantity < filter.MinQuantity.Value) continue;
-                if (filter.MaxQuantity.HasValue && item.Quantity > filter.MaxQuantity.Value) continue;
+                if (filter.MinQuantity.HasValue && item.ItemQuantity < filter.MinQuantity.Value) continue;
+                if (filter.MaxQuantity.HasValue && item.ItemQuantity > filter.MaxQuantity.Value) continue;
                 if (!string.IsNullOrEmpty(filter.InwardNumbers) &&
                     !filter.InwardNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries).Contains(item.Inward?.InwardNo)) continue;
                 if (!string.IsNullOrEmpty(filter.ProductSKUs) &&
@@ -290,8 +290,8 @@ public class InwardReportGenerator : IInwardReportService
                 if (!string.IsNullOrEmpty(filter.BatchNumbers) &&
                     !filter.BatchNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries).Contains(item.BatchNo)) continue;
 
-                var unitCost = item.Quantity > 0 ? 0m : 0m; // You may need to get this from product cost
-                var totalCost = unitCost * item.Quantity;
+                var unitCost = item.ItemQuantity > 0 ? 0m : 0m; // You may need to get this from product cost
+                var totalCost = unitCost * item.ItemQuantity;
 
                 items.Add(new InwardReportItem
                 {
@@ -302,8 +302,8 @@ public class InwardReportGenerator : IInwardReportService
                     ProductName = item.Product?.Name ?? "Unknown",
                     SKU = item.Product?.SKU ?? "",
                     CategoryName = item.Product?.Category?.Name ?? "",
-                    Quantity = item.Quantity,
-                    Unit = item.Unit ?? "",
+                    Quantity = item.ItemQuantity,
+                    Unit = item.InwardUnitName ?? "",
                     UnitCost = unitCost,
                     TotalCost = totalCost,
                     BatchNumber = item.BatchNo,
@@ -333,8 +333,8 @@ public class InwardReportGenerator : IInwardReportService
             {
                 items.Add(new InwardReportItem
                 {
-                    Quantity = item.Quantity,
-                    Unit = item.Unit ?? "",
+                    Quantity = item.ItemQuantity,
+                    Unit = item.InwardUnitName ?? "",
                     ShipmentCompanyId = inward.ShipMentCompanyId,
                     ShipmentCompanyName = inward.ShipMentCompany?.Name ?? "",
                     ProductName = item.Product?.Name ?? "",

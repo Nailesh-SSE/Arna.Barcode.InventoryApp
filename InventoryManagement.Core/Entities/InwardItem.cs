@@ -14,12 +14,15 @@ public class InwardItem : Common
     public int ProductId { get; set; }
 
     [Required]
-    [Range(0.01, double.MaxValue, ErrorMessage = "Quantity must be greater than 0")]
-    public decimal Quantity { get; set; }
+    [Range(0.01, double.MaxValue, ErrorMessage = "Item Quantity must be greater than 0")]
+    public decimal ItemQuantity { get; set; }
+
+    [Required] 
+    public int InwardUnitId { get; set; }
 
     [Required]
     [StringLength(20)]
-    public string Unit { get; set; } = "PCS";
+    public string? InwardUnitName { get; set; }
 
     [Required(ErrorMessage = "Batch number is required")]
     [StringLength(50)]
@@ -33,5 +36,7 @@ public class InwardItem : Common
 
     public virtual Inward Inward { get; set; } = null!;
     public virtual Product Product { get; set; } = null!;
+
+    public decimal BoxQuantity { get; set; }
     public virtual ICollection<InwardBarcodeItem> InwardBarcodeItems { get; set; } = new List<InwardBarcodeItem>();
 }

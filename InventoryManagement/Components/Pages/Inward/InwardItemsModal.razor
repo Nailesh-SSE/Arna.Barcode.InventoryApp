@@ -33,7 +33,9 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>Product</th>
-                                        <th>Quantity</th>                                
+                                        <th>Units</th>
+                                        <th>Item Quantity</th>
+                                        <th>Box Quantity</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -41,17 +43,19 @@
                                     @foreach (var item in InwardItems)
                                     {
                                         var productClass = $"form-select form-select-sm {GetValidationClass(item, "product")}";
-                                        var quantityClass = $"form-control form-control-sm {GetValidationClass(item, "quantity")}";
+                                        var itemQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "itemQuantity")}";
+                                        var unitsClass = $"form-control form-control-sm {GetValidationClass(item, "units")}";
+                                        var boxQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "boxQuantity")}";
 
                                         <tr class="@(item.Id == 0 ? "table-warning" : "")">
                                             <td>
                                                 <InputSelect class="@productClass"
-                                                             @bind-Value="item.ProductId"
-                                                             @onchange="@(() => ClearMessages())">
+                                                @bind-Value="item.ProductId"
+                                                @onchange="@(() => ClearMessages())">
                                                     <option value="0">-- Select Product --</option>
                                                     @foreach (var product in FilteredProducts)
                                                     {
-                                                        <option value="@product.Id">@product.Name (@product.ColourName.ToUpper())-@product.Unit</option>
+                                                        <option value="@product.Id">@product.Name (@product.ColourName.ToUpper())</option>
                                                     }
                                                 </InputSelect>
                                                 @if (showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))
@@ -59,16 +63,45 @@
                                                     <small class="text-danger">Product is required</small>
                                                 }
                                             </td>
+
                                             <td>
-                                                <InputNumber class="@quantityClass"
-                                                             @bind-Value="item.Quantity"
-                                                             @onchange="@(() => ClearMessages())" />
-                                                @if (showValidation && item.Quantity <= 0 && IsLastUnsavedItem(item))
+                                                <InputSelect class="@unitsClass"
+                                                @bind-Value="item.InwardUnitId">
+                                                    <option value="0">-- Select Units --</option>
+                                                    @foreach (var unit in Units)
+                                                    {
+                                                        <option value="@unit.Id">@unit.Name</option>
+                                                    }
+                                                </InputSelect>
+                                                @if (showValidation && item.InwardUnitId == 0 && IsLastUnsavedItem(item))
+                                                {
+                                                    <small class="text-danger">Unit is required</small>
+                                                }
+                                            </td>
+
+                                            <td>
+                                                <InputNumber class="@itemQuantityClass"
+                                                @bind-Value="item.ItemQuantity"
+                                                @onchange="@(() => ClearMessages())" />
+                                                @if (showValidation && item.ItemQuantity <= 0 && IsLastUnsavedItem(item))
                                                 {
                                                     <small class="text-danger">Quantity must be greater than 0</small>
                                                 }
                                             </td>
-                                         
+
+                                            <td>
+                                                @if(IsRequired(item))
+                                                {
+                                                    <InputNumber class="@boxQuantityClass"
+                                                                 @bind-Value="item.BoxQuantity"
+                                                                 @onchange="@(() => ClearMessages())" />
+                                                    @if (showValidation && item.BoxQuantity <= 0 && IsRequired(item) && IsLastUnsavedItem(item))
+                                                    {
+                                                        <small class="text-danger">BoxQuantity must be greater than 0</small>
+                                                    }
+                                                }
+                                            </td>
+
                                             <td>
                                                 <div class="d-flex gap-1">
                                                     <button type="button"
@@ -161,6 +194,7 @@
     [Parameter] public EventCallback OnAddItem { get; set; }
     [Parameter] public EventCallback<InwardItemModel> OnRemoveUnsaved { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
+    public List<UnitModel> Units => CommonUtils.UnitList;
 
     public async Task Show()
     {
@@ -188,19 +222,30 @@
         }
 
         // Validate Quantity
-        if (item.Quantity <= 0)
+        if (item.ItemQuantity <= 0)
         {
-            errorMessage = "Quantity must be greater than 0.";
+            errorMessage = "Item Quantity must be greater than 0.";
             StateHasChanged();
             return;
         }
 
         // Validate Unit
-        if (string.IsNullOrWhiteSpace(item.Unit))
+        if (item.InwardUnitId <= 0)
         {
             errorMessage = "Unit is required.";
             StateHasChanged();
             return;
+        }
+
+        // Validate BoxQuantity
+        if (IsRequired(item))
+        {
+            if (item.BoxQuantity <= 0)
+            {
+                errorMessage = "Box Quantity must be greater than 0.";
+                StateHasChanged();
+                return;
+            }
         }
 
         isSaving = true;
@@ -212,7 +257,7 @@
             await OnSaveItem.InvokeAsync(item);
             successMessage = item.Id == 0 ? "Item added successfully!" : "Item updated successfully!";
             showValidation = false;
-          await HandleAddItem();
+            await HandleAddItem();
         }
         catch (Exception ex)
         {
@@ -244,7 +289,6 @@
         successMessage = "Item deleted successfully!";
         StateHasChanged();
 
-        // Auto-hide success message
         _ = Task.Run(async () =>
         {
             await Task.Delay(3000);
@@ -259,7 +303,7 @@
 
         // Check if there's an unsaved item with no data
         var hasBlankUnsavedRow = InwardItems.Any(item =>
-            item.Id == 0 && (item.ProductId == 0 || item.Quantity == 0));
+            item.Id == 0 && (item.ProductId == 0 || item.ItemQuantity == 0));
 
         if (hasBlankUnsavedRow)
         {
@@ -314,7 +358,9 @@
         return field switch
         {
             "product" => item.ProductId == 0 ? "is-invalid" : "is-valid",
-            "quantity" => item.Quantity <= 0 ? "is-invalid" : "is-valid",
+            "itemQuantity" => item.ItemQuantity <= 0 ? "is-invalid" : "is-valid",
+            "units" => item.InwardUnitId == 0 ? "is-invalid" : "is-valid",
+            "boxQuantity" => item.InwardUnitId == 0 || !IsRequired(item) || item.BoxQuantity > 0 ? "is-valid" : "is-invalid",
             _ => ""
         };
     }
@@ -322,5 +368,11 @@
     private bool IsLastUnsavedItem(InwardItemModel item)
     {
         return item.Id == 0;
+    }
+
+    private bool IsRequired(InwardItemModel item)
+    {
+        var inwardUnitName = Units.FirstOrDefault(u => u.Id == item.InwardUnitId)?.Name ?? string.Empty;
+        return inwardUnitName == "BOX";
     }
 }

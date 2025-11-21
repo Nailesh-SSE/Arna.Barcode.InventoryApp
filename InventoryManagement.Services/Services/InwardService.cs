@@ -161,17 +161,46 @@ public class InwardService : IInwardService
                 throw new Exception("Related Inward record not found.");
 
             // Update common fields
-            entity.ProductId = model.ProductId;
-            entity.Unit = model.Unit;
+            entity.ProductId = model.ProductId; 
             entity.UpdatedBy = model.UpdatedBy ?? 0;
             entity.UpdatedOn = model.UpdatedOn ?? DateTime.UtcNow;
+            entity.InwardUnitName = model.InwardUnitName;
             // Handle quantity change
-            if (entity.Quantity != model.Quantity)
+
+            if (entity.InwardUnitName == "BOX")
             {
-                entity.Quantity = model.Quantity;
-                await DeleteBarcodesForItemAsync(entity.Id);
-                await CreateBarcodesForSingleItemAsync(entity, inward.InwardDate);
+                if(entity.InwardUnitId != model.InwardUnitId)
+                {
+                    entity.BoxQuantity = model.BoxQuantity;
+                    await DeleteBarcodesForItemAsync(entity.Id);
+                    await CreateBarcodesForSingleItemAsync(entity, inward.InwardDate);
+                }
+
+                else if (entity.BoxQuantity != model.BoxQuantity)
+                {
+                    entity.BoxQuantity = model.BoxQuantity;
+                    await DeleteBarcodesForItemAsync(entity.Id);
+                    await CreateBarcodesForSingleItemAsync(entity, inward.InwardDate);
+                }
             }
+            else 
+            {
+                if(entity.InwardUnitId != model.InwardUnitId)
+                {
+                    entity.ItemQuantity = model.ItemQuantity;
+                    await DeleteBarcodesForItemAsync(entity.Id);
+                    await CreateBarcodesForSingleItemAsync(entity, inward.InwardDate);
+                }
+
+                else if (entity.ItemQuantity != model.ItemQuantity)
+                {
+                    entity.ItemQuantity = model.ItemQuantity;
+                    await DeleteBarcodesForItemAsync(entity.Id);
+                    await CreateBarcodesForSingleItemAsync(entity, inward.InwardDate);
+                }
+            }
+
+            entity.InwardUnitId = model.InwardUnitId;
 
             inwardItemRepo.Update(entity);
 
@@ -273,12 +302,14 @@ public class InwardService : IInwardService
             {
                 InwardId = inwardId,
                 ProductId = itemModel.ProductId,
-                Quantity = itemModel.Quantity,
-                Unit = itemModel.Unit,
+                ItemQuantity = itemModel.ItemQuantity,
+                InwardUnitId = itemModel.InwardUnitId,
+                InwardUnitName = itemModel.InwardUnitName,
                 SerialNo = serialNo.ToString(),
                 BatchNo = GenerateBatchNo(serialNo),
                 IsDeleted = false,
                 CreatedBy = itemModel.CreatedBy,
+                BoxQuantity = itemModel.BoxQuantity
             });
         }
 
@@ -296,13 +327,15 @@ public class InwardService : IInwardService
         {
             InwardId = model.InwardId,
             ProductId = model.ProductId,
-            Quantity = model.Quantity,
-            Unit = model.Unit,
+            ItemQuantity = model.ItemQuantity,
+            InwardUnitId = model.InwardUnitId,
+            InwardUnitName = model.InwardUnitName,
             SerialNo = serialNo.ToString(),
             BatchNo = GenerateBatchNo(serialNo),
             IsDeleted = false,
             CreatedBy = model.CreatedBy ,
-            CreatedOn = model.CreatedOn
+            CreatedOn = model.CreatedOn,
+            BoxQuantity = model.BoxQuantity
         };
 
         await itemRepo.AddAsync(entity);
@@ -333,10 +366,21 @@ public class InwardService : IInwardService
 
         foreach (var item in items)
         {
-            for (int i = 0; i < item.Quantity; i++)
+            if(item.InwardUnitName == "BOX")
             {
-                barcodeCounter++;
-                barcodes.Add(CreateBarcodeEntity(item, barcodeCounter, transactionDate));
+                for (int i = 0; i < item.BoxQuantity; i++)
+                {
+                    barcodeCounter++;
+                    barcodes.Add(CreateBarcodeEntity(item, barcodeCounter, transactionDate));
+                }
+            }
+            else
+            {
+                for (int i = 0; i < item.ItemQuantity; i++)
+                {
+                    barcodeCounter++;
+                    barcodes.Add(CreateBarcodeEntity(item, barcodeCounter, transactionDate));
+                }
             }
         }
 
@@ -373,9 +417,20 @@ public class InwardService : IInwardService
             }
 
             var barcodes = new List<InwardBarcodeItem>();
-            for (int i = 0; i < item.Quantity; i++)
+
+            if(item.InwardUnitName == "BOX")
             {
-                barcodes.Add(CreateBarcodeEntity(item, startCounter + i, transactionDate));
+                for (int i = 0; i < item.BoxQuantity; i++)
+                {
+                    barcodes.Add(CreateBarcodeEntity(item, startCounter + i, transactionDate));
+                }
+            }
+            else
+            {
+                for (int i = 0; i < item.ItemQuantity; i++)
+                {
+                    barcodes.Add(CreateBarcodeEntity(item, startCounter + i, transactionDate));
+                }
             }
 
             if (barcodes.Any())
@@ -412,7 +467,7 @@ public class InwardService : IInwardService
             InwardItemId = item.Id,
             BarcodeNo = GenerateBarcodeNumber(transactionDate, item.InwardId, counter),
             TransactionDate = transactionDate,
-            IsInStock = true           
+            IsInStock = true
         };
     }
 
@@ -477,10 +532,12 @@ public class InwardService : IInwardService
             Id = entity.Id,
             InwardId = entity.InwardId,
             ProductId = entity.ProductId,
-            Quantity = entity.Quantity,
-            Unit = entity.Unit,
+            ItemQuantity = entity.ItemQuantity,
+            InwardUnitId = entity.InwardUnitId,
+            InwardUnitName = entity.InwardUnitName,
             BatchNo = entity.BatchNo,
             CreatedBy = entity.CreatedBy,
+            BoxQuantity = entity.BoxQuantity
         };
     }
 

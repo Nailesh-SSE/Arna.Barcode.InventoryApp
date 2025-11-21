@@ -30,11 +30,13 @@ public class InwardItemModel
     public int Id { get; set; }
     public int InwardId { get; set; }
     public int ProductId { get; set; }
-    public decimal Quantity { get; set; }
-    public string? Unit { get; set; }
+    public decimal ItemQuantity { get; set; }
     public string? BatchNo { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedOn { get; set; }
     public int? UpdatedBy { get; set; }
     public DateTime? UpdatedOn { get; set; }
+    public int InwardUnitId { get; set; }
+    public string? InwardUnitName { get; set; }
+    public decimal BoxQuantity { get; set; }
 }
