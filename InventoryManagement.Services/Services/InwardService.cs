@@ -258,8 +258,9 @@ public class InwardService : IInwardService
             {
                 InwardId = inward.Id,
                 ProductId = productId,
-                Quantity = quantity,
-                Unit = "PCS", // or your default
+                ItemQuantity = quantity,
+                InwardUnitId = 1 ,
+                InwardUnitName = "PCS",
                 SerialNo = serialNo.ToString(),
                 BatchNo = GenerateBatchNo(serialNo),
                 IsDeleted = false,
