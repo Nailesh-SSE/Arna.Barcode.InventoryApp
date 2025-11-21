@@ -21,9 +21,9 @@
                 <button class="btn btn-outline-primary" @onclick="RefreshReport">
                     <Icon Name="IconName.ArrowClockwise" /> Refresh
                 </button>
-                <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
+            @*     <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
                     <Icon Name="IconName.Download" /> Export
-                </button>
+                </button> *@
             </div>
         </div>
     </div>
@@ -74,22 +74,22 @@
                                     }
                                 </InputSelect>
                             </div>
-                            <div class="col-6">
+                           @*  <div class="col-6">
                                 <label class="form-label">Min Quantity</label>
                                 <InputNumber class="form-control" @bind-Value="filter.MinQuantity" />
                             </div>
                             <div class="col-6">
                                 <label class="form-label">Max Quantity</label>
                                 <InputNumber class="form-control" @bind-Value="filter.MaxQuantity" />
-                            </div>
+                            </div> *@
                             <div class="col-12">
                                 <label class="form-label">Inward No</label>
                                 <InputText class="form-control" @bind-Value="filter.InwardNumbers" placeholder="comma-separated" />
                             </div>
-                            <div class="col-12">
+                          @*   <div class="col-12">
                                 <label class="form-label">Product SKUs</label>
                                 <InputText class="form-control" @bind-Value="filter.ProductSKUs" placeholder="comma-separated" />
-                            </div>
+                            </div> *@
                             <div class="col-12">
                                 <label class="form-label">Batch Numbers</label>
                                 <InputText class="form-control" @bind-Value="filter.BatchNumbers" placeholder="comma-separated" />
@@ -121,7 +121,7 @@
                                     <label class="form-check-label">Descending</label>
                                 </div>
                             </div>
-                            <div class="col-12">
+                       @*      <div class="col-12">
                                 <label class="form-label">Options</label>
                                 <div class="form-check">
                                     <InputCheckbox class="form-check-input" @bind-Value="filter.IncludeInactive" />
@@ -139,7 +139,7 @@
                                     <InputCheckbox class="form-check-input" @bind-Value="filter.SummaryOnly" />
                                     <label class="form-check-label">Summary Only</label>
                                 </div>
-                            </div>
+                            </div> *@
                             <div class="col-12 d-grid gap-2">
                                 <button type="submit" class="btn btn-primary">
                                     <Icon Name="IconName.Search" /> Generate Report
@@ -484,7 +484,7 @@
     }
     private async Task AutoHideAlertAsync()
     {
-        await Task.Delay(5000);
+        await Task.Delay(3000);
         alertMessage = null;
         await InvokeAsync(StateHasChanged);
     }

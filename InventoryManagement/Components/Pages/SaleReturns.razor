@@ -1,305 +1,305 @@
-@page "/sale-returns"
-@inject ISaleReturnService SaleReturnService
-@inject ICompanyService CompanyService
-@inject IProductService ProductService
-@inject IJSRuntime JSRuntime
+    @page "/sale-returns"
+    @inject ISaleReturnService SaleReturnService
+    @inject ICompanyService CompanyService
+    @inject IProductService ProductService
+    @inject IJSRuntime JSRuntime
 
-@inherits InventoryManagement.Components.Auth.AuthComponentBase
-<PageTitle>Sale Return Management</PageTitle>
+    @inherits InventoryManagement.Components.Auth.AuthComponentBase
+    <PageTitle>Sale Return Management</PageTitle>
 
-<div class="container-fluid">
-    @if (showErrorMessage)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <Icon Name="IconName.ExclamationTriangle" /> @errorMessage
-        </div>
-    }
+    <div class="container-fluid">
+        @if (showErrorMessage)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <Icon Name="IconName.ExclamationTriangle" /> @errorMessage
+            </div>
+        }
 
-    <div class="row mb-3">
-        <div class="col">
-            <h3><Icon Name="IconName.ArrowReturnRight" /> Sale Return Management</h3>
+        <div class="row mb-3">
+            <div class="col">
+                <h3><Icon Name="IconName.ArrowReturnRight" /> Sale Return Management</h3>
+            </div>
+            <div class="col-auto">
+                <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                    <Icon Name="IconName.Plus" /> Add New Sale Return
+                </Button>
+            </div>
         </div>
-        <div class="col-auto">
-            <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
-                <Icon Name="IconName.Plus" /> Add New Sale Return
-            </Button>
-        </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center">
+                <Spinner Type="SpinnerType.Border" />
+            </div>
+        }
+        else
+        {
+            <Grid TItem="SaleReturnModel" Class="table table-hover table-bordered table-striped"
+                  Data="saleReturns" AllowPaging="true" PageSize="10" AllowSorting="true"
+                  Responsive="true">
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Sr. No." Sortable="false"
+                            HeaderTextAlignment="Alignment.Center" TextAlignment="Alignment.Center">
+                    @(saleReturns.IndexOf(context) + 1)
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Return No" PropertyName="ReturnNo">
+                    @context.ReturnNo
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Return Date" PropertyName="ReturnDate">
+                    @context.ReturnDate.ToString("dd/MM/yyyy")
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Billing Date" PropertyName="BillingDate">
+                    @(context.BillingDate.HasValue? context.BillingDate.Value.ToString("dd/MM/yyyy"): "-")
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Company" PropertyName="CompanyName">
+                    @context.CompanyName
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Product" PropertyName="ProductName">
+                    @context.ProductName
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Return Type" PropertyName="ReturnType">
+                    <Badge Color="@GetReturnTypeBadgeColor(context.ReturnType ?? InventoryManagement.Core.Enums.ReturnType.Other)">
+                        @(context.ReturnType?.ToString() ?? "-")
+                    </Badge>
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Barcode" PropertyName="BarcodeNo">
+                    @context.BarcodeNo
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Quantity" PropertyName="Quantity">
+                    @context.Quantity
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Status" PropertyName="IsActive">
+                    @if (context.IsActive)
+                    {
+                        <Badge Color="BadgeColor.Success">Active</Badge>
+                    }
+                    else
+                    {
+                        <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                    }
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Actions">
+                    <Button Color="ButtonColor.Warning" Size="ButtonSize.Small"
+                            @onclick="() => ShowEditModal(context)">
+                        <Icon Name="IconName.PencilSquare" /> Edit
+                    </Button>
+                    <Button Color="ButtonColor.Danger" Size="ButtonSize.Small"
+                            @onclick="() => DeleteSaleReturn(context.Id)">
+                        <Icon Name="IconName.Trash" /> Delete
+                    </Button>
+                </GridColumn>
+            </Grid>
+        }
     </div>
 
-    @if (isLoading)
-    {
-        <div class="text-center">
-            <Spinner Type="SpinnerType.Border" />
-        </div>
-    }
-    else
-    {
-        <Grid TItem="SaleReturnModel" Class="table table-hover table-bordered table-striped"
-              Data="saleReturns" AllowPaging="true" PageSize="10" AllowSorting="true"
-              Responsive="true">
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+        <BodyTemplate>
+            <EditForm EditContext="@editContext" OnValidSubmit="SaveSaleReturn">
+                <DataAnnotationsValidator />
 
-            <GridColumn TItem="SaleReturnModel" HeaderText="Sr. No." Sortable="false"
-                        HeaderTextAlignment="Alignment.Center" TextAlignment="Alignment.Center">
-                @(saleReturns.IndexOf(context) + 1)
-            </GridColumn>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Return Date <span class="text-danger">*</span></label>
+                        <InputDate class="form-control" @bind-Value="saleReturn.ReturnDate" />
+                        <ValidationMessage For="@(() => saleReturn.ReturnDate)" />
+                    </div>
 
-            <GridColumn TItem="SaleReturnModel" HeaderText="Return No" PropertyName="ReturnNo">
-                @context.ReturnNo
-            </GridColumn>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Billing Date <span class="text-danger">*</span></label>
+                        <InputDate class="form-control" @bind-Value="saleReturn.BillingDate" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        <ValidationMessage For="@(() => saleReturn.BillingDate)" />
+                    </div>
 
-            <GridColumn TItem="SaleReturnModel" HeaderText="Return Date" PropertyName="ReturnDate">
-                @context.ReturnDate.ToString("dd/MM/yyyy")
-            </GridColumn>
-
-            <GridColumn TItem="SaleReturnModel" HeaderText="Billing Date" PropertyName="BillingDate">
-                @(context.BillingDate.HasValue? context.BillingDate.Value.ToString("dd/MM/yyyy"): "-")
-            </GridColumn>
-
-            <GridColumn TItem="SaleReturnModel" HeaderText="Company" PropertyName="CompanyName">
-                @context.CompanyName
-            </GridColumn>
-
-            <GridColumn TItem="SaleReturnModel" HeaderText="Product" PropertyName="ProductName">
-                @context.ProductName
-            </GridColumn>
-
-            <GridColumn TItem="SaleReturnModel" HeaderText="Return Type" PropertyName="ReturnType">
-                <Badge Color="@GetReturnTypeBadgeColor(context.ReturnType ?? InventoryManagement.Core.Enums.ReturnType.Other)">
-                    @(context.ReturnType?.ToString() ?? "-")
-                </Badge>
-            </GridColumn>
-
-            <GridColumn TItem="SaleReturnModel" HeaderText="Barcode" PropertyName="BarcodeNo">
-                @context.BarcodeNo
-            </GridColumn>
-
-            <GridColumn TItem="SaleReturnModel" HeaderText="Quantity" PropertyName="Quantity">
-                @context.Quantity
-            </GridColumn>
-
-            <GridColumn TItem="SaleReturnModel" HeaderText="Status" PropertyName="IsActive">
-                @if (context.IsActive)
-                {
-                    <Badge Color="BadgeColor.Success">Active</Badge>
-                }
-                else
-                {
-                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
-                }
-            </GridColumn>
-
-            <GridColumn TItem="SaleReturnModel" HeaderText="Actions">
-                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small"
-                        @onclick="() => ShowEditModal(context)">
-                    <Icon Name="IconName.PencilSquare" /> Edit
-                </Button>
-                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small"
-                        @onclick="() => DeleteSaleReturn(context.Id)">
-                    <Icon Name="IconName.Trash" /> Delete
-                </Button>
-            </GridColumn>
-        </Grid>
-    }
-</div>
-
-<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
-    <BodyTemplate>
-        <EditForm EditContext="@editContext" OnValidSubmit="SaveSaleReturn">
-            <DataAnnotationsValidator />
-
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Return Date <span class="text-danger">*</span></label>
-                    <InputDate class="form-control" @bind-Value="saleReturn.ReturnDate" />
-                    <ValidationMessage For="@(() => saleReturn.ReturnDate)" />
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
+                        <InputSelect class="form-select" @bind-Value="saleReturn.BillToCompanyId"
+                                     @onchange="(e) => HandleCompanyChange(Convert.ToInt32(e.Value))">
+                            <option value="0">-- Select Company --</option>
+                            @foreach (var company in billCompanies)
+                            {
+                                <option value="@company.Id">@company.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => saleReturn.BillToCompanyId)" />
+                    </div>
                 </div>
 
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Billing Date <span class="text-danger">*</span></label>
-                    <InputDate class="form-control" @bind-Value="saleReturn.BillingDate" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
-                    <ValidationMessage For="@(() => saleReturn.BillingDate)" />
-                </div>
-
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
-                    <InputSelect class="form-select" @bind-Value="saleReturn.BillToCompanyId"
-                                 @onchange="(e) => HandleCompanyChange(Convert.ToInt32(e.Value))">
-                        <option value="0">-- Select Company --</option>
-                        @foreach (var company in billCompanies)
-                        {
-                            <option value="@company.Id">@company.Name</option>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Product <span class="text-danger">*</span></label>
+                        @{
+                            var productClass = $"form-select {GetValidationClass(saleReturn, "product")}";
                         }
-                    </InputSelect>
-                    <ValidationMessage For="@(() => saleReturn.BillToCompanyId)" />
-                </div>
-            </div>
+                        <InputSelect class="@productClass" @bind-Value="saleReturn.ProductId"
+                                     @onchange="@(() => ClearMessages())">
+                            <option value="0">-- Select Product --</option>
+                            @foreach (var product in FilteredProducts)
+                            {
+                                <option value="@product.Id">@($"{product.Name} ({product.ColourName.ToUpper()}) ({product.SKU})-{product.Unit}")</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => saleReturn.ProductId)" />
+                    </div>
 
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Product <span class="text-danger">*</span></label>
-                    @{
-                        var productClass = $"form-select {GetValidationClass(saleReturn, "product")}";
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Return Type <span class="text-danger">*</span></label>
+                        <InputSelect class="form-select" @bind-Value="saleReturn.ReturnType">
+                            <option value="">-- Select Return Type --</option>
+                            <option value="@InventoryManagement.Core.Enums.ReturnType.Defective">Defective</option>
+                            <option value="@InventoryManagement.Core.Enums.ReturnType.Excess">Excess</option>
+                            <option value="@InventoryManagement.Core.Enums.ReturnType.Damaged">Damaged</option>
+                            <option value="@InventoryManagement.Core.Enums.ReturnType.Other">Other</option>
+                        </InputSelect>
+                        <ValidationMessage For="@(() => saleReturn.ReturnType)" />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Quantity <span class="text-danger">*</span></label>
+                        <InputNumber class="form-control" @bind-Value="saleReturn.Quantity" />
+                        <ValidationMessage For="@(() => saleReturn.Quantity)" />
+                    </div>
+                </div>
+
+                <div class="row align-items-center">
+                    <div class="@(saleReturn.ReturnType == ReturnType.Excess || saleReturn.ReturnType == ReturnType.Other ? "col-md-8" : "col-md-12") mb-3">
+                        <label class="form-label">Barcode</label>
+                        <div class="input-group">
+                            <InputText class="form-control"
+                                       @bind-Value="saleReturn.BarcodeNo"
+                                       placeholder="Scan or enter barcode" />
+
+                            <Button Color="ButtonColor.Secondary"
+                                    @onclick="ValidateBarcode"
+                                    Disabled="@(saleReturn.BillToCompanyId == 0)">
+                                <Icon Name="IconName.CheckCircle" /> Validate
+                            </Button>
+                        </div>
+                    </div>
+
+                    @if (saleReturn.ReturnType == ReturnType.Excess || saleReturn.ReturnType == ReturnType.Other)
+                    {
+                        <div class="col-md-4 mb-3">
+                            <br />
+                            <div class="mt-1">
+                                <InputCheckbox class="form-check-input"
+                                               @bind-Value="saleReturn.IsTakeInStock"
+                                               id="isTakeInStock " />
+                                <label class="form-label mb-0" for="isTakeInStock">Need to take in stock</label>
+                            </div>
+                        </div>
                     }
-                    <InputSelect class="@productClass" @bind-Value="saleReturn.ProductId"
-                                 @onchange="@(() => ClearMessages())">
-                        <option value="0">-- Select Product --</option>
-                        @foreach (var product in FilteredProducts)
-                        {
-                            <option value="@product.Id">@($"{product.Name} ({product.ColourName.ToUpper()}) ({product.SKU})-{product.Unit}")</option>
-                        }
-                    </InputSelect>
-                    <ValidationMessage For="@(() => saleReturn.ProductId)" />
                 </div>
 
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Return Type <span class="text-danger">*</span></label>
-                    <InputSelect class="form-select" @bind-Value="saleReturn.ReturnType">
-                        <option value="">-- Select Return Type --</option>
-                        <option value="@InventoryManagement.Core.Enums.ReturnType.Defective">Defective</option>
-                        <option value="@InventoryManagement.Core.Enums.ReturnType.Excess">Excess</option>
-                        <option value="@InventoryManagement.Core.Enums.ReturnType.Damaged">Damaged</option>
-                        <option value="@InventoryManagement.Core.Enums.ReturnType.Other">Other</option>
-                    </InputSelect>
-                    <ValidationMessage For="@(() => saleReturn.ReturnType)" />
-                </div>
-
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Quantity <span class="text-danger">*</span></label>
-                    <InputNumber class="form-control" @bind-Value="saleReturn.Quantity" />
-                    <ValidationMessage For="@(() => saleReturn.Quantity)" />
-                </div>
-            </div>
-
-            <div class="row align-items-center">
-                <div class="@(saleReturn.ReturnType == ReturnType.Excess || saleReturn.ReturnType == ReturnType.Other ? "col-md-8" : "col-md-12") mb-3">
-                    <label class="form-label">Barcode</label>
-                    <div class="input-group">
-                        <InputText class="form-control"
-                                   @bind-Value="saleReturn.BarcodeNo"
-                                   placeholder="Scan or enter barcode" />
-
-                        <Button Color="ButtonColor.Secondary"
-                                @onclick="ValidateBarcode"
-                                Disabled="@(saleReturn.BillToCompanyId == 0)">
-                            <Icon Name="IconName.CheckCircle" /> Validate
-                        </Button>
-                    </div>
-                </div>
-
-                @if (saleReturn.ReturnType == ReturnType.Excess || saleReturn.ReturnType == ReturnType.Other)
-                {
+                <div class="row">
                     <div class="col-md-4 mb-3">
-                        <br/>
-                        <div class="mt-1">
-                            <InputCheckbox class="form-check-input"
-                                           @bind-Value="saleReturn.IsChecked"
-                                           id="isChecked" />
-                            <label class="form-label mb-0" for="isChecked">IsChecked</label>
-                        </div>
+                        <label class="form-label">Reason</label>
+                        <InputText class="form-control" @bind-Value="saleReturn.Reason"
+                                   placeholder="Reason for return" />
                     </div>
-                }
-            </div>
 
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Reason</label>
-                    <InputText class="form-control" @bind-Value="saleReturn.Reason"
-                               placeholder="Reason for return" />
-                </div>
-
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Remarks</label>
-                    <InputText class="form-control" rows="3" @bind-Value="saleReturn.Remarks" />
-                </div>
-
-                @if (saleReturn.Id > 0)
-                {
                     <div class="col-md-4 mb-3">
-                        <div class="form-check">
-                            <InputCheckbox class="form-check-input" @bind-Value="saleReturn.IsActive" id="isActive" />
-                            <label class="form-check-label" for="isActive">Active</label>
-                        </div>
+                        <label class="form-label">Remarks</label>
+                        <InputText class="form-control" rows="3" @bind-Value="saleReturn.Remarks" />
                     </div>
-                }
-            </div>
 
-            <div class="text-end mt-3">
-                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
-            </div>
-        </EditForm>
-    </BodyTemplate>
-</Modal>
+                    @if (saleReturn.Id > 0)
+                    {
+                        <div class="col-md-4 mb-3">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="saleReturn.IsActive" id="isActive" />
+                                <label class="form-check-label" for="isActive">Active</label>
+                            </div>
+                        </div>
+                    }
+                </div>
 
-@code {
-    private Modal modal = default!;
+                <div class="text-end mt-3">
+                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+                </div>
+            </EditForm>
+        </BodyTemplate>
+    </Modal>
 
-    private List<SaleReturnModel> saleReturns = new();
-    private List<CompanyModel> billCompanies = new();
-    public List<ProductModel> FilteredProducts { get; set; } = new();
+    @code {
+        private Modal modal = default!;
 
-    private SaleReturnModel saleReturn = new();
+        private List<SaleReturnModel> saleReturns = new();
+        private List<CompanyModel> billCompanies = new();
+        public List<ProductModel> FilteredProducts { get; set; } = new();
 
-    private EditContext editContext = default!;
-    private ValidationMessageStore messageStore = default!;
+        private SaleReturnModel saleReturn = new();
 
-    private bool isLoading = true;
-    private string modalTitle = "Add Sale Return";
-    private bool isEditMode = false;
+        private EditContext editContext = default!;
+        private ValidationMessageStore messageStore = default!;
 
-    private bool showErrorMessage = false;
-    private string errorMessage = string.Empty;
-    private System.Threading.Timer? errorTimer;
+        private bool isLoading = true;
+        private string modalTitle = "Add Sale Return";
+        private bool isEditMode = false;
 
-    private string validationMessage = string.Empty;
-    private bool validationIsValid = false;
+        private bool showErrorMessage = false;
+        private string errorMessage = string.Empty;
+        private System.Threading.Timer? errorTimer;
 
-    private bool showValidation = false;
+        private string validationMessage = string.Empty;
+        private bool validationIsValid = false;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await base.OnInitializedAsync();
-        if (!IsAuthenticated)
+        private bool showValidation = false;
+
+        protected override async Task OnInitializedAsync()
         {
-            NavigationManager.NavigateTo("/logout", forceLoad: true);
-            return;
+            await base.OnInitializedAsync();
+            if (!IsAuthenticated)
+            {
+                NavigationManager.NavigateTo("/logout", forceLoad: true);
+                return;
+            }
+            await LoadData();
         }
-        await LoadData();
-    }
 
-    private void InitializeEditContext()
-    {
-        editContext = new EditContext(saleReturn);
-        messageStore = new ValidationMessageStore(editContext);
-    }
-
-    private async Task LoadData()
-    {
-        try
+        private void InitializeEditContext()
         {
-            isLoading = true;
-            saleReturns = (await SaleReturnService.GetAllSaleReturnsAsync()).ToList();
-            billCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
-            FilteredProducts = (await ProductService.GetAllProductsAsync()).ToList();
-            InitializeEditContext();
+            editContext = new EditContext(saleReturn);
+            messageStore = new ValidationMessageStore(editContext);
         }
-        catch
-        {
-            ShowError("Connectivity issue happened, operation failed");
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
 
-    #region Sale Return CRUD Operations
+        private async Task LoadData()
+        {
+            try
+            {
+                isLoading = true;
+                saleReturns = (await SaleReturnService.GetAllSaleReturnsAsync()).ToList();
+                billCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
+                FilteredProducts = (await ProductService.GetAllProductsAsync()).ToList();
+                InitializeEditContext();
+            }
+            catch
+            {
+                ShowError("Connectivity issue happened, operation failed");
+            }
+            finally
+            {
+                isLoading = false;
+            }
+        }
 
-    private void ShowAddModal()
-    {
-        modalTitle = "Add New Sale Return";
-        isEditMode = false;
-        saleReturn = new SaleReturnModel
+        #region Sale Return CRUD Operations
+
+        private void ShowAddModal()
+        {
+            modalTitle = "Add New Sale Return";
+            isEditMode = false;
+            saleReturn = new SaleReturnModel
             {
                 ReturnDate = DateTime.Now,
                 ReturnType = null,
@@ -308,18 +308,18 @@
                 CreatedBy = Convert.ToInt32(CurrentUserId),
                 CreatedOn = DateTime.UtcNow
             };
-        validationMessage = string.Empty;
-        validationIsValid = false;
-        showValidation = false;
-        InitializeEditContext();
-        modal.ShowAsync();
-    }
+            validationMessage = string.Empty;
+            validationIsValid = false;
+            showValidation = false;
+            InitializeEditContext();
+            modal.ShowAsync();
+        }
 
-    private async Task ShowEditModal(SaleReturnModel editSaleReturn)
-    {
-        modalTitle = "Edit Sale Return";
-        isEditMode = true;
-        saleReturn = new SaleReturnModel
+        private async Task ShowEditModal(SaleReturnModel editSaleReturn)
+        {
+            modalTitle = "Edit Sale Return";
+            isEditMode = true;
+            saleReturn = new SaleReturnModel
             {
                 Id = editSaleReturn.Id,
                 ReturnNo = editSaleReturn.ReturnNo,
@@ -336,225 +336,220 @@
                 UpdatedBy = Convert.ToInt32(CurrentUserId),
                 UpdatedOn = DateTime.UtcNow
             };
-        validationMessage = string.Empty;
-        validationIsValid = false;
-        showValidation = false;
-        InitializeEditContext();
-        await modal.ShowAsync();
-    }
+            validationMessage = string.Empty;
+            validationIsValid = false;
+            showValidation = false;
+            InitializeEditContext();
+            await modal.ShowAsync();
+        }
 
-    private async Task SaveSaleReturn()
-    {
-        try
+        private async Task SaveSaleReturn()
         {
-            ClearMessages();
-            showValidation = true;
-
-            // Validate all annotations first
-            if (!editContext.Validate())
-                return;
-
-            // Business validations (company/product/returntype)
-            ValidateCompany();
-            if (editContext.GetValidationMessages().Any())
-                return;
-
-            // If barcode present, validate it (this will set validationIsValid + message)
-            if (!string.IsNullOrWhiteSpace(saleReturn.BarcodeNo))
+            try
             {
-                await ValidateBarcode();
-                if (!validationIsValid)
-                {
-                    // show a validation error for barcode on the form
-                    messageStore.Clear(() => saleReturn.BarcodeNo);
-                    messageStore.Add(() => saleReturn.BarcodeNo, validationMessage);
-                    editContext.NotifyValidationStateChanged();
+                ClearMessages();
+                showValidation = true;
+
+                if (!editContext.Validate())
                     return;
+
+                ValidateCompany();
+                if (editContext.GetValidationMessages().Any())
+                    return;
+
+                if (!string.IsNullOrWhiteSpace(saleReturn.BarcodeNo))
+                {
+                    await ValidateBarcode();
+                    if (!validationIsValid)
+                    {
+                        messageStore.Clear(() => saleReturn.BarcodeNo);
+                        messageStore.Add(() => saleReturn.BarcodeNo, validationMessage);
+                        editContext.NotifyValidationStateChanged();
+                        return;
+                    }
+                }
+
+                bool result;
+                if (isEditMode)
+                {
+                    result = await SaleReturnService.UpdateSaleReturnAsync(saleReturn);
+                }
+                else
+                {
+                    result = await SaleReturnService.CreateSaleReturnAsync(saleReturn);
+                }
+
+                if (result)
+                {
+                    await HideModal();
+                    await LoadData();
+                }
+                else
+                {
+                    await HideModal();
+                    ShowError("Connectivity issue happened, operation failed");
                 }
             }
-
-            bool result;
-            if (isEditMode)
-            {
-                result = await SaleReturnService.UpdateSaleReturnAsync(saleReturn);
-            }
-            else
-            {
-                result = await SaleReturnService.CreateSaleReturnAsync(saleReturn);
-            }
-
-            if (result)
-            {
-                await HideModal();
-                await LoadData();
-            }
-            else
+            catch
             {
                 await HideModal();
                 ShowError("Connectivity issue happened, operation failed");
             }
         }
-        catch
-        {
-            await HideModal();
-            ShowError("Connectivity issue happened, operation failed");
-        }
-    }
 
-    private async Task DeleteSaleReturn(int id)
-    {
-        try
+        private async Task DeleteSaleReturn(int id)
         {
-            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
-                "Are you sure you want to delete this sale return?");
-            if (!confirmed) return;
-
-            var userId = Convert.ToInt32(CurrentUserId);
-            var result = await SaleReturnService.DeleteSaleReturnAsync(id, userId);
-            if (result)
+            try
             {
-                await LoadData();
+                var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
+                    "Are you sure you want to delete this sale return?");
+                if (!confirmed) return;
+
+                var userId = Convert.ToInt32(CurrentUserId);
+                var result = await SaleReturnService.DeleteSaleReturnAsync(id, userId);
+                if (result)
+                {
+                    await LoadData();
+                }
+                else
+                {
+                    ShowError("Connectivity issue happened, operation failed");
+                }
             }
-            else
+            catch
             {
                 ShowError("Connectivity issue happened, operation failed");
             }
         }
-        catch
+
+        private async Task HideModal()
         {
-            ShowError("Connectivity issue happened, operation failed");
+            await modal.HideAsync();
         }
-    }
 
-    private async Task HideModal()
-    {
-        await modal.HideAsync();
-    }
+        #endregion
 
-    #endregion
+        #region Barcode Validation
 
-    #region Barcode Validation
-
-    private async Task ValidateBarcode()
-    {
-        try
+        private async Task ValidateBarcode()
         {
-            if (string.IsNullOrWhiteSpace(saleReturn.BarcodeNo))
+            try
             {
-                validationMessage = "Please enter a barcode first.";
+                if (string.IsNullOrWhiteSpace(saleReturn.BarcodeNo))
+                {
+                    validationMessage = "Please enter a barcode first.";
+                    validationIsValid = false;
+                    return;
+                }
+
+                if (saleReturn.BillToCompanyId == 0)
+                {
+                    validationMessage = "Please select a company first.";
+                    validationIsValid = false;
+                    return;
+                }
+
+                var validationResult = await SaleReturnService.ValidateBarcodeForSaleReturnAsync(
+                    saleReturn.BarcodeNo,
+                    saleReturn.BillToCompanyId
+                );
+
+                validationIsValid = validationResult.IsValid;
+                validationMessage = validationResult.IsValid
+                    ? $"Valid barcode. Product: {validationResult.ProductName}"
+                    : validationResult.ErrorMessage;
+
+                StateHasChanged();
+            }
+            catch
+            {
+                validationMessage = "Connectivity issue happened, validation failed";
                 validationIsValid = false;
-                return;
+                StateHasChanged();
             }
+        }
 
+        #endregion
+
+        #region Validation
+
+        private void ValidateCompany()
+        {
+            messageStore.Clear(() => saleReturn.BillToCompanyId);
             if (saleReturn.BillToCompanyId == 0)
             {
-                validationMessage = "Please select a company first.";
-                validationIsValid = false;
-                return;
+                messageStore.Add(() => saleReturn.BillToCompanyId, "Please select a company");
             }
 
-            var validationResult = await SaleReturnService.ValidateBarcodeForSaleReturnAsync(
-                saleReturn.BarcodeNo,
-                saleReturn.BillToCompanyId
-            );
-
-            validationIsValid = validationResult.IsValid;
-            validationMessage = validationResult.IsValid
-                ? $"Valid barcode. Product: {validationResult.ProductName}"
-                : validationResult.ErrorMessage;
-
-            StateHasChanged();
+            editContext.NotifyValidationStateChanged();
         }
-        catch
+
+        private void HandleCompanyChange(int id)
         {
-            validationMessage = "Connectivity issue happened, validation failed";
+            saleReturn.BillToCompanyId = id;
+            ClearMessages();
+            ValidateCompany();
+        }
+
+        private BadgeColor GetReturnTypeBadgeColor(InventoryManagement.Core.Enums.ReturnType returnType)
+        {
+            return returnType switch
+            {
+                InventoryManagement.Core.Enums.ReturnType.Defective => BadgeColor.Danger,
+                InventoryManagement.Core.Enums.ReturnType.Excess => BadgeColor.Warning,
+                InventoryManagement.Core.Enums.ReturnType.Damaged => BadgeColor.Danger,
+                InventoryManagement.Core.Enums.ReturnType.Other => BadgeColor.Secondary,
+                _ => BadgeColor.Secondary
+            };
+        }
+
+        #endregion
+
+        #region Error Display
+
+        private void ShowError(string message)
+        {
+            errorMessage = message;
+            showErrorMessage = true;
+            StateHasChanged();
+
+            errorTimer?.Dispose();
+            errorTimer = new System.Threading.Timer(_ =>
+            {
+                showErrorMessage = false;
+                errorMessage = string.Empty;
+                InvokeAsync(StateHasChanged);
+            }, null, 4000, System.Threading.Timeout.Infinite);
+        }
+
+        public new void Dispose()
+        {
+            errorTimer?.Dispose();
+            base.Dispose();
+        }
+        #endregion
+
+        #region Helpers from modal example
+
+        private void ClearMessages()
+        {
+            validationMessage = string.Empty;
             validationIsValid = false;
-            StateHasChanged();
-        }
-    }
-
-    #endregion
-
-    #region Validation
-
-    private void ValidateCompany()
-    {
-        messageStore.Clear(() => saleReturn.BillToCompanyId);
-        if (saleReturn.BillToCompanyId == 0)
-        {
-            messageStore.Add(() => saleReturn.BillToCompanyId, "Please select a company");
+            showValidation = false;
         }
 
-        editContext.NotifyValidationStateChanged();
-    }
-
-    private void HandleCompanyChange(int id)
-    {
-        saleReturn.BillToCompanyId = id;
-        // validationMessage = string.Empty; // Clear validation when company changes
-        ClearMessages();
-        ValidateCompany();
-    }
-
-    private BadgeColor GetReturnTypeBadgeColor(InventoryManagement.Core.Enums.ReturnType returnType)
-    {
-        return returnType switch
+        private string GetValidationClass(SaleReturnModel model, string field)
         {
-            InventoryManagement.Core.Enums.ReturnType.Defective => BadgeColor.Danger,
-            InventoryManagement.Core.Enums.ReturnType.Excess => BadgeColor.Warning,
-            InventoryManagement.Core.Enums.ReturnType.Damaged => BadgeColor.Danger,
-            InventoryManagement.Core.Enums.ReturnType.Other => BadgeColor.Secondary,
-            _ => BadgeColor.Secondary
-        };
+            if (!showValidation)
+                return "";
+
+            return field switch
+            {
+                "product" => model.ProductId == 0 ? "is-invalid" : "is-valid",
+                "quantity" => model.Quantity <= 0 ? "is-invalid" : "is-valid",
+                _ => ""
+            };
+        }
+
+        #endregion
     }
-
-    #endregion
-
-    #region Error Display
-
-    private void ShowError(string message)
-    {
-        errorMessage = message;
-        showErrorMessage = true;
-        StateHasChanged();
-
-        errorTimer?.Dispose();
-        errorTimer = new System.Threading.Timer(_ =>
-        {
-            showErrorMessage = false;
-            errorMessage = string.Empty;
-            InvokeAsync(StateHasChanged);
-        }, null, 4000, System.Threading.Timeout.Infinite);
-    }
-
-    public new void Dispose()
-    {
-        errorTimer?.Dispose();
-        base.Dispose();
-    }
-    #endregion
-
-    #region Helpers from modal example
-
-    private void ClearMessages()
-    {
-        validationMessage = string.Empty;
-        validationIsValid = false;
-        showValidation = false;
-    }
-
-    private string GetValidationClass(SaleReturnModel model, string field)
-    {
-        if (!showValidation)
-            return "";
-
-        return field switch
-        {
-            "product" => model.ProductId == 0 ? "is-invalid" : "is-valid",
-            "quantity" => model.Quantity <= 0 ? "is-invalid" : "is-valid",
-            _ => ""
-        };
-    }
-
-    #endregion
-}

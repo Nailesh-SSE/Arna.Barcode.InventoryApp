@@ -8,6 +8,7 @@ public interface IRepository<T> where T : class
     Task<T?> GetByIdAsync(int id, params Expression<Func<T, object>>[]? includes);
     Task<IEnumerable<T>> GetAllAsync();
     Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate);
+    Task<IEnumerable<T>> FindWithIncludesAsync(Expression<Func<T, bool>> predicate, params Expression<Func<T, object>>[] includes);
     Task<T> AddAsync(T entity);
     Task AddRangeAsync(IEnumerable<T> entities);
     T Update(T entity);
@@ -112,4 +113,18 @@ public class Repository<T> : IRepository<T> where T : class
         var entity = await GetByIdAsync(id);
         return entity != null;
     }
+    public async Task<IEnumerable<T>> FindWithIncludesAsync(
+    Expression<Func<T, bool>> predicate,
+    params Expression<Func<T, object>>[] includes)
+    {
+        IQueryable<T> query = _dbSet;
+
+        foreach (var include in includes)
+        {
+            query = query.Include(include);
+        }
+
+        return await query.Where(predicate).ToListAsync();
+    }
+
 }

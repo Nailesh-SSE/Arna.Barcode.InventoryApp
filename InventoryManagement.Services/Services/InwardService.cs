@@ -234,6 +234,91 @@ public class InwardService : IInwardService
         }
     }
 
+    public async Task<int> AddReturnedItemToExistingInwardAsync(
+    int inwardId,
+    int productId,
+    int quantity,
+    int createdBy)
+    {
+        var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
+        var inwardRepo = _unitOfWork.GetRepository<Inward>();
+
+        try
+        {
+            var inward = await inwardRepo.GetByIdAsync(inwardId);
+            if (inward == null)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new Exception($"Inward {inwardId} not found.");
+            }
+
+            var serialNo = await inwardItemRepo.CountAsync() + 1;
+
+            var inwardItem = new InwardItem
+            {
+                InwardId = inward.Id,
+                ProductId = productId,
+                Quantity = quantity,
+                Unit = "PCS", // or your default
+                SerialNo = serialNo.ToString(),
+                BatchNo = GenerateBatchNo(serialNo),
+                IsDeleted = false,
+                CreatedBy = createdBy,
+                CreatedOn = DateTime.UtcNow
+            };
+
+            await inwardItemRepo.AddAsync(inwardItem);
+            await _unitOfWork.SaveChangesAsync();
+
+            await CreateBarcodesForSingleItemAsync(inwardItem, inward.InwardDate);
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return inwardItem.Id;
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
+    public async Task RemoveReturnedReturnedItemFromStockAsync(int inwardItemId)
+    {
+        var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
+        var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+
+        try
+        {
+            var inwardItem = await inwardItemRepo.GetByIdAsync(inwardItemId);
+            if (inwardItem == null)
+            {
+                return;
+            }
+
+            var barcodes = await barcodeRepo.FindAsync(b =>
+                b.InwardItemId == inwardItemId && !b.IsDeleted);
+
+            foreach (var barcode in barcodes)
+            {
+                barcode.IsDeleted = true; 
+                barcode.IsInStock = false;
+                barcodeRepo.Update(barcode);
+            }
+
+            inwardItem.IsDeleted = true;
+            inwardItemRepo.Update(inwardItem);
+
+            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
+        }
+        catch
+        {
+            throw;
+        }
+    }
+
+
     #endregion
 
     #region Inward Entity Operations

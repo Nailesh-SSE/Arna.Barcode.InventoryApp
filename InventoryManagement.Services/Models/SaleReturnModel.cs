@@ -7,8 +7,7 @@ public class SaleReturnModel : CommonModel
 {
     public int Id { get; set; }
 
-    [Required]
-    public string ReturnNo { get; set; } = string.Empty;
+    public string? ReturnNo { get; set; } = string.Empty;
 
     [Required]
     public DateTime ReturnDate { get; set; } = DateTime.UtcNow.Date;
@@ -20,7 +19,7 @@ public class SaleReturnModel : CommonModel
     [Required]
     public ReturnType? ReturnType { get; set; }
 
-    public string BarcodeNo { get; set; } = string.Empty;
+    public string? BarcodeNo { get; set; } = string.Empty;
 
     [Required]
     [Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1")]
@@ -29,9 +28,8 @@ public class SaleReturnModel : CommonModel
     public string? Reason { get; set; }
     public string? Remarks { get; set; }
 
-    // Navigation properties for UI
-    public string CompanyName { get; set; } = string.Empty;
-    public string ProductName { get; set; } = string.Empty;
+    public string? CompanyName { get; set; } = string.Empty;
+    public string? ProductName { get; set; } = string.Empty;
 
     [Required]
     public DateTime? BillingDate { get; set; }
@@ -40,7 +38,8 @@ public class SaleReturnModel : CommonModel
     [Range(1, int.MaxValue, ErrorMessage = "Product is required")]
     public int ProductId { get; set; } // new
 
-    public bool IsChecked { get; set; }
+    public bool IsTakeInStock { get; set; }
+    public int? ReturnInwardItemId { get; set; }
 }
 
 public class SaleReturnValidationResult
