@@ -1,0 +1,99 @@
+﻿@page "/report"
+
+<h3 class="mb-4 fw-bold text-primary">📊 Reports Dashboard</h3>
+
+<div class="container">
+    <div class="row g-4">
+
+        <!-- InStock Report -->
+        <div class="col-md-4">
+            <Card class="shadow-lg border-0 rounded-4 h-100">
+                <CardBody class="p-4">
+                    <h5 class="fw-bold text-success">📦 InStock Report</h5>
+                    <p class="text-muted mt-3">
+                        The Instock Report provides a structured view of all inward inventory transactions,
+                        helping you track what stock has entered the system over any selected period.
+                    </p>
+                    <p class="text-muted">
+                        With powerful filters like date range, supplier, category, inward number, batch number,
+                        and quantity ranges, you can analyze data with precision.
+                    </p>
+                    <p class="text-muted">
+                        Summary insights include total inward quantity, unique products, supplier distribution
+                        and overall stock value.
+                    </p>
+
+                    <div class="d-grid mt-3">
+                        <NavLink href="/reports/instock">
+                            <Button Color="ButtonColor.Success" Size="ButtonSize.Small" class="rounded-pill fw-bold shadow-sm">
+                                <Icon Name="IconName.BoxSeam" /> InStock Report
+                            </Button>
+                        </NavLink>
+                    </div>
+                </CardBody>
+            </Card>
+        </div>
+
+        <!-- Outward Report -->
+        <div class="col-md-4">
+            <Card class="shadow-lg border-0 rounded-4 h-100">
+                <CardBody class="p-4">
+                    <h5 class="fw-bold text-secondary">📤 Outward Report</h5>
+                    <p class="text-muted mt-3">
+                        The Outward Report offers a complete view of all inventory items that have moved out
+                        of the organization, making it easier to track dispatched products.
+                    </p>
+                    <p class="text-muted">
+                        Users can apply advanced filters like date range, supplier, category, 
+                        batch number, sorting & grouping options.
+                    </p>
+                    <p class="text-muted">
+                        It shows summary metrics including total dispatched quantity, unique products,
+                        supplier distribution and financial value calculations.
+                    </p>
+
+                    <div class="d-grid mt-3">
+                        <NavLink href="/reports/outward">
+                            <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" class="rounded-pill fw-bold shadow-sm">
+                                <Icon Name="IconName.CartDash" /> Outward Report
+                            </Button>
+                        </NavLink>
+                    </div>
+                </CardBody>
+            </Card>
+        </div>
+
+        <!-- Sale Return Report -->
+        <div class="col-md-4">
+            <Card class="shadow-lg border-0 rounded-4 h-100">
+                <CardBody class="p-4">
+                    <h5 class="fw-bold text-primary">↩️ Sale Return Report</h5>
+                    <p class="text-muted mt-3">
+                        The Sale Return Report provides detailed insights into returned sales transactions,
+                        helping businesses understand return reasons and inventory impact.
+                    </p>
+                    <p class="text-muted">
+                        It supports advanced filtering such as date range, supplier, category, return number,
+                        sorting options, and page size adjustments.
+                    </p>
+                    <p class="text-muted">
+                        Summary cards highlight total return quantity, number of transactions, and product-level
+                        return trends.
+                    </p>
+
+                    <div class="d-grid mt-3">
+                        <NavLink href="/reports/sale-return">
+                            <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" class="rounded-pill fw-bold shadow-sm">
+                                <Icon Name="IconName.GraphUp" /> Sale Return Report
+                            </Button>
+                        </NavLink>
+                    </div>
+                </CardBody>
+            </Card>
+        </div>
+
+    </div>
+</div>
+@code {
+
+}
