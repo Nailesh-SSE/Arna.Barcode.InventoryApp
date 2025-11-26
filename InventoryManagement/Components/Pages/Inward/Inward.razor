@@ -1,10 +1,12 @@
 ﻿@page "/inward"
+@using BlazorDownloadFile
 @using InventoryManagement.Components.Auth
 @inherits AuthComponentBase
 @inject IInwardService InwardService
 @inject ICompanyService CompanyService
 @inject IProductService ProductService
 @inject ICategoryService CategoryService
+@inject IBlazorDownloadFileService BlazorDownloadFileService
 @inject IJSRuntime JS
 
 <PageTitle>Inward Management</PageTitle>
@@ -37,8 +39,8 @@
                  Products="products" OnSave="SaveInward" OnCancel="HideModal" />
 
 <InwardItemsModal @ref="itemsModal" SelectedInward="selectedInward" InwardItems="inwardItems" FilteredProducts="filteredProducts"
-                  OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnAddItem="AddNewItemRow"
-                  OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" />
+                  OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnDownloadPdf="DownloadSingleItemPdf" OnAddItem="AddNewItemRow"
+                  OnRemoveUnsaved="RemoveUnsavedItem"  OnClose="HideItemModal" />
 
 @code {
     private List<InwardModel> inwards = new();
@@ -237,6 +239,29 @@
         {
             inwardItems = inwardItems.Where(i => i.Id != itemId).ToList();
             StateHasChanged();
+        }
+    }
+
+    private async Task DownloadSingleItemPdf(InwardItemModel item)
+    {
+        try
+        {
+            var pdfBytes = await InwardService.GenerateItemBarcodePdfAsync(item.Id);
+
+            if (pdfBytes != null && pdfBytes.Length > 0)
+            {
+                string fileName = $"Item_{item.Id}_Barcodes.pdf";
+                await BlazorDownloadFileService.DownloadFile(fileName, pdfBytes, "application/pdf");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "No barcodes found for this item.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            await JS.InvokeVoidAsync("alert", "Error downloading PDF.");
         }
     }
 }
