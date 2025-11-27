@@ -22,8 +22,8 @@ public class SaleReturnModel : CommonModel
     public string? BarcodeNo { get; set; } = string.Empty;
 
     [Required]
-    [Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1")]
-    public int Quantity { get; set; } = 1;
+    public int Quantity { get; set; }
+    public int BoxQuantity { get; set; }   
 
     public string? Reason { get; set; }
     public string? Remarks { get; set; }
@@ -40,6 +40,10 @@ public class SaleReturnModel : CommonModel
 
     public bool IsTakeInStock { get; set; }
     public int? ReturnInwardItemId { get; set; }
+    [Required]
+   // [Range(1, int.MaxValue, ErrorMessage = "Please select a valid unit")]
+    public int UnitId { get; set; }
+    public string? UnitName { get; set;} = string.Empty;
 }
 
 public class SaleReturnValidationResult

@@ -6,6 +6,7 @@
 @inject ICompanyService CompanyService
 @inject IColourService ColourService
 @using InventoryManagement.Components.Auth
+@using InventoryManagement.Services.Models;
 @inherits AuthComponentBase
 
 <PageTitle>Products</PageTitle>
@@ -130,9 +131,10 @@
 
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Unit <span class="text-danger">*</span></label>
-                    <InputSelect class="form-select" @bind-Value="productModel.UnitId" @oninput="HandleUnitChange">
-                        <option value="0">-- Select Unit -- </option>
-                        @foreach (var unit in units)
+                    <InputSelect class="form-select"
+                                 @bind-Value="productModel.UnitId">
+                        <option value="0">-- Select Unit --</option>
+                        @foreach (var unit in Units)
                         {
                             <option value="@unit.Id">@unit.Name</option>
                         }
@@ -206,23 +208,10 @@
     private bool isEditMode = false;
     private EditContext editContext;
     private ValidationMessageStore messageStore;
+    private List<UnitModel> Units => CommonUtils.UnitList;
 
-    public class UnitModel
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-    }
 
-    private List<UnitModel> units = new()
-    {
-        new UnitModel { Id = 1, Name = "PCS" },
-        new UnitModel { Id = 2, Name = "KG" },
-        new UnitModel { Id = 3, Name = "LTR" },
-        new UnitModel { Id = 4, Name = "BOX" },
-        new UnitModel { Id = 5, Name = "PACK" },
-        new UnitModel { Id = 6, Name = "MTR" }
-    };
-
+  
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -262,7 +251,8 @@
         {
             IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
-            CreatedOn = DateTime.UtcNow
+            CreatedOn = DateTime.UtcNow,
+            UnitId = (int)UnitType.PCS
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -306,7 +296,7 @@
             await ValidateDuplicateNameAsync();
             if (editContext.GetValidationMessages().Any())
                 return;
-            productModel.Unit = units.FirstOrDefault(u => u.Id == productModel.UnitId)?.Name ?? string.Empty;
+            productModel.Unit = Units.FirstOrDefault(u => u.Id == productModel.UnitId)?.Name ?? string.Empty;
             productModel.MakeCompany = companies.FirstOrDefault(m => m.Id == productModel.MakeCompanyId)?.Name ?? string.Empty;
             productModel.CategoryName = categories.FirstOrDefault(c => c.Id == productModel.CategoryId)?.Name ?? string.Empty;
             productModel.ColourName = Colours.FirstOrDefault(c => c.Id == productModel.ColourId)?.Name ?? string.Empty;

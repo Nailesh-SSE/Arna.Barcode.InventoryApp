@@ -1,5 +1,7 @@
 using InventoryManagement.Core.Entities;
+using InventoryManagement.Core.Enums;
 using InventoryManagement.Infrastructure.Repositories;
+using InventoryManagement.Services.DTO;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
 using Microsoft.EntityFrameworkCore;
@@ -234,40 +236,38 @@ public class InwardService : IInwardService
         }
     }
 
-    public async Task<int> AddReturnedItemToExistingInwardAsync(
-    int inwardId,
-    int productId,
-    int quantity,
-    int createdBy)
+    public async Task<int> AddReturnedItemToExistingInwardAsync(ReturnItemDto parameter)
     {
         var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
         var inwardRepo = _unitOfWork.GetRepository<Inward>();
 
         try
         {
-            var inward = await inwardRepo.GetByIdAsync(inwardId);
+            var inward = await inwardRepo.GetByIdAsync(parameter.InwardId);
             if (inward == null)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                throw new Exception($"Inward {inwardId} not found.");
+                throw new Exception($"Inward {parameter.InwardId} not found.");
             }
 
-            var serialNo = await inwardItemRepo.CountAsync() + 1;
-
+            var serialNo = await inwardItemRepo.CountAsync() + 1;     
             var inwardItem = new InwardItem
             {
                 InwardId = inward.Id,
-                ProductId = productId,
-                ItemQuantity = quantity,
-                InwardUnitId = 1 ,
-                InwardUnitName = "PCS",
+                ProductId = parameter.ProductId,
+                InwardUnitId = parameter.UnitId,
+            
+                InwardUnitName = parameter.UnitName,
+                ItemQuantity= parameter.ItemQuantity,
+                BoxQuantity= parameter.BoxQuantity,
                 SerialNo = serialNo.ToString(),
                 BatchNo = GenerateBatchNo(serialNo),
                 IsDeleted = false,
-                CreatedBy = createdBy,
-                CreatedOn = DateTime.UtcNow
-            };
 
+                CreatedBy = parameter.CreatedBy,
+                CreatedOn = DateTime.UtcNow
+              };
+           
             await inwardItemRepo.AddAsync(inwardItem);
             await _unitOfWork.SaveChangesAsync();
 
@@ -452,7 +452,7 @@ public class InwardService : IInwardService
 
         foreach (var item in items)
         {
-            if(item.InwardUnitName == "BOX")
+            if(item.InwardUnitId == (int)UnitType.BOX)
             {
                 for (int i = 0; i < item.BoxQuantity; i++)
                 {
@@ -504,7 +504,7 @@ public class InwardService : IInwardService
 
             var barcodes = new List<InwardBarcodeItem>();
 
-            if(item.InwardUnitName == "BOX")
+            if(item.InwardUnitId == (int)UnitType.BOX)
             {
                 for (int i = 0; i < item.BoxQuantity; i++)
                 {

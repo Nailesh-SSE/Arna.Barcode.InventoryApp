@@ -110,7 +110,7 @@
             <div class="row">
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Return Date <span class="text-danger">*</span></label>
-                    <InputDate class="form-control" @bind-Value="saleReturn.ReturnDate" />
+                    <InputDate class="form-control" @bind-Value="saleReturn.ReturnDate" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
                     <ValidationMessage For="@(() => saleReturn.ReturnDate)" />
                 </div>
 
@@ -150,7 +150,52 @@
                     </InputSelect>
                     <ValidationMessage For="@(() => saleReturn.ProductId)" />
                 </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Unit <span class="text-danger">*</span></label>
+                    <InputSelect class="form-select"
+                                 @bind-Value="saleReturn.UnitId"
+                                 @oninput="(e) => HandleUnitAsync(Convert.ToInt32(e.Value))">
 
+                        <option value="0">-- Select Uni --</option>
+                        @foreach (var unit in Units)
+                        {
+                            <option value="@unit.Id">@unit.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => saleReturn.UnitId)" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">
+                        Item Quantity <span class="text-danger">*</span>
+                    </label>
+
+                    <InputNumber class="form-control"
+                                 @bind-Value="saleReturn.Quantity"
+                                  min="1"
+                                 @oninput="(e) => HandleBoxQuantityAsync(Convert.ToInt32(e.Value))">
+                             </InputNumber>
+                    <ValidationMessage For="@(() => saleReturn.Quantity)" />
+                </div>
+
+                @if (saleReturn.UnitId == (int)UnitType.BOX)
+                {
+                    <div class="col-md-4 mb-3">
+
+                        <label class="form-label">
+                            Box Quantity <span class="text-danger">*</span>
+                        </label>
+                        <InputNumber class="form-control"
+                                     @bind-Value="saleReturn.BoxQuantity"
+                                     min="0"
+                                     @oninput="(e) => HandleBoxQuantityAsync(Convert.ToInt32(e.Value))">
+                                 </InputNumber>
+                                     
+                        <ValidationMessage For="@(() => saleReturn.BoxQuantity)" />
+                    </div>
+                }
+                
+            </div>
+            <div class="row">
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Return Type <span class="text-danger">*</span></label>
                     <InputSelect class="form-select" @bind-Value="saleReturn.ReturnType">
@@ -161,12 +206,6 @@
                         <option value="@InventoryManagement.Core.Enums.ReturnType.Other">Other</option>
                     </InputSelect>
                     <ValidationMessage For="@(() => saleReturn.ReturnType)" />
-                </div>
-
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Quantity <span class="text-danger">*</span></label>
-                    <InputNumber class="form-control" @bind-Value="saleReturn.Quantity" />
-                    <ValidationMessage For="@(() => saleReturn.Quantity)" />
                 </div>
             </div>
 
@@ -184,6 +223,13 @@
                             <Icon Name="IconName.CheckCircle" /> Validate
                         </Button>
                     </div>
+                    @if (!string.IsNullOrEmpty(validationMessage))
+                    {
+                        <div class="@(validationIsValid ? "text-success" : "text-danger") mt-1 small">
+                            @validationMessage
+                        </div>
+                    }
+                      <ValidationMessage For="@(() => saleReturn.BarcodeNo)" />
                 </div>
 
                 @if (saleReturn.ReturnType == ReturnType.Excess || saleReturn.ReturnType == ReturnType.Other)
@@ -253,6 +299,7 @@
     private bool validationIsValid = false;
 
     private bool showValidation = false;
+    public List<UnitModel> Units => CommonUtils.UnitList;
 
     protected override async Task OnInitializedAsync()
     {
@@ -290,7 +337,7 @@
             isLoading = false;
         }
     }
-
+ 
     #region Sale Return CRUD Operations
 
     private void ShowAddModal()
@@ -301,10 +348,10 @@
         {
             ReturnDate = DateTime.Now,
             ReturnType = null,
-            Quantity = 1,
             IsActive = true,
+            Quantity=1,
             CreatedBy = Convert.ToInt32(CurrentUserId),
-            CreatedOn = DateTime.UtcNow
+            CreatedOn = DateTime.UtcNow,
         };
         validationMessage = string.Empty;
         validationIsValid = false;
@@ -329,7 +376,9 @@
             ProductId = editSaleReturn.ProductId,
             ReturnType = editSaleReturn.ReturnType,
             BarcodeNo = editSaleReturn.BarcodeNo,
+            UnitId = editSaleReturn.UnitId,
             Quantity = editSaleReturn.Quantity,
+            BoxQuantity = editSaleReturn.UnitId == (int)UnitType.PCS ? 1 : editSaleReturn.BoxQuantity,
             Reason = editSaleReturn.Reason,
             Remarks = editSaleReturn.Remarks,
             IsActive = editSaleReturn.IsActive,
@@ -347,15 +396,32 @@
     {
         try
         {
+            // isLoading = true;
             ClearMessages();
             showValidation = true;
+            saleReturn.UnitName = Units.FirstOrDefault(u => u.Id == saleReturn.UnitId)?.Name;
+
+            if (saleReturn.ReturnType == ReturnType.Defective || saleReturn.ReturnType == ReturnType.Damaged)
+            {
+                saleReturn.IsTakeInStock = false;
+            }
+
+            if(saleReturn.UnitId !=(int)UnitType.BOX)
+            {
+                saleReturn.BoxQuantity = 0;
+
+            }
 
             if (!editContext.Validate())
+            {
+                editContext.NotifyValidationStateChanged();
+                await InvokeAsync(StateHasChanged);
                 return;
-
+            }
+            saleReturn.BoxQuantity = saleReturn.UnitId == (int)UnitType.PCS ? 0 : saleReturn.BoxQuantity;
             ValidateCompany();
-            if (editContext.GetValidationMessages().Any())
-                return;
+            ValidateQuantity();
+
 
             if (!string.IsNullOrWhiteSpace(saleReturn.BarcodeNo))
             {
@@ -367,6 +433,12 @@
                     editContext.NotifyValidationStateChanged();
                     return;
                 }
+            }
+            if (editContext.GetValidationMessages().Any())
+            {
+                editContext.NotifyValidationStateChanged();
+                await InvokeAsync(StateHasChanged);
+                return;
             }
 
             bool result;
@@ -490,7 +562,142 @@
         ClearMessages();
         ValidateCompany();
     }
+    private async Task HandleUnitAsync(int input)
+    {
+        saleReturn.UnitId = input;
+        try
+        {
+            messageStore.Clear(() => saleReturn.UnitId);
 
+            if (saleReturn.UnitId == 0)
+            {
+                await ValidateUnit();
+            }
+         
+        }
+        catch
+        {
+
+        }
+
+    }
+    private async Task HandleQuantityAsync(int input)
+    {
+        saleReturn.Quantity = input;
+
+        try
+        {
+            ValidateQuantity();
+            await ValidateBarcodeAndQuantity();
+        }
+        catch
+        {
+        }
+
+    }
+    private async Task HandleBoxQuantityAsync(int input)
+    {
+        saleReturn.BoxQuantity = input;
+
+        try
+        {
+            await ValidateBoxQuantityAndUnitidBOX();
+
+        }
+        catch
+        {
+        }
+
+    }
+    
+  
+    private async Task ValidateUnit()
+    {            
+        messageStore.Clear(() => saleReturn.UnitId);
+
+        if(saleReturn.UnitId==0 || saleReturn.UnitId==null)
+        {
+            messageStore.Add(() => saleReturn.UnitId, "Required.");
+            validationIsValid = false;
+            editContext.NotifyValidationStateChanged();
+            StateHasChanged();
+        }
+    }
+    private async Task ValidateBarcodeAndQuantity()
+    {
+        messageStore.Clear(() => saleReturn.Quantity);
+
+        if (!string.IsNullOrWhiteSpace(saleReturn.BarcodeNo))
+        {
+            if (saleReturn.UnitId == (int)UnitType.PCS && saleReturn.Quantity != 1)
+            {
+                messageStore.Add(() => saleReturn.Quantity, " One Barcode Only Have One Quantity.");
+                validationIsValid = false;
+                editContext.NotifyValidationStateChanged();
+                StateHasChanged();
+                return;
+
+            }
+            else
+            {
+                messageStore.Clear(() => saleReturn.Quantity);
+                editContext.NotifyValidationStateChanged();
+            }
+        }
+    }
+    private void ValidateQuantity()
+    {
+        try
+        {
+            messageStore.Clear(() => saleReturn.Quantity);
+
+            if (saleReturn.Quantity <= 0)
+            {
+                messageStore.Add(() => saleReturn.Quantity, "Minimum Quantity must be 1");
+                validationIsValid = false;
+                editContext.NotifyValidationStateChanged();
+                StateHasChanged();
+            }
+         
+            else
+            {
+                //  messageStore.Clear(() => saleReturn.BoxQuantity);
+                messageStore.Clear(() => saleReturn.Quantity);
+            }
+            editContext.NotifyValidationStateChanged();
+
+        }
+        catch
+        {
+            validationMessage = "Connectivity issue happened, validation failed";
+            validationIsValid = false;
+            StateHasChanged();
+        }
+    }
+    private async Task ValidateBoxQuantityAndUnitidBOX()
+    {
+        messageStore.Clear(() => saleReturn.BoxQuantity);
+        if ((saleReturn.UnitId == (int)UnitType.BOX && saleReturn.BoxQuantity <= 0) )
+        {
+            messageStore.Add(() => saleReturn.BoxQuantity, "Box Quantity must be greater than 0");
+            validationIsValid = false;
+            editContext.NotifyValidationStateChanged();
+            StateHasChanged();
+        }
+    }
+    private async Task ValidateBoxQuantity()
+    {
+        messageStore.Clear(() => saleReturn.UnitId);
+         if (saleReturn.BoxQuantity <= 0 && saleReturn.UnitId != (int)UnitType.BOX)
+        {
+            messageStore.Add(() => saleReturn.UnitId, "Box Quantity must be greater than 0");
+            validationIsValid = false;
+            editContext.NotifyValidationStateChanged();
+            StateHasChanged();
+        }
+       
+    } 
+  
     private BadgeColor GetReturnTypeBadgeColor(InventoryManagement.Core.Enums.ReturnType returnType)
     {
         return returnType switch
@@ -547,7 +754,8 @@
         {
             "product" => model.ProductId == 0 ? "is-invalid" : "is-valid",
             "quantity" => model.Quantity <= 0 ? "is-invalid" : "is-valid",
-            _ => ""
+            "unit" => model.UnitId <= 0 ? "is-invalid" : "is-valid",
+            _ => string.Empty
         };
     }
 
