@@ -122,6 +122,12 @@
                                                                 disabled="@isSaving">
                                                             Delete
                                                         </button>
+
+                                                        <button type="button" class="btn btn-dark btn-sm"
+                                                                title="Download Barcodes"
+                                                                @onclick="@(() => OnDownloadPdf.InvokeAsync(item))">
+                                                            <Icon Name="IconName.UpcScan" /> PDF
+                                                        </button>
                                                     }
                                                     else
                                                     {
@@ -194,6 +200,8 @@
     [Parameter] public EventCallback OnAddItem { get; set; }
     [Parameter] public EventCallback<InwardItemModel> OnRemoveUnsaved { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<InwardItemModel> OnDownloadPdf { get; set; }
+
     public List<UnitModel> Units => CommonUtils.UnitList;
 
     public async Task Show()

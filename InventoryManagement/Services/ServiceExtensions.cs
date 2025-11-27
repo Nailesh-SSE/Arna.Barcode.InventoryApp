@@ -7,6 +7,7 @@ using InventoryManagement.Services.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
+using BlazorDownloadFile;
 
 namespace InventoryManagement.Services;
 
@@ -19,7 +20,7 @@ public static class ServiceExtensions
 
         services.AddDbContext<InventoryDbContext>(options =>
             options.UseSqlServer(configuration.GetConnectionString("ERP_Connection")));
-
+        services.AddBlazorDownloadFile();
         return services;
     }
 
