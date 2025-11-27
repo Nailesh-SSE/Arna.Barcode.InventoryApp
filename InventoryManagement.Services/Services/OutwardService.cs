@@ -238,7 +238,7 @@ public class OutwardService : IOutwardService
                 OutwardId = outwardId,
                 ProductId = inwardItem.ProductId,
                 Quantity = 1,
-                Unit = "PCS",
+                Unit = inwardItem.InwardUnitName,
                 BarcodeNo = barcodeNo,
                 CreatedOn=DateTime.UtcNow,
                 CreatedBy=userid,
@@ -262,7 +262,7 @@ public class OutwardService : IOutwardService
                 ProductName = product?.Name ?? "Unknown",
                 BarcodeNo = barcodeNo,
                 Quantity = 1,
-                Unit = "PCS"
+                Unit = inwardItem.InwardUnitName
             };
         }
         catch

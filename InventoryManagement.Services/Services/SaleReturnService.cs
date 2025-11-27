@@ -1,5 +1,6 @@
 using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
+using InventoryManagement.Services.DTO;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
 using Microsoft.EntityFrameworkCore;
@@ -52,6 +53,8 @@ public class SaleReturnService : ISaleReturnService
                 ReturnType = model.ReturnType.GetValueOrDefault(),
                 BarcodeNo = model.BarcodeNo,
                 Quantity = model.Quantity,
+                BoxQuantity = model.BoxQuantity,
+                UnitId = model.UnitId,
                 Reason = model.Reason,
                 Remarks = model.Remarks,
                 IsTakeInStock = model.IsTakeInStock,
@@ -68,14 +71,19 @@ public class SaleReturnService : ISaleReturnService
             {
                 var inwardId = await FindInwardIdForSaleReturnAsync(model);
 
+                var parameter = new ReturnItemDto()
+                {
+                    InwardId = inwardId.Value,
+                    ProductId = model.ProductId,
+                    ItemQuantity = model.Quantity,
+                    BoxQuantity = model.BoxQuantity,
+                    UnitId = model.UnitId,
+                    UnitName = model.UnitName,
+                    CreatedBy = model.CreatedBy
+                };
                 if (inwardId.HasValue)
                 {
-                    var inwardItemId = await _inwardService.AddReturnedItemToExistingInwardAsync(
-                        inwardId.Value,
-                        model.ProductId,
-                        model.Quantity,
-                        model.CreatedBy
-                    );
+                    var inwardItemId = await _inwardService.AddReturnedItemToExistingInwardAsync(parameter);
 
                     newSaleReturn.ReturnInwardItemId = inwardItemId;
                     saleReturnRepository.Update(newSaleReturn);
@@ -116,6 +124,8 @@ public class SaleReturnService : ISaleReturnService
             existing.ReturnType = model.ReturnType.GetValueOrDefault();
             existing.BarcodeNo = model.BarcodeNo;
             existing.Quantity = model.Quantity;
+            existing.UnitId = model.UnitId;
+
             existing.Reason = model.Reason;
             existing.Remarks = model.Remarks;
             existing.IsActive = model.IsActive;
@@ -126,15 +136,21 @@ public class SaleReturnService : ISaleReturnService
             {
                 var inwardId = await FindInwardIdForSaleReturnAsync(model);
 
+
+                var parameter = new ReturnItemDto()
+                {
+                    InwardId = inwardId.Value,
+                    ProductId = model.ProductId,
+                    ItemQuantity = model.Quantity,
+                    BoxQuantity = model.BoxQuantity,
+                    UnitId = model.UnitId,
+                    UnitName = model.UnitName,
+                    UpdatedBy = model.UpdatedBy
+                };
+
                 if (inwardId.HasValue)
                 {
-                    var inwardItemId = await _inwardService.AddReturnedItemToExistingInwardAsync(
-                        inwardId.Value,
-                        model.ProductId,
-                        model.Quantity,
-                        model.UpdatedBy
-                    );
-
+                    var inwardItemId = await _inwardService.AddReturnedItemToExistingInwardAsync(parameter);
                     existing.ReturnInwardItemId = inwardItemId;
                 }
 
@@ -221,7 +237,7 @@ public class SaleReturnService : ISaleReturnService
         var outwardDetailRepository = _unitOfWork.GetRepository<OutwardDetail>();
         var outwardDetails = await outwardDetailRepository.FindWithIncludesAsync(
      od => od.BarcodeNo == barcodeNo && !od.IsDeleted,
-     od => od.Outward   
+     od => od.Outward
  );
 
 
@@ -365,6 +381,8 @@ public class SaleReturnService : ISaleReturnService
             ReturnType = entity.ReturnType,
             BarcodeNo = entity.BarcodeNo,
             Quantity = entity.Quantity,
+            BoxQuantity = entity.BoxQuantity,
+            UnitId = entity.UnitId,
             Reason = entity.Reason,
             Remarks = entity.Remarks,
             IsActive = entity.IsActive,

@@ -1,5 +1,7 @@
 using InventoryManagement.Core.Entities;
+using InventoryManagement.Core.Enums;
 using InventoryManagement.Infrastructure.Repositories;
+using InventoryManagement.Services.DTO;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
 using iTextSharp.text;
@@ -133,14 +135,14 @@ public class InwardService : IInwardService
             if (inward == null) return false;
 
             var entity = await CreateInwardItemEntityAsync(model);
-            await CreateBarcodesForSingleItemAsync(entity, inward.InwardDate); 
+            await CreateBarcodesForSingleItemAsync(entity, inward.InwardDate);
 
             await _unitOfWork.CommitTransactionAsync();
             return true;
         }
         catch (Exception ex)
         {
-            await _unitOfWork.RollbackTransactionAsync(); 
+            await _unitOfWork.RollbackTransactionAsync();
             Console.WriteLine($"Error creating inward item: {ex.Message}");
             return false;
         }
@@ -157,63 +159,36 @@ public class InwardService : IInwardService
 
             var inwardRepo = _unitOfWork.GetRepository<Inward>();
             var inward = await GetByIdAsync(model.InwardId);
-            
+
             if (entity == null) return false;
             if (inward == null)
                 throw new Exception("Related Inward record not found.");
 
             // Update common fields
-            entity.ProductId = model.ProductId; 
+            entity.ProductId = model.ProductId;
             entity.UpdatedBy = model.UpdatedBy ?? 0;
             entity.UpdatedOn = model.UpdatedOn ?? DateTime.UtcNow;
             entity.InwardUnitName = model.InwardUnitName;
-            // Handle quantity change
+            entity.ItemQuantity = model.ItemQuantity;
+            entity.BoxQuantity = model.BoxQuantity;
 
-            if (entity.InwardUnitName == "BOX")
+            if (model.ItemQuantity > 0)
             {
-                if(entity.InwardUnitId != model.InwardUnitId)
-                {
-                    entity.BoxQuantity = model.BoxQuantity;
-                    await DeleteBarcodesForItemAsync(entity.Id);
-                    await CreateBarcodesForSingleItemAsync(entity, inward.InwardDate);
-                }
-
-                else if (entity.BoxQuantity != model.BoxQuantity)
-                {
-                    entity.BoxQuantity = model.BoxQuantity;
-                    await DeleteBarcodesForItemAsync(entity.Id);
-                    await CreateBarcodesForSingleItemAsync(entity, inward.InwardDate);
-                }
+                await DeleteBarcodesForItemAsync(entity.Id);
+                await CreateBarcodesForSingleItemAsync(entity, inward.InwardDate);
             }
-            else 
-            {
-                if(entity.InwardUnitId != model.InwardUnitId)
-                {
-                    entity.ItemQuantity = model.ItemQuantity;
-                    await DeleteBarcodesForItemAsync(entity.Id);
-                    await CreateBarcodesForSingleItemAsync(entity, inward.InwardDate);
-                }
-
-                else if (entity.ItemQuantity != model.ItemQuantity)
-                {
-                    entity.ItemQuantity = model.ItemQuantity;
-                    await DeleteBarcodesForItemAsync(entity.Id);
-                    await CreateBarcodesForSingleItemAsync(entity, inward.InwardDate);
-                }
-            }
-
             entity.InwardUnitId = model.InwardUnitId;
 
             inwardItemRepo.Update(entity);
 
             await _unitOfWork.SaveChangesAsync();
 
-            await _unitOfWork.CommitTransactionAsync(); 
+            await _unitOfWork.CommitTransactionAsync();
             return true;
         }
         catch (Exception ex)
         {
-            await _unitOfWork.RollbackTransactionAsync(); 
+            await _unitOfWork.RollbackTransactionAsync();
             Console.WriteLine($"Error updating inward item: {ex.Message}");
             return false;
         }
@@ -236,40 +211,38 @@ public class InwardService : IInwardService
         }
     }
 
-    public async Task<int> AddReturnedItemToExistingInwardAsync(
-    int inwardId,
-    int productId,
-    int quantity,
-    int createdBy)
+    public async Task<int> AddReturnedItemToExistingInwardAsync(ReturnItemDto parameter)
     {
         var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
         var inwardRepo = _unitOfWork.GetRepository<Inward>();
 
         try
         {
-            var inward = await inwardRepo.GetByIdAsync(inwardId);
+            var inward = await inwardRepo.GetByIdAsync(parameter.InwardId);
             if (inward == null)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                throw new Exception($"Inward {inwardId} not found.");
+                throw new Exception($"Inward {parameter.InwardId} not found.");
             }
 
-            var serialNo = await inwardItemRepo.CountAsync() + 1;
-
+            var serialNo = await inwardItemRepo.CountAsync() + 1;     
             var inwardItem = new InwardItem
             {
                 InwardId = inward.Id,
-                ProductId = productId,
-                ItemQuantity = quantity,
-                InwardUnitId = 1 ,
-                InwardUnitName = "PCS",
+                ProductId = parameter.ProductId,
+                InwardUnitId = parameter.UnitId,
+            
+                InwardUnitName = parameter.UnitName,
+                ItemQuantity= parameter.ItemQuantity,
+                BoxQuantity= parameter.BoxQuantity,
                 SerialNo = serialNo.ToString(),
                 BatchNo = GenerateBatchNo(serialNo),
                 IsDeleted = false,
-                CreatedBy = createdBy,
-                CreatedOn = DateTime.UtcNow
-            };
 
+                CreatedBy = parameter.CreatedBy,
+                CreatedOn = DateTime.UtcNow
+              };
+           
             await inwardItemRepo.AddAsync(inwardItem);
             await _unitOfWork.SaveChangesAsync();
 
@@ -304,7 +277,7 @@ public class InwardService : IInwardService
 
             foreach (var barcode in barcodes)
             {
-                barcode.IsDeleted = true; 
+                barcode.IsDeleted = true;
                 barcode.IsInStock = false;
                 barcodeRepo.Update(barcode);
             }
@@ -539,7 +512,7 @@ public class InwardService : IInwardService
 
         foreach (var item in items)
         {
-            if(item.InwardUnitName == "BOX")
+            if(item.InwardUnitId == (int)UnitType.BOX)
             {
                 for (int i = 0; i < item.BoxQuantity; i++)
                 {
@@ -591,7 +564,7 @@ public class InwardService : IInwardService
 
             var barcodes = new List<InwardBarcodeItem>();
 
-            if(item.InwardUnitName == "BOX")
+            if(item.InwardUnitId == (int)UnitType.BOX)
             {
                 for (int i = 0; i < item.BoxQuantity; i++)
                 {
@@ -660,7 +633,7 @@ public class InwardService : IInwardService
 
     private string GenerateBarcodeNumber(DateTime TransactionDate,int inwardId, int counter)
     {
-        string datePart = TransactionDate.ToString("ddMMyy"); 
+        string datePart = TransactionDate.ToString("ddMMyy");
 
         return $"{datePart}{inwardId:D4}{counter:D6}";
     }

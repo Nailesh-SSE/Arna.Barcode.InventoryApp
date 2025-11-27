@@ -4,6 +4,7 @@ using InventoryManagement.Core.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InventoryManagement.Core.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    partial class InventoryDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251124130709_AddUnitIdInsalereturnTable")]
+    partial class AddUnitIdInsalereturnTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -558,9 +561,6 @@ namespace InventoryManagement.Core.Migrations
 
                     b.Property<DateTime>("BillingDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<int>("BoxQuantity")
-                        .HasColumnType("int");
 
                     b.Property<int>("CreatedBy")
                         .HasColumnType("int");
