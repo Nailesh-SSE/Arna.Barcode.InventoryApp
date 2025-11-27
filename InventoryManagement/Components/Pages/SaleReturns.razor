@@ -55,15 +55,22 @@
                 @(context.BillingDate.HasValue? context.BillingDate.Value.ToString("dd/MM/yyyy"): "-")
             </GridColumn>
 
-            <GridColumn TItem="SaleReturnModel" HeaderText="Company" PropertyName="CompanyName">
-                @context.CompanyName
+            <GridColumn TItem="SaleReturnModel" HeaderText="Company" PropertyName="CompanyId">
+                @{
+                    var company = billCompanies.FirstOrDefault(c => c.Id == context.CompanyId);
+                    @((company?.Name) ?? "N/A")
+                                    
+                 }           
             </GridColumn>
 
-            <GridColumn TItem="SaleReturnModel" HeaderText="Product" PropertyName="ProductName">
-                @context.ProductName
+            <GridColumn TItem="SaleReturnModel" HeaderText="Product" PropertyName="ProductId">
+                @{
+                    var product = FilteredProducts.FirstOrDefault(p => p.Id == context.ProductId);
+                    @($"{product.Name} ( {product.ColourName}) " ?? "-")
+                }
             </GridColumn>
 
-            <GridColumn TItem="SaleReturnModel" HeaderText="Return Type" PropertyName="ReturnType">
+            @* <GridColumn TItem="SaleReturnModel" HeaderText="Return Type" PropertyName="ReturnType">
                 <Badge Color="@GetReturnTypeBadgeColor(context.ReturnType ?? InventoryManagement.Core.Enums.ReturnType.Other)">
                     @(context.ReturnType?.ToString() ?? "-")
                 </Badge>
@@ -86,7 +93,7 @@
                 {
                     <Badge Color="BadgeColor.Danger">Inactive</Badge>
                 }
-            </GridColumn>
+            </GridColumn> *@
 
             <GridColumn TItem="SaleReturnModel" HeaderText="Actions">
                 <Button Color="ButtonColor.Warning" Size="ButtonSize.Small"

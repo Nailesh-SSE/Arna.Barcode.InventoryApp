@@ -44,6 +44,7 @@ public class SaleReturnModel : CommonModel
    // [Range(1, int.MaxValue, ErrorMessage = "Please select a valid unit")]
     public int UnitId { get; set; }
     public string? UnitName { get; set;} = string.Empty;
+    public int CompanyId { get; set; }
 }
 
 public class SaleReturnValidationResult
