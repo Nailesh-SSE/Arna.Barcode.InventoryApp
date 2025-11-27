@@ -84,7 +84,7 @@
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Outward Date <span class="text-danger">*</span></label>
-                    <InputDate class="form-control" @bind-Value="outward.OutwardDate" />
+                    <InputDate class="form-control" @bind-Value="outward.OutwardDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
                     <ValidationMessage For="@(() => outward.OutwardDate)" />
                 </div>
 

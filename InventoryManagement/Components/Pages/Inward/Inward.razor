@@ -76,8 +76,7 @@
         shipCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
         categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
         products = (await ProductService.GetAllProductsAsync()).Where(e => e.IsActive == true).ToList();
-        filteredProducts = products;
-
+  
         isLoading = false;
         StateHasChanged();
     }
@@ -95,7 +94,6 @@
             CreatedOn = DateTime.Now
         };
         inwardItems = new();
-        filteredProducts = products;
         inwardFormModal?.Show();
     }
 
@@ -109,6 +107,10 @@
         inward.UpdatedOn = DateTime.Now;
         inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(edit.Id);
         filteredProducts = products;
+        if(inward.CategoryId > 0 && inward.CategoryId != null)
+        {
+            filteredProducts = products.Where(p => p.CategoryId == inward.CategoryId).ToList();
+        }
         inwardFormModal?.Show();
     }
 
@@ -158,6 +160,10 @@
 
         inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(inwardId);
         filteredProducts = products;
+        if (inward.CategoryId > 0 && inward.CategoryId != null)
+        {
+            filteredProducts = products.Where(p => p.CategoryId == inward.CategoryId).ToList();
+        }
         await itemsModal.Show();
     }
 

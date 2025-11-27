@@ -8,7 +8,7 @@
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label class="form-label">Inward Date <span class="text-danger">*</span></label>
-                            <InputDate class="form-control" @bind-Value="Inward.InwardDate" />
+                            <InputDate class="form-control" @bind-Value="Inward.InwardDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
                             <ValidationMessage For="@(() => Inward.InwardDate)" />
                         </div>
 
