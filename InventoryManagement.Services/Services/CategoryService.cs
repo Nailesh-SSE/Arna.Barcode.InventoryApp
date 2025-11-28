@@ -1,3 +1,4 @@
+using AutoMapper;
 using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
@@ -8,30 +9,19 @@ namespace InventoryManagement.Services;
 public class CategoryService : ICategoryService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMapper _mapper;
 
-    public CategoryService(IUnitOfWork unitOfWork)
+    public CategoryService(IUnitOfWork unitOfWork,IMapper mapper)
     {
         _unitOfWork = unitOfWork;
+        _mapper = mapper;
     }
 
     public async Task<List<CategoryModel>> GetAllCategoriesAsync()
     {
         var categoryRepository = _unitOfWork.GetRepository<Category>();
         var entities = await categoryRepository.FindAsync(c => !c.IsDeleted);
-
-        var categorymodels = entities.Select(c => new CategoryModel
-        {
-            Id = c.Id,
-            Name = c.Name,
-            Description = c.Description,
-            ParentCategoryId = c.ParentCategoryId,
-            ParentCategoryName = c.ParentCategoryName,
-            CreatedBy = c.CreatedBy,
-            CreatedOn = c.CreatedOn,
-            UpdatedBy = c.UpdatedBy,
-            IsActive = c.IsActive,
-            IsDeleted = c.IsDeleted
-        }).ToList();
+        var categorymodels = _mapper.Map<List<CategoryModel>>(entities);
         return categorymodels;
     }
 

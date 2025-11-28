@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
 using BlazorDownloadFile;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace InventoryManagement.Services;
 
@@ -34,6 +35,7 @@ public static class ServiceExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<ICompanyService, CompanyService>();
         services.AddScoped<ICategoryService, CategoryService>();
+        services.AddAutoMapper(typeof(CategoryMappingProfile));
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<IInwardService, InwardService>();
         services.AddScoped<IOutwardService, OutwardService>();
