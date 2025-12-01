@@ -168,9 +168,12 @@ public class InwardService : IInwardService
             entity.ProductId = model.ProductId;
             entity.UpdatedBy = model.UpdatedBy ?? 0;
             entity.UpdatedOn = model.UpdatedOn ?? DateTime.UtcNow;
+            entity.InwardUnitId = model.InwardUnitId;
             entity.InwardUnitName = model.InwardUnitName;
             entity.ItemQuantity = model.ItemQuantity;
             entity.BoxQuantity = model.BoxQuantity;
+            if (entity.InwardUnitId == (int)UnitType.PCS)
+                entity.BoxQuantity = 0;
 
             if (model.ItemQuantity > 0)
             {
