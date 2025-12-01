@@ -1,7 +1,11 @@
 ﻿using InventoryManagement.Core.Entities;
+using InventoryManagement.Core.Enums;
 using InventoryManagement.Infrastructure.Repositories;
+using InventoryManagement.Services.DTO;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
 using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagement.Services;
@@ -207,40 +211,38 @@ public class InwardService : IInwardService
         }
     }
 
-    public async Task<int> AddReturnedItemToExistingInwardAsync(
-    int inwardId,
-    int productId,
-    int quantity,
-    int createdBy)
+    public async Task<int> AddReturnedItemToExistingInwardAsync(ReturnItemDto parameter)
     {
         var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
         var inwardRepo = _unitOfWork.GetRepository<Inward>();
 
         try
         {
-            var inward = await inwardRepo.GetByIdAsync(inwardId);
+            var inward = await inwardRepo.GetByIdAsync(parameter.InwardId);
             if (inward == null)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                throw new Exception($"Inward {inwardId} not found.");
+                throw new Exception($"Inward {parameter.InwardId} not found.");
             }
 
-            var serialNo = await inwardItemRepo.CountAsync() + 1;
-
+            var serialNo = await inwardItemRepo.CountAsync() + 1;     
             var inwardItem = new InwardItem
             {
                 InwardId = inward.Id,
-                ProductId = productId,
-                ItemQuantity = quantity,
-                InwardUnitId = 1 ,
-                InwardUnitName = "PCS",
+                ProductId = parameter.ProductId,
+                InwardUnitId = parameter.UnitId,
+            
+                InwardUnitName = parameter.UnitName,
+                ItemQuantity= parameter.ItemQuantity,
+                BoxQuantity= parameter.BoxQuantity,
                 SerialNo = serialNo.ToString(),
                 BatchNo = GenerateBatchNo(serialNo),
                 IsDeleted = false,
-                CreatedBy = createdBy,
-                CreatedOn = DateTime.UtcNow
-            };
 
+                CreatedBy = parameter.CreatedBy,
+                CreatedOn = DateTime.UtcNow
+              };
+           
             await inwardItemRepo.AddAsync(inwardItem);
             await _unitOfWork.SaveChangesAsync();
 
@@ -292,7 +294,92 @@ public class InwardService : IInwardService
         }
     }
 
+    public async Task<byte[]> GenerateItemBarcodePdfAsync(int inwardItemId)
+    {
+        var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+        var barcodeItems = await barcodeRepo.FindAsync(b => b.InwardItemId == inwardItemId && !b.IsDeleted && b.IsActive);
 
+        if (!barcodeItems.Any()) return null;
+
+        // ==========================================
+        // 1. SET YOUR SIZE HERE (IN CM)
+        // ==========================================
+        float widthInCm = 3.0f;   // Example: 3.5 cm width (Approx 1.4 inches)
+        float heightInCm = 1.5f;  // Example: 2.0 cm height (Approx 0.8 inches)
+
+        // Convert CM to Points (Do not change this math)
+        float widthPoints = widthInCm * 28.35f;
+        float heightPoints = heightInCm * 28.35f;
+
+        var pageSize = new Rectangle(widthPoints, heightPoints);
+
+        // Margins (Left, Right, Top, Bottom) - keeping them small (2 points) for small stickers
+        using var fs = new MemoryStream();
+        Document doc = new Document(pageSize, 2f, 2f, 3f, 2f);
+
+        try
+        {
+            PdfWriter writer = PdfWriter.GetInstance(doc, fs);
+            doc.Open();
+            PdfContentByte cb = writer.DirectContent;
+            BaseFont bf = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
+
+            foreach (var item in barcodeItems)
+            {
+                doc.NewPage();
+
+                Barcode128 bc = new Barcode128();
+                bc.Code = item.BarcodeNo;
+                bc.CodeType = Barcode128.CODE128;
+                bc.StartStopText = false;
+                bc.Font = null;
+
+                // ==========================================
+                // 2. ADJUST BARCODE APPEARANCE
+                // ==========================================
+                bc.BarHeight = 22f; // Make bars shorter to fit small height (Try 15f to 25f)
+                bc.X = 0.6f;        // Bar thickness (lower = thinner). Try 0.8f if barcode is too wide.
+
+                Image img = bc.CreateImageWithBarcode(cb, BaseColor.BLACK, BaseColor.BLACK);
+
+                // ==========================================
+                // 3. DYNAMIC POSITIONING (Calculates center automatically)
+                // ==========================================
+
+                // Center Horizontally
+                float imgX = (doc.PageSize.Width - img.ScaledWidth) / 2;
+
+                // Center Vertically: Push it up slightly to make room for text below
+                // "doc.PageSize.Height / 2" is the middle line.
+                float imgY = (doc.PageSize.Height / 2) - 6f;
+
+                img.SetAbsolutePosition(imgX, imgY);
+                doc.Add(img);
+
+                // ==========================================
+                // 4. TEXT SETTINGS
+                // ==========================================
+                cb.BeginText();
+                cb.SetFontAndSize(bf, 8f); // Smaller font (8f) for small sticker
+
+                float textWidth = bf.GetWidthPoint(item.BarcodeNo, 8f);
+                float textX = (doc.PageSize.Width - textWidth) / 2;
+
+                // Position text just below the barcode image
+                float textY = imgY - 9f;
+
+                cb.SetTextMatrix(textX, textY);
+                cb.ShowText(item.BarcodeNo);
+                cb.EndText();
+            }
+        }
+        finally
+        {
+            doc.Close();
+        }
+
+        return fs.ToArray();
+    }
     #endregion
 
     #region Inward Entity Operations
@@ -425,7 +512,7 @@ public class InwardService : IInwardService
 
         foreach (var item in items)
         {
-            if(item.InwardUnitName == "BOX")
+            if(item.InwardUnitId == (int)UnitType.BOX)
             {
                 for (int i = 0; i < item.BoxQuantity; i++)
                 {
@@ -477,7 +564,7 @@ public class InwardService : IInwardService
 
             var barcodes = new List<InwardBarcodeItem>();
 
-            if(item.InwardUnitName == "BOX")
+            if(item.InwardUnitId == (int)UnitType.BOX)
             {
                 for (int i = 0; i < item.BoxQuantity; i++)
                 {

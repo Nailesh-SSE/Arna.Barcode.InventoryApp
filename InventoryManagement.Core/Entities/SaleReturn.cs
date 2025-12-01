@@ -27,6 +27,10 @@ public class SaleReturn : Common
     [Required]
     public int Quantity { get; set; } = 1;
 
+    public int BoxQuantity { get; set; } = 0;
+    [Required]
+    public int UnitId { get; set; } 
+
     [StringLength(500)]
     public string? Reason { get; set; }
 
