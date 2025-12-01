@@ -55,7 +55,7 @@
                                                     <option value="0">-- Select Product --</option>
                                                     @foreach (var product in FilteredProducts)
                                                     {
-                                                        <option value="@product.Id">@product.Name (@product.ColourName.ToUpper())</option>
+                                                        <option value="@product.Id">@product.SKU</option>
                                                     }
                                                 </InputSelect>
                                                 @if (showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))

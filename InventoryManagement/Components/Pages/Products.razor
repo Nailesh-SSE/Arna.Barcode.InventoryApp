@@ -62,14 +62,6 @@
                 @context.Unit
             </GridColumn>
 
-            <GridColumn TItem="ProductModel" HeaderText="MakeCompany" PropertyName="MakeCompany">
-                @context.MakeCompany
-            </GridColumn>
-
-            <GridColumn TItem="ProductModel" HeaderText="ColourName" PropertyName="ColourName">
-                @context.ColourName
-            </GridColumn>
-
             <GridColumn TItem="ProductModel" HeaderText="Status" PropertyName="IsActive">
                 @if (context.IsActive)
                 {
@@ -104,9 +96,9 @@
                     <ValidationMessage For="@(() => productModel.Name)" />
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">MakeCompany <span class="text-danger">*</span></label>
+                    <label class="form-label">Brand <span class="text-danger">*</span></label>
                     <InputSelect class="form-select" @bind-Value="productModel.MakeCompanyId" @oninput="HandleMakeCompanyChange">
-                        <option value="0">-- Select MakeCompany -- </option>
+                        <option value="0">-- Select Brand-- </option>
                         @foreach (var company in companies)
                         {
                             <option value="@company.Id">@company.Name</option>
