@@ -8,7 +8,7 @@
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col">
-            <h3><Icon Name="IconName.Tools" /> Make Companies</h3>
+            <h3><Icon Name="IconName.Tags" /> Brands</h3>
         </div>
         <div class="col-auto">
             <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
@@ -101,7 +101,7 @@
 @code {
     private Modal modal = default!;
     private bool isLoading = true;
-    private string modalTitle = "Add Make Company";
+    private string modalTitle = "Add Brand";
     private bool isEditMode = false;
 
     private CompanyModel companyModel = new();
@@ -136,7 +136,7 @@
 
     private void ShowAddModal()
     {
-        modalTitle = "Add Make Company";
+        modalTitle = "Add Brand";
         isEditMode = false;
         companyModel = new CompanyModel 
         {
@@ -149,7 +149,7 @@
 
     private void ShowEditModal(CompanyModel editCompany)
     {
-        modalTitle = "Edit Make Company";
+        modalTitle = "Edit Brand";
         isEditMode = true;
         companyModel = new CompanyModel
         {
