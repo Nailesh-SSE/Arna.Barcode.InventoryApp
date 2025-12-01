@@ -166,6 +166,7 @@
         {
             filteredProducts = products.Where(p => p.CategoryId == inward.CategoryId).ToList();
         }
+        StateHasChanged();
         await itemsModal.Show();
     }
 

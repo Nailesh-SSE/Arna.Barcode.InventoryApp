@@ -1,4 +1,4 @@
-using InventoryManagement.Core.Entities;
+﻿using InventoryManagement.Core.Entities;
 using InventoryManagement.Core.Enums;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.DTO;
@@ -168,9 +168,12 @@ public class InwardService : IInwardService
             entity.ProductId = model.ProductId;
             entity.UpdatedBy = model.UpdatedBy ?? 0;
             entity.UpdatedOn = model.UpdatedOn ?? DateTime.UtcNow;
+            entity.InwardUnitId = model.InwardUnitId;
             entity.InwardUnitName = model.InwardUnitName;
             entity.ItemQuantity = model.ItemQuantity;
             entity.BoxQuantity = model.BoxQuantity;
+            if (entity.InwardUnitId == (int)UnitType.PCS)
+                entity.BoxQuantity = 0;
 
             if (model.ItemQuantity > 0)
             {
@@ -687,5 +690,20 @@ public class InwardService : IInwardService
         };
     }
 
+    #endregion
+
+    #region Are All barcode Isinstock
+    public async Task<bool> AreAllBarcodesInStock(int itemId)
+    {
+        var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+
+        var barcodes = await barcodeRepo.FindAsync(b => b.InwardItemId == itemId);
+
+        // If any barcode is outwarded (IsInStock == false)
+        if (barcodes.Any(b => !b.IsInStock))
+            return false;
+
+        return true;
+    }
     #endregion
 }
