@@ -1,4 +1,4 @@
-using InventoryManagement.Core.Entities;
+﻿using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
@@ -600,5 +600,20 @@ public class InwardService : IInwardService
         };
     }
 
+    #endregion
+
+    #region Are All barcode Isinstock
+    public async Task<bool> AreAllBarcodesInStock(int itemId)
+    {
+        var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+
+        var barcodes = await barcodeRepo.FindAsync(b => b.InwardItemId == itemId);
+
+        // If any barcode is outwarded (IsInStock == false)
+        if (barcodes.Any(b => !b.IsInStock))
+            return false;
+
+        return true;
+    }
     #endregion
 }

@@ -1,5 +1,5 @@
 ﻿@inject IJSRuntime JSRuntime
-
+@inject IInwardService inwardService
 <Modal @ref="modal" Title="Manage Inward Items" Size="ModalSize.Large">
     <BodyTemplate>
         @if (SelectedInward != null)
@@ -107,7 +107,7 @@
                                                     <button type="button"
                                                             class="btn btn-primary btn-sm"
                                                             @onclick="@(() => HandleSaveItem(item))"
-                                                            disabled="@isSaving">
+                                                            disabled="@(ItemStockStatus.ContainsKey(item.Id) && !ItemStockStatus[item.Id])">
                                                         @if (isSaving && currentSavingItem == item)
                                                         {
                                                             <span class="spinner-border spinner-border-sm me-1"></span>
@@ -119,7 +119,7 @@
                                                         <button type="button"
                                                                 class="btn btn-danger btn-sm"
                                                                 @onclick="@(() => HandleDeleteItem(item.Id))"
-                                                                disabled="@isSaving">
+                                                                disabled="@(ItemStockStatus.ContainsKey(item.Id) && !ItemStockStatus[item.Id])">
                                                             Delete
                                                         </button>
                                                     }
@@ -195,11 +195,20 @@
     [Parameter] public EventCallback<InwardItemModel> OnRemoveUnsaved { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     public List<UnitModel> Units => CommonUtils.UnitList;
+    private Dictionary<int, bool> ItemStockStatus = new();
 
     public async Task Show()
     {
         ClearMessages();
         showValidation = false;
+        foreach (var item in InwardItems)
+        {
+            if (item.Id > 0)
+            {
+                bool isAllInStock = await inwardService.AreAllBarcodesInStock(item.Id);
+                ItemStockStatus[item.Id] = isAllInStock;
+            }
+        }
         await modal.ShowAsync();
     }
 
