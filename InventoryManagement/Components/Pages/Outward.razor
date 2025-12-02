@@ -63,7 +63,17 @@
 
             <GridColumn TItem="OutwardModel" HeaderText="Actions">
                 <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
-                    <Icon Name="IconName.PlusCircle" /> Add Items
+                    @if (context.IsFinished)
+                    {
+                        <Icon Name="IconName.Eye" />
+                        @: &nbsp;View Item
+                    }              
+                    else
+                    {
+                        <Icon Name="IconName.PlusCircle" />
+                      @:  &nbsp;Add Item
+                    }
+                                
                 </Button>
                 <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                     <Icon Name="IconName.PencilSquare" /> Edit
@@ -120,38 +130,43 @@
             <div class="text-end mt-3">
                 <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
                 <Button Color="ButtonColor.Primary" Type="ButtonType.Submit"> @(outward.Id > 0 ? "Update" : "Next")</Button>
-                </div>
+            </div>
         </EditForm>
     </BodyTemplate>
 </Modal>
 
 <Modal @ref="itemModal" Title="@($"Manage Items - {selectedOutward?.OutwardNo}")" Size="ModalSize.ExtraLarge">
     <BodyTemplate>
-        @if (selectedOutward != null)
-        {
+@if (selectedOutward != null)
+{
             <div class="card mb-3">
                 <div class="card-body">
                     <EditForm EditContext="@itemEditContext" OnValidSubmit="AddItemToList">
                         <DataAnnotationsValidator />
-                                                                                         
-                        <div class="row">
-                            <div class="col-md-8">
-                                <label class="form-label">Barcode <span class="text-danger">*</span></label>
-                                <InputText class="form-control" @bind-Value="newItem.BarcodeNo"
-                                           placeholder="Scan or enter barcode" @ref="barcodeInput" />
-                                <ValidationMessage For="@(() => newItem.BarcodeNo)" />
-
+                        @if (!selectedOutward.IsFinished)
+                        {
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <label class="form-label">Barcode <span class="text-danger">*</span></label>
+                                    <InputText class="form-control" @bind-Value="newItem.BarcodeNo"
+                                               placeholder="Scan or enter barcode" @ref="barcodeInput" />
+                                    <ValidationMessage For="@(() => newItem.BarcodeNo)" />
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit" class="w-100">
+                                        <Icon Name="IconName.Plus" /> Add Item
+                                    </Button>
+                                </div>
+                                @if (!string.IsNullOrEmpty(barcodeErrorMessage))
+                                {
+                                    <div class="text-danger mt-1">@barcodeErrorMessage</div>
+                                }
                             </div>
-                            <div class="col-md-4 d-flex align-items-end">
-                                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit" class="w-100">
-                                    <Icon Name="IconName.Plus" /> Add Item
-                                </Button>
-                            </div>
-                            @if (!string.IsNullOrEmpty(barcodeErrorMessage))
-                            {
-                                <div class="text-danger mt-1">@barcodeErrorMessage</div>
-                            }
-                        </div>
+                        }
+                        else
+                        {
+                          <div> </div>
+                        }
                     </EditForm>
                 </div>
             </div>
@@ -168,9 +183,12 @@
                                     <th style="width: 5%">#</th>
                                     <th style="width: 20%">Barcode</th>
                                     <th style="width: 35%">Product Name</th>
-                                    <th style="width: 15%">Quantity</th>
-                                    <th style="width: 15%">Unit</th>
-                                    <th style="width: 10%">Action</th>
+                                  
+                                    <th style="width: 10%">Unit</th>
+                                     @if (!selectedOutward.IsFinished)
+                                    {
+                                        <th style="width: 10%">Action</th>
+                                    }                             
                                 </tr>
                             </thead>
                             <tbody>
@@ -183,15 +201,22 @@
                                         <tr>
                                             <td>@(index + 1)</td>
                                             <td>@item.BarcodeNo</td>
-                                            <td>@item.ProductName</td>
-                                            <td>@item.Quantity</td>
+                                            <td>@item.ProductName</td>                                          
                                             <td>@item.Unit</td>
-                                            <td>
-                                                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small"
-                                                        @onclick="() => RemoveItem(item)">
-                                                    <Icon Name="IconName.Trash" />
-                                                </Button>
-                                            </td>
+                                            @if (!selectedOutward.IsFinished)
+                                            {
+                                                <td>
+                                                    <Button Color="ButtonColor.Danger"
+                                                    Size="ButtonSize.Small"
+                                                    @onclick="() => RemoveItem(item)">
+                                                        <Icon Name="IconName.Trash" />
+                                                    </Button>
+                                                </td>
+                                            }
+                                            else
+                                            {
+                                                <td></td>                                           
+                                            }
                                         </tr>
                                     }
                                 }
@@ -209,11 +234,19 @@
                 </div>
             </div>
 
-            <div class="text-end mt-3">
-                          <Button Color="ButtonColor.Secondary" @onclick="HideItemModal">Close</Button>
-            </div>
-        }
-    </BodyTemplate>
+            <div class="d-flex justify-content-between mt-3">
+                @if (!selectedOutward.IsFinished)
+                {
+                    <Button Color="ButtonColor.Danger" @onclick="() => FinalizeOutward(selectedOutward)">Finish</Button>
+                }
+                else
+                {
+                    <Button Color="ButtonColor.Success" data-bs-toggle="tooltip" title="This outward is already finished">Finished</Button>
+                }            
+                    <Button Color="ButtonColor.Secondary" @onclick="HideItemModal">Close</Button>
+                 </div>
+    }
+</BodyTemplate>
 </Modal>
 
 @code {
@@ -354,7 +387,7 @@
                     await LoadData();
                     outward.Id = outwardId;
                     await ShowItemModal(outward);
-                }   
+                }
                 else
                 {
                     await HideModal();
@@ -394,7 +427,22 @@
             ShowError("Connectivity issue happened, operation failed");
         }
     }
-  
+    private async Task FinalizeOutward(OutwardModel model)
+    {
+        try
+        {
+            bool isConfirm = await JSRuntime.InvokeAsync<bool>("confirm", "After This You Can't Scan/Edit Bracode/Item");
+            if (isConfirm)
+            {
+                model.IsFinished = true;
+                await OutwardService.UpdateOutwardAsync(model);
+                await HideItemModal();
+            }
+        }
+        catch (Exception ex)
+        {
+        }
+    }
     private async Task HideModal()
     {
         await modal.HideAsync();
