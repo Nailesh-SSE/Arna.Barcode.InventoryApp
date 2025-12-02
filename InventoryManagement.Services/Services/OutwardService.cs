@@ -259,7 +259,7 @@ public class OutwardService : IOutwardService
                 Id = newDetail.Id,
                 OutwardId = outwardId,
                 ProductId = inwardItem.ProductId,
-                ProductName = product?.Name ?? "Unknown",
+                ProductName = product?.SKU?? "Unknown",
                 BarcodeNo = barcodeNo,
                 Quantity = 1,
                 Unit = inwardItem.InwardUnitName

@@ -1,5 +1,5 @@
 ﻿@inject IJSRuntime JSRuntime
-
+@inject IInwardService inwardService
 <Modal @ref="modal" Title="Manage Inward Items" Size="ModalSize.Large">
     <BodyTemplate>
         @if (SelectedInward != null)
@@ -28,7 +28,7 @@
 
                     @if (InwardItems.Any())
                     {
-                        <div class="table-responsive">
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                             <table class="table table-bordered table-sm align-middle">
                                 <thead class="table-light">
                                     <tr>
@@ -46,16 +46,19 @@
                                         var itemQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "itemQuantity")}";
                                         var unitsClass = $"form-control form-control-sm {GetValidationClass(item, "units")}";
                                         var boxQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "boxQuantity")}";
+                                        var rowClasses = $"{(item.Id == 0 ? "table-warning" : "")} {(IsRowDisabled(item) ? "opacity-30 text-muted" : "")}";
 
-                                        <tr class="@(item.Id == 0 ? "table-warning" : "")">
+                                        <tr class="@rowClasses">
                                             <td>
                                                 <InputSelect class="@productClass"
-                                                @bind-Value="item.ProductId"
-                                                @onchange="@(() => ClearMessages())">
+                                                             @bind-Value="item.ProductId"
+                                                             @onchange="@(() => ClearMessages())"
+                                                             disabled="@IsRowDisabled(item)"
+                                                             title="@(IsRowDisabled(item) ? "Item is locked or out-of-stock" : "")">
                                                     <option value="0">-- Select Product --</option>
                                                     @foreach (var product in FilteredProducts)
                                                     {
-                                                        <option value="@product.Id">@product.Name (@product.ColourName.ToUpper())</option>
+                                                        <option value="@product.Id">@product.SKU</option>
                                                     }
                                                 </InputSelect>
                                                 @if (showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))
@@ -66,7 +69,9 @@
 
                                             <td>
                                                 <InputSelect class="@unitsClass"
-                                                @bind-Value="item.InwardUnitId">
+                                                             @bind-Value="item.InwardUnitId"
+                                                             disabled="@IsRowDisabled(item)"
+                                                             title="@(IsRowDisabled(item) ? "Item is locked or out-of-stock" : "")">
                                                     <option value="0">-- Select Units --</option>
                                                     @foreach (var unit in Units)
                                                     {
@@ -81,8 +86,10 @@
 
                                             <td>
                                                 <InputNumber class="@itemQuantityClass"
-                                                @bind-Value="item.ItemQuantity"
-                                                @onchange="@(() => ClearMessages())" />
+                                                             @bind-Value="item.ItemQuantity"
+                                                             @onchange="@(() => ClearMessages())"
+                                                             disabled="@IsRowDisabled(item)"
+                                                             title="@(IsRowDisabled(item) ? "Item is locked or out-of-stock" : "")" />
                                                 @if (showValidation && item.ItemQuantity <= 0 && IsLastUnsavedItem(item))
                                                 {
                                                     <small class="text-danger">Quantity must be greater than 0</small>
@@ -90,11 +97,13 @@
                                             </td>
 
                                             <td>
-                                                @if(IsRequired(item))
+                                                @if (IsRequired(item))
                                                 {
                                                     <InputNumber class="@boxQuantityClass"
                                                                  @bind-Value="item.BoxQuantity"
-                                                                 @onchange="@(() => ClearMessages())" />
+                                                                 @onchange="@(() => ClearMessages())"
+                                                                 disabled="@IsRowDisabled(item)"
+                                                                 title="@(IsRowDisabled(item) ? "Item is locked or out-of-stock" : "")" />
                                                     @if (showValidation && item.BoxQuantity <= 0 && IsRequired(item) && IsLastUnsavedItem(item))
                                                     {
                                                         <small class="text-danger">BoxQuantity must be greater than 0</small>
@@ -107,7 +116,8 @@
                                                     <button type="button"
                                                             class="btn btn-primary btn-sm"
                                                             @onclick="@(() => HandleSaveItem(item))"
-                                                            disabled="@isSaving">
+                                                            disabled="@(IsRowDisabled(item) || (isSaving && currentSavingItem != null && currentSavingItem != item))"
+                                                            title="@(IsRowDisabled(item) ? "Cannot edit this item" : "")">
                                                         @if (isSaving && currentSavingItem == item)
                                                         {
                                                             <span class="spinner-border spinner-border-sm me-1"></span>
@@ -119,11 +129,12 @@
                                                         <button type="button"
                                                                 class="btn btn-danger btn-sm"
                                                                 @onclick="@(() => HandleDeleteItem(item.Id))"
-                                                                disabled="@isSaving">
+                                                                disabled="@IsRowDisabled(item)"
+                                                                title="@(IsRowDisabled(item) ? "Cannot delete this item" : "")">
                                                             Delete
                                                         </button>
 
-                                                        <button type="button" class="btn btn-dark btn-sm"
+                                                        <button type="button" class="btn btn-dark btn-sm opacity-10"
                                                                 title="Download Barcodes"
                                                                 @onclick="@(() => OnDownloadPdf.InvokeAsync(item))">
                                                             <Icon Name="IconName.UpcScan" /> PDF
@@ -201,13 +212,23 @@
     [Parameter] public EventCallback<InwardItemModel> OnRemoveUnsaved { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<InwardItemModel> OnDownloadPdf { get; set; }
+    [Parameter] public Dictionary<int, bool> LockedItems { get; set; } = new();
 
     public List<UnitModel> Units => CommonUtils.UnitList;
+    private Dictionary<int, bool> ItemStockStatus = new();
 
     public async Task Show()
     {
         ClearMessages();
         showValidation = false;
+        foreach (var item in InwardItems)
+        {
+            if (item.Id > 0)
+            {
+                bool isAllInStock = await inwardService.AreAllBarcodesInStock(item.Id);
+                ItemStockStatus[item.Id] = isAllInStock;
+            }
+        }
         await modal.ShowAsync();
     }
 
@@ -256,6 +277,13 @@
             }
         }
 
+        if (IsRowDisabled(item))
+        {
+            errorMessage = "This item is locked and cannot be edited.";
+            StateHasChanged();
+            return;
+        }
+
         isSaving = true;
         currentSavingItem = item;
         StateHasChanged();
@@ -292,7 +320,15 @@
 
     private async Task HandleDeleteItem(int itemId)
     {
-        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",$"Are you sure you want to remove item?");
+
+        if (LockedItems.TryGetValue(itemId, out var locked) && locked)
+        {
+            errorMessage = "This item is linked to sale/return/outward and cannot be deleted.";
+            StateHasChanged();
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to remove item?");
 
         if (!confirmed) return;
         ClearMessages();
@@ -385,5 +421,13 @@
     {
         var inwardUnitName = Units.FirstOrDefault(u => u.Id == item.InwardUnitId)?.Name ?? string.Empty;
         return inwardUnitName == "BOX";
+    }
+
+    private bool IsRowDisabled(InwardItemModel item)
+    {
+        if (item.Id == 0) return false; // unsaved rows remain editable
+        var outOfStock = ItemStockStatus.TryGetValue(item.Id, out var inStock) && !inStock;
+        var locked = LockedItems.TryGetValue(item.Id, out var isLocked) && isLocked;
+        return outOfStock || locked;
     }
 }
