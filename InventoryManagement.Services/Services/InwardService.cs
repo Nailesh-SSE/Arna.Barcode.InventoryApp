@@ -45,7 +45,7 @@ public class InwardService : IInwardService
         return model;
     }
 
-    public async Task<bool> CreateAsync(InwardModel model)
+    public async Task<int> CreateAsync(InwardModel model)
     {
         try
         {
@@ -61,13 +61,13 @@ public class InwardService : IInwardService
 
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
-            return true;
+            return inward.Id;
         }
         catch (Exception ex)
         {
             await _unitOfWork.RollbackTransactionAsync();
             Console.WriteLine($"Error creating inward: {ex.Message}");
-            return false;
+            return 0;
         }
     }
 

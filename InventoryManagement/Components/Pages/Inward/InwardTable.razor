@@ -36,7 +36,7 @@
 
         <GridColumn TItem="InwardModel" HeaderText="Actions">
             <div class="d-flex flex-wrap gap-1">
-                <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context.Id)">
+                <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
                     <Icon Name="IconName.Plus" /> Add Items
                 </Button>
 
@@ -58,5 +58,5 @@
     [Parameter] public List<CompanyModel> ShipCompanies { get; set; } = new();
     [Parameter] public EventCallback<InwardModel> OnEdit { get; set; }
     [Parameter] public EventCallback<int> OnDelete { get; set; }
-    [Parameter] public EventCallback<int> OnAddItems { get; set; }
+    [Parameter] public EventCallback<InwardModel?> OnAddItems { get; set; }
 }
