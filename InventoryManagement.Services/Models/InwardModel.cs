@@ -39,4 +39,5 @@ public class InwardItemModel
     public int InwardUnitId { get; set; }
     public string? InwardUnitName { get; set; }
     public decimal BoxQuantity { get; set; }
+    public string ProductSearchText { get; set; } = string.Empty;
 }
