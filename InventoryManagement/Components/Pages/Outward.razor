@@ -119,8 +119,8 @@
             }
             <div class="text-end mt-3">
                 <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
-            </div>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit"> @(outward.Id > 0 ? "Update" : "Next")</Button>
+                </div>
         </EditForm>
     </BodyTemplate>
 </Modal>
@@ -133,7 +133,7 @@
                 <div class="card-body">
                     <EditForm EditContext="@itemEditContext" OnValidSubmit="AddItemToList">
                         <DataAnnotationsValidator />
-
+                                                                                         
                         <div class="row">
                             <div class="col-md-8">
                                 <label class="form-label">Barcode <span class="text-danger">*</span></label>
@@ -210,7 +210,7 @@
             </div>
 
             <div class="text-end mt-3">
-                <Button Color="ButtonColor.Secondary" @onclick="HideItemModal">Close</Button>
+                          <Button Color="ButtonColor.Secondary" @onclick="HideItemModal">Close</Button>
             </div>
         }
     </BodyTemplate>
@@ -333,21 +333,33 @@
             if (isEditMode)
             {
                 result = await OutwardService.UpdateOutwardAsync(outward);
+                if (result)
+                {
+                    await HideModal();
+                    await LoadData();
+                }
+                else
+                {
+                    await HideModal();
+                    ShowError("Connectivity issue happened, operation failed");
+                }
             }
             else
             {
-                result = await OutwardService.CreateOutwardAsync(outward);
-            }
+                var outwardId = await OutwardService.CreateOutwardAsync(outward);
 
-            if (result)
-            {
-                await HideModal();
-                await LoadData();
-            }
-            else
-            {
-                await HideModal();
-                ShowError("Connectivity issue happened, operation failed");
+                if(outwardId!=0)
+                {
+                    await HideModal();
+                    await LoadData();
+                    outward.Id = outwardId;
+                    await ShowItemModal(outward);
+                }   
+                else
+                {
+                    await HideModal();
+                    ShowError("Connectivity issue happened, operation failed");
+                }
             }
         }
         catch (Exception ex)
@@ -382,7 +394,7 @@
             ShowError("Connectivity issue happened, operation failed");
         }
     }
-
+  
     private async Task HideModal()
     {
         await modal.HideAsync();

@@ -30,7 +30,7 @@ public class OutwardService : IOutwardService
         return outward == null ? null : MapToModel(outward);
     }
 
-    public async Task<bool> CreateOutwardAsync(OutwardModel model)
+    public async Task<int> CreateOutwardAsync(OutwardModel model)
     {
         try
         {
@@ -55,12 +55,12 @@ public class OutwardService : IOutwardService
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
 
-            return true;
+            return newOutward.Id;
         }
         catch
         {
             await _unitOfWork.RollbackTransactionAsync();
-            return false;
+            return 0; ;
         }
     }
 
