@@ -428,7 +428,7 @@
         var locked = LockedItems.TryGetValue(item.Id, out var isLocked) && isLocked;
         return outOfStock || locked;
     }
-}
+
 
     private async Task<AutoCompleteDataProviderResult<ProductModel>> ProductsDataProvider(AutoCompleteDataProviderRequest<ProductModel> request)
     {
@@ -462,4 +462,5 @@
             item.ProductSearchText = product.SKU;
         }
     }
+}
 }
