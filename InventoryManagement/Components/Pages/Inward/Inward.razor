@@ -78,7 +78,7 @@
         shipCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
         categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
         products = (await ProductService.GetAllProductsAsync()).Where(e => e.IsActive == true).ToList();
-  
+
         isLoading = false;
         StateHasChanged();
     }
@@ -112,6 +112,14 @@
         if(inward.CategoryId > 0 && inward.CategoryId != null)
         {
             filteredProducts = products.Where(p => p.CategoryId == inward.CategoryId).ToList();
+        }
+        foreach (var item in inwardItems)
+        {
+            var product = filteredProducts.FirstOrDefault(p => p.Id == item.ProductId);
+            if (product != null)
+            {
+                item.ProductSearchText = product.SKU;
+            }
         }
         inwardFormModal?.Show();
     }
@@ -165,6 +173,17 @@
         if (inward.CategoryId > 0 && inward.CategoryId != null)
         {
             filteredProducts = products.Where(p => p.CategoryId == inward.CategoryId).ToList();
+        }
+        if (inwardItems.Any())
+        {
+            foreach (var item in inwardItems)
+            {
+                var product = filteredProducts.FirstOrDefault(p => p.Id == item.ProductId);
+                if (product != null)
+                {
+                    item.ProductSearchText = product.SKU;
+                }
+            }
         }
         await itemsModal.Show();
     }

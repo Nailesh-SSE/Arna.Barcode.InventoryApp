@@ -42,27 +42,27 @@
                                 <tbody>
                                     @foreach (var item in InwardItems)
                                     {
-                                        var productClass = $"form-select form-select-sm {GetValidationClass(item, "product")}";
+                                        var productClass = $"form-select form-select-sm {GetValidationClass(item, "product")} w-100";
                                         var itemQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "itemQuantity")}";
                                         var unitsClass = $"form-control form-control-sm {GetValidationClass(item, "units")}";
                                         var boxQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "boxQuantity")}";
 
                                         <tr class="@(item.Id == 0 ? "table-warning" : "")">
-                                            <td>
-                                                <InputSelect class="@productClass"
-                                                @bind-Value="item.ProductId"
-                                                @onchange="@(() => ClearMessages())">
-                                                    <option value="0">-- Select Product --</option>
-                                                    @foreach (var product in FilteredProducts)
-                                                    {
-                                                        <option value="@product.Id">@product.Name (@product.ColourName.ToUpper())</option>
-                                                    }
-                                                </InputSelect>
-                                                @if (showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))
-                                                {
-                                                    <small class="text-danger">Product is required</small>
-                                                }
-                                            </td>
+                                         <td>
+                                            <AutoComplete TItem="ProductModel"
+                                                          class="@productClass"
+                                                          @bind-Value="item.ProductSearchText"
+                                                          DataProvider="ProductsDataProvider"
+                                                          PropertyName="SKU"
+                                                          Placeholder="Search product..."
+                                                          StringComparison="StringComparison.OrdinalIgnoreCase"
+                                                          OnChanged="(ProductModel product) => OnProductAutoCompleteChanged(item, product)" />
+                                        
+                                            @if (showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))
+                                            {
+                                                <small class="text-danger">Product is required</small>
+                                            }
+                                        </td>
 
                                             <td>
                                                 <InputSelect class="@unitsClass"
@@ -385,5 +385,38 @@
     {
         var inwardUnitName = Units.FirstOrDefault(u => u.Id == item.InwardUnitId)?.Name ?? string.Empty;
         return inwardUnitName == "BOX";
+    }
+
+    private async Task<AutoCompleteDataProviderResult<ProductModel>> ProductsDataProvider(AutoCompleteDataProviderRequest<ProductModel> request)
+    {
+        if (FilteredProducts == null || !FilteredProducts.Any())
+        {
+            return await Task.FromResult(new AutoCompleteDataProviderResult<ProductModel>
+            {
+                Data = Array.Empty<ProductModel>()
+            });
+        }
+    
+        var query = FilteredProducts
+            .OrderBy(p => p.Name)
+            .ToList();
+    
+        return await Task.FromResult(request.ApplyTo(query));
+    }
+
+    private void OnProductAutoCompleteChanged(InwardItemModel item, ProductModel? product)
+    {
+        ClearMessages();
+    
+        if (product is null)
+        {
+            item.ProductId = 0;
+            item.ProductSearchText = string.Empty;
+        }
+        else
+        {
+            item.ProductId = product.Id;
+            item.ProductSearchText = product.SKU;
+        }
     }
 }
