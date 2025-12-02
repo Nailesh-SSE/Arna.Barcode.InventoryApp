@@ -261,6 +261,6 @@ public class ProductService : IProductService
         var proudcts = await proudctRepository.GetAllAsync();
         var product = proudcts.Where(a => a.IsActive && !a.IsDeleted).OrderByDescending(a => a.Id).FirstOrDefault();
         model.SerialNumber = product != null ? product.SerialNumber + 1 : 0;
-        model.SKU = model.Name + "-" + model.SerialNumber;
+        model.SKU = model.MakeCompany + " " + model.Name + " (" + model.ColourName +")";
     }
-}
+} 

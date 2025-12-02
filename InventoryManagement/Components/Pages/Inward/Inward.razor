@@ -25,8 +25,9 @@
 
     @if (isLoading)
     {
-        <div class="text-center py-5">
-            <div class="spinner-border"></div>
+        <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-50"
+             style="z-index: 1050;">
+            <div class="spinner-border text-light" role="status"></div>
         </div>
     }
     else
@@ -40,7 +41,7 @@
 
 <InwardItemsModal @ref="itemsModal" SelectedInward="selectedInward" InwardItems="inwardItems" FilteredProducts="filteredProducts"
                   OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnDownloadPdf="DownloadSingleItemPdf" OnAddItem="AddNewItemRow"
-                  OnRemoveUnsaved="RemoveUnsavedItem"  OnClose="HideItemModal" />
+                  OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" />
 
 @code {
     private List<InwardModel> inwards = new();
@@ -60,7 +61,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await base.OnInitializedAsync(); 
+        await base.OnInitializedAsync();
 
         if (!IsAuthenticated)
         {
@@ -92,7 +93,7 @@
             InwardDate = DateTime.Now,
             InwardTime = DateTime.Now.TimeOfDay,
             IsActive = true,
-            CreatedBy = Convert.ToInt32(CurrentUserId), 
+            CreatedBy = Convert.ToInt32(CurrentUserId),
             CreatedOn = DateTime.Now
         };
         inwardItems = new();
@@ -109,7 +110,7 @@
         inward.UpdatedOn = DateTime.Now;
         inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(edit.Id);
         filteredProducts = products;
-        if(inward.CategoryId > 0 && inward.CategoryId != null)
+        if (inward.CategoryId > 0 && inward.CategoryId != null)
         {
             filteredProducts = products.Where(p => p.CategoryId == inward.CategoryId).ToList();
         }
@@ -126,6 +127,7 @@
 
     private async Task SaveInward()
     {
+        isLoading = true;
         inward.InwardDate = inward.InwardDate.Date.Add(inward.InwardTime);
         inward.InwardItems = inwardItems;
 
@@ -135,16 +137,24 @@
             inward.UpdatedBy = Convert.ToInt32(CurrentUserId);
             inward.UpdatedOn = DateTime.Now;
             await InwardService.UpdateAsync(inward);
+            await HideModal();
+            await LoadData();
         }
         else
         {
             inward.CreatedBy = Convert.ToInt32(CurrentUserId);
             inward.CreatedOn = DateTime.Now;
-            await InwardService.CreateAsync(inward);
-        }
+            var inwardId = await InwardService.CreateAsync(inward);
 
-        await HideModal();
-        await LoadData();
+            await HideModal();
+            await LoadData();
+
+            if (inwardId != 0)
+            {
+                inward.Id = inwardId;
+                await OpenAddItemModal(inward);
+            }
+        }
     }
 
     private async Task DeleteInward(int id)
@@ -153,7 +163,7 @@
         if (isConfirm)
         {
             var deletedBy = Convert.ToInt32(CurrentUserId);
-            await InwardService.DeleteAsync(id,deletedBy);
+            await InwardService.DeleteAsync(id, deletedBy);
             await LoadData();
         }
     }
@@ -163,29 +173,31 @@
         await inwardFormModal.Hide();
     }
 
-    private async Task OpenAddItemModal(int inwardId)
+    private async Task OpenAddItemModal(InwardModel inward)
     {
-        selectedInward = inwards.FirstOrDefault(i => i.Id == inwardId);
+        selectedInward = inwards.FirstOrDefault(i => i.Id == inward.Id);
         if (selectedInward == null) return;
 
-        inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(inwardId);
+        inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(inward.Id);
         filteredProducts = products;
         if (inward.CategoryId > 0 && inward.CategoryId != null)
         {
             filteredProducts = products.Where(p => p.CategoryId == inward.CategoryId).ToList();
         }
-        if (inwardItems.Any())
-        {
-            foreach (var item in inwardItems)
-            {
-                var product = filteredProducts.FirstOrDefault(p => p.Id == item.ProductId);
-                if (product != null)
-                {
-                    item.ProductSearchText = product.SKU;
-                }
-            }
-        }
+      if (inwardItems.Any())
+  {
+      foreach (var item in inwardItems)
+      {
+          var product = filteredProducts.FirstOrDefault(p => p.Id == item.ProductId);
+          if (product != null)
+          {
+              item.ProductSearchText = product.SKU;
+          }
+      }
+  }
+        StateHasChanged();
         await itemsModal.Show();
+        isLoading = false;
     }
 
     private async Task HideItemModal()
