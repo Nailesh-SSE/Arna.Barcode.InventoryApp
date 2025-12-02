@@ -686,7 +686,8 @@ public class InwardService : IInwardService
             InwardUnitName = entity.InwardUnitName,
             BatchNo = entity.BatchNo,
             CreatedBy = entity.CreatedBy,
-            BoxQuantity = entity.BoxQuantity
+            BoxQuantity = entity.BoxQuantity,
+            ProductSearchText = entity.Product.SKU
         };
     }
 
