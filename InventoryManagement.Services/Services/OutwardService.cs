@@ -2,6 +2,7 @@ using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagement.Services;
 
@@ -17,7 +18,14 @@ public class OutwardService : IOutwardService
     public async Task<List<OutwardModel>> GetAllOutwardsAsync()
     {
         var outwardRepository = _unitOfWork.GetRepository<Outward>();
-        var outwards = await outwardRepository.FindAsync(o => !o.IsDeleted);
+
+        var outwards = await outwardRepository
+                             .GetQueryable()
+                             .Where(o => !o.IsDeleted)
+                             .OrderByDescending(o => o.OutwardDate)
+                             .ThenByDescending(o => o.Id)
+                             .ToListAsync();
+        // var outwards = await outwardRepository.FindAsync(o => !o.IsDeleted);
 
         return outwards.Select(MapToModel).ToList();
     }
@@ -30,7 +38,7 @@ public class OutwardService : IOutwardService
         return outward == null ? null : MapToModel(outward);
     }
 
-    public async Task<bool> CreateOutwardAsync(OutwardModel model)
+    public async Task<int> CreateOutwardAsync(OutwardModel model)
     {
         try
         {
@@ -47,6 +55,7 @@ public class OutwardService : IOutwardService
                 Remarks = model.Remarks,
                 IsActive = true,
                 IsDeleted = false,
+                IsFinished =false,
                 CreatedBy = model.CreatedBy,
                 CreatedOn = model.CreatedOn
             };
@@ -55,12 +64,12 @@ public class OutwardService : IOutwardService
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
 
-            return true;
+            return newOutward.Id;
         }
         catch
         {
             await _unitOfWork.RollbackTransactionAsync();
-            return false;
+            return 0; ;
         }
     }
 
@@ -80,6 +89,7 @@ public class OutwardService : IOutwardService
             existing.IsActive = model.IsActive;
             existing.UpdatedBy = model.UpdatedBy;
             existing.UpdatedOn = DateTime.UtcNow;
+            existing.IsFinished = model.IsFinished;
 
             outwardRepository.Update(existing);
             await _unitOfWork.SaveChangesAsync();
@@ -327,7 +337,7 @@ public class OutwardService : IOutwardService
 
         if (lastOutward != null && int.TryParse(lastOutward.OutwardNo, out int lastNumber))
         {
-            model.OutwardNo = (lastNumber + 1).ToString("D6"); 
+            model.OutwardNo = (lastNumber + 1).ToString("D6");
         }
         else
         {
@@ -344,7 +354,8 @@ public class OutwardService : IOutwardService
             OutwardDate = entity.OutwardDate,
             BillToCompanyId = entity.BillToCompanyId,
             Remarks = entity.Remarks,
-            IsActive = entity.IsActive
+            IsActive = entity.IsActive,
+            IsFinished=entity.IsFinished
         };
     }
 }
