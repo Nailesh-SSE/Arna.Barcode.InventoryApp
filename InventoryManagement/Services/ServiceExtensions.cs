@@ -39,6 +39,7 @@ public static class ServiceExtensions
         services.AddScoped<IOutwardService, OutwardService>();
         services.AddScoped<ISaleReturnService, SaleReturnService>();
         services.AddScoped<IColourService, ColourService>();
+        services.AddScoped<IPlatformService, PlatformService>();
 
         // Register generators
         services.AddTransient<IInwardReportService, InwardReportGenerator>();
