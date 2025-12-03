@@ -139,32 +139,14 @@
                 <div class="col-md-6 mb-3 position-relative">
                     <label class="form-label">Colour <span class="text-danger">*</span></label>
 
-                    <!-- visible search input -->
-                    <input class="form-control"
-                           placeholder="Search colour..."
-                           @bind="colourSearch"
-                           @oninput="OnColourSearch"
-                           @onfocus="ShowColourList" />
-
-                    <!-- hidden field to participate in EditContext validation -->
-                    <input type="hidden" @bind="productModel.ColourId" />
-
+                    <AutoComplete TItem="ColourModel"
+                                  @bind-Value="productModel.ColourSearchText"
+                                  DataProvider="ColoursDataProvider"
+                                  PropertyName="Name"
+                                  Placeholder="Search Colour..."
+                                  StringComparison="StringComparison.OrdinalIgnoreCase"
+                                  OnChanged="OnColourChanged" />
                     <ValidationMessage For="@(() => productModel.ColourId)" />
-
-                    <!-- suggestions list -->
-                    @if (showColourList && filteredColours?.Any() == true)
-                    {
-                        <ul class="list-group position-absolute w-100" style="z-index: 1200; max-height: 200px; overflow:auto;">
-                            @foreach (var c in filteredColours.Take(20))
-                            {
-                                <li class="list-group-item list-group-item-action"
-                                    style="cursor:pointer"
-                                    @onclick="() => SelectColour(c)">
-                                    @c.Name
-                                </li>
-                            }
-                        </ul>
-                    }
                 </div>
             </div>
 
@@ -236,8 +218,6 @@
     private void ShowAddModal()
     {
         modalTitle = "Add Product";
-        colourSearch = string.Empty;
-        showColourList = false;
         isEditMode = false;
         productModel = new ProductModel
         {
@@ -271,7 +251,8 @@
             ColourId = editProduct.ColourId,
             ColourName = editProduct.ColourName,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
-            UpdatedOn = DateTime.UtcNow
+            UpdatedOn = DateTime.UtcNow,
+            ColourSearchText = editProduct.ColourName
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -445,51 +426,47 @@
         ValidateColour();
     }
 
-    private string colourSearch = string.Empty;
-    private List<ColourModel> filteredColours = new();
-    private bool showColourList = false;
-
-    // call this in LoadData() after Colours loaded, to initialise the filtered list
-    private void InitColourFilter()
+    private async Task<AutoCompleteDataProviderResult<ColourModel>> ColoursDataProvider(AutoCompleteDataProviderRequest<ColourModel> request)
     {
-        filteredColours = Colours.ToList();
+        if (Colours == null || !Colours.Any())
+        {
+            return await Task.FromResult(new AutoCompleteDataProviderResult<ColourModel>
+            {
+                Data = Array.Empty<ColourModel>()
+            });
+        }
+        var searchText = request.Filter?.Value ?? string.Empty;
+
+        if (request.Filter == null || string.IsNullOrWhiteSpace(request.Filter.Value))
+        {
+            return new AutoCompleteDataProviderResult<ColourModel>
+            {
+                Data = Colours.OrderBy(c => c.Name).ToList()
+            };
+        }
+
+        var query = Colours.Where(c => c.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(p => p.Name)
+            .ToList();
+
+        return await Task.FromResult(request.ApplyTo(query));
     }
 
-    // runs as user types
-    private void OnColourSearch(ChangeEventArgs e)
+    private void OnColourChanged(ColourModel colour)
     {
-        colourSearch = e.Value?.ToString() ?? string.Empty;
-        FilterColours();
-        showColourList = true;
-    }
-
-    // show the list (on focus)
-    private void ShowColourList()
-    {
-        FilterColours();
-        showColourList = true;
-    }
-
-    private void FilterColours()
-    {
-        if (string.IsNullOrWhiteSpace(colourSearch))
-            filteredColours = Colours.ToList();
+        if (colour == null)
+        {
+            productModel.ColourId = 0;
+            productModel.ColourSearchText = string.Empty;
+        }
         else
         {
-            var q = colourSearch.Trim().ToLowerInvariant();
-            filteredColours = Colours
-                .Where(c => !string.IsNullOrEmpty(c.Name) && c.Name.ToLowerInvariant().Contains(q))
-                .ToList();
+            productModel.ColourId = colour.Id;
+            productModel.ColourName = colour.Name;
+            productModel.ColourSearchText = colour.Name;
         }
-        StateHasChanged();
-    }
 
-    private void SelectColour(ColourModel c)
-    {
-        productModel.ColourId = c.Id;
-        productModel.ColourName = c.Name;
-        colourSearch = c.Name;
-        showColourList = false;
         ValidateColour();
     }
+
 }
