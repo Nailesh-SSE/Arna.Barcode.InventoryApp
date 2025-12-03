@@ -320,7 +320,7 @@
         try
         {
             await ValidateMakeCompany();
-            await ValidateCateogry();
+            await ValidateCategory();
             await ValidateName();
             await ValidateUnit();
             await ValidateColour();
@@ -360,7 +360,7 @@
         editContext.NotifyValidationStateChanged();
     }
 
-    private async Task ValidateCateogry()
+    private async Task ValidateCategory()
     {
         messageStore.Clear(() => productModel.CategoryId);
         if (productModel.CategoryId == 0)
@@ -413,7 +413,7 @@
     private void HandleCategoryChange(ChangeEventArgs e)
     {
         productModel.CategoryId = Convert.ToInt32(e.Value);
-        ValidateCateogry();
+        ValidateCategory();
     }
 
     private void HandleUnitChange(ChangeEventArgs e)
