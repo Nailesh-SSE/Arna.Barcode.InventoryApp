@@ -138,7 +138,9 @@ public class ProductService : IProductService
             var category = await categoryRepository.GetByIdAsync(productModel.CategoryId);
             if (category == null)
                 return false;
-
+           
+            await GenerateProudctSkuAndSquenceNumberAsync(productModel);
+            
             var ProductRepository = _unitOfWork.GetRepository<Product>();
             var existingProduct = await ProductRepository.GetByIdAsync(productModel.Id);
 
