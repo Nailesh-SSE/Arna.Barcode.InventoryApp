@@ -1,3 +1,5 @@
+﻿product fix the autocomplete problem and working fine
+
 @page "/products"
 @using InventoryManagement.Core.Enums
 @inject IJSRuntime JS
@@ -185,7 +187,7 @@
     private List<UnitModel> Units => CommonUtils.UnitList;
 
 
-  
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -435,17 +437,8 @@
                 Data = Array.Empty<ColourModel>()
             });
         }
-        var searchText = request.Filter?.Value ?? string.Empty;
 
-        if (request.Filter == null || string.IsNullOrWhiteSpace(request.Filter.Value))
-        {
-            return new AutoCompleteDataProviderResult<ColourModel>
-            {
-                Data = Colours.OrderBy(c => c.Name).ToList()
-            };
-        }
-
-        var query = Colours.Where(c => c.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+        var query = Colours
             .OrderBy(p => p.Name)
             .ToList();
 
