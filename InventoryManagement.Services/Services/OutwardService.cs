@@ -1,18 +1,24 @@
+﻿using InventoryManagement.Core.Data;
 using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
+using InventoryManagement.Services.DTO;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
 using Microsoft.EntityFrameworkCore;
+using NPOI.SS.Formula.Functions;
 
 namespace InventoryManagement.Services;
 
 public class OutwardService : IOutwardService
 {
     private readonly IUnitOfWork _unitOfWork;
-
-    public OutwardService(IUnitOfWork unitOfWork)
+    private readonly OutwardPdfService _pdfService;
+    private readonly InventoryDbContext _context;
+    public OutwardService(IUnitOfWork unitOfWork, OutwardPdfService pdfService, InventoryDbContext context)
     {
         _unitOfWork = unitOfWork;
+        _pdfService = pdfService;
+        _context = context;
     }
 
     public async Task<List<OutwardModel>> GetAllOutwardsAsync()
@@ -53,10 +59,10 @@ public class OutwardService : IOutwardService
                 OutwardDate = model.OutwardDate,
                 BillToCompanyId = model.BillToCompanyId,
                 PlatformId = model.PlatformId,
-                Remarks = model.Remarks,    
+                Remarks = model.Remarks,
                 IsActive = true,
                 IsDeleted = false,
-                IsFinished =false,
+                IsFinished = false,
                 CreatedBy = model.CreatedBy,
                 CreatedOn = model.CreatedOn
             };
@@ -222,7 +228,7 @@ public class OutwardService : IOutwardService
         return new BarcodeValidationResult { IsValid = true };
     }
 
-    public async Task<OutWardItemModel?> AddOutwardItemAsync(int outwardId, string barcodeNo,int userid)
+    public async Task<OutWardItemModel?> AddOutwardItemAsync(int outwardId, string barcodeNo, int userid)
     {
         try
         {
@@ -252,10 +258,10 @@ public class OutwardService : IOutwardService
                 Quantity = 1,
                 Unit = inwardItem.InwardUnitName,
                 BarcodeNo = barcodeNo,
-                CreatedOn=DateTime.UtcNow,
-                CreatedBy=userid,
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = userid,
                 IsDeleted = false,
-                IsActive= true
+                IsActive = true
             };
 
             await detailRepository.AddAsync(newDetail);
@@ -271,7 +277,7 @@ public class OutwardService : IOutwardService
                 Id = newDetail.Id,
                 OutwardId = outwardId,
                 ProductId = inwardItem.ProductId,
-                ProductName = product?.SKU?? "Unknown",
+                ProductName = product?.SKU ?? "Unknown",
                 BarcodeNo = barcodeNo,
                 Quantity = 1,
                 Unit = inwardItem.InwardUnitName
@@ -358,7 +364,34 @@ public class OutwardService : IOutwardService
             PlatformId = entity.PlatformId,
             Remarks = entity.Remarks,
             IsActive = entity.IsActive,
-            IsFinished=entity.IsFinished
+            IsFinished = entity.IsFinished
         };
+    }
+    public async Task<byte[]> GenerateOutwardPdf(int outwardId)
+    {
+        var repo = _unitOfWork.GetRepository<Outward>();
+
+        var outwardData = await _context.Outwards
+            .Where(o => o.Id == outwardId)
+            .Select(o => new
+            {
+                o.Id,
+                o.BillToCompanyId,
+                CompanyName = o.BillToCompany.Name,
+                TotalQuantity = o.OutwardDetails.Sum(d => d.Quantity)
+            })
+            .FirstOrDefaultAsync();
+
+        if (outwardData == null)
+            throw new Exception("Outward not found");
+
+        var model = new OutwardPdfSummeryDto
+        {
+            Id = outwardData.Id,
+            BillToCompanyId = outwardData.BillToCompanyId,
+            CompanyName = outwardData.CompanyName,
+            TotalQuantity = outwardData.TotalQuantity
+        };
+        return _pdfService.GeneratePdf(model);
     }
 }

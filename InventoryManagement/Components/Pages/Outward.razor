@@ -2,6 +2,7 @@
 @inject IOutwardService OutwardService
 @inject ICompanyService CompanyService
 @inject IPlatformService PlatformService
+@inject BlazorDownloadFile.IBlazorDownloadFileService DownloadFileService
 @inject IJSRuntime JSRuntime
 @inherits InventoryManagement.Components.Auth.AuthComponentBase
 <PageTitle>Outward Management</PageTitle>
@@ -87,6 +88,9 @@
                 @* <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteOutward(context.Id)">
                     <Icon Name="IconName.Trash" /> Delete
                 </Button> *@
+                <Button Color="ButtonColor.Info" Size="ButtonSize.Small" @onclick="() => DownloadPdf(context.Id)">
+                    <Icon Name="IconName.FileEarmarkPdf" /> PDF
+                </Button>
             </GridColumn>
         </Grid>
     }
@@ -579,6 +583,17 @@
         selectedOutward = null;
         itemList.Clear();
     }
+
+   private async Task DownloadPdf(int id)
+   {
+        var pdfBytes = await OutwardService.GenerateOutwardPdf(id);
+
+        await DownloadFileService.DownloadFile(
+            $"Outward_{id}.pdf",
+            pdfBytes,
+            "application/pdf"
+        );
+   }
 
     #endregion
 

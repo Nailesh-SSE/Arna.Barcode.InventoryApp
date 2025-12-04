@@ -9,7 +9,9 @@
   <ItemGroup>
     <PackageReference Include="iTextSharp" Version="5.5.13.4" />
     <PackageReference Include="NPOI" Version="2.7.5" />
+    <PackageReference Include="NReco.PdfGenerator" Version="1.2.1" />
     <PackageReference Include="PDFsharp" Version="6.2.2" />
+    <PackageReference Include="QRCoder" Version="1.7.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -50,6 +50,7 @@ public static class ServiceExtensions
         services.AddScoped<ProtectedLocalStorage>();
         services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
         services.AddScoped<CustomAuthStateProvider>();
+        services.AddScoped<OutwardPdfService>();
 
         return services;
     }
