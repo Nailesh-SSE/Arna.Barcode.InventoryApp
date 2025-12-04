@@ -1,10 +1,5 @@
 ﻿using InventoryManagement.Core.Entities;
 using InventoryManagement.Services.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace InventoryManagement.Services.Interfaces
 {
@@ -16,7 +11,8 @@ namespace InventoryManagement.Services.Interfaces
         Task<bool> CreateColourAsync(ColourModel colourModel);
         Task<bool> UpdateColourAsync(ColourModel colourModel);
         Task<bool> DeleteColourAsync(int id,int deletedBy);
-        Task<bool> IsColourAndNameUniqueAsync(string name, string code, int? id = null);
+        Task<bool> IsColourCodeUnique( string code, int? id = null);
+        Task<bool> IsColourNameUnique(string Name, int? id = null);
 
     }
 }
