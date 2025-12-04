@@ -10,6 +10,8 @@ public class OutwardModel:CommonModel
     public int BillToCompanyId { get; set; }
     public string? Remarks { get; set; }
     public List<OutWardItemModel> OutwardItems { get; set; } = new();
+    public bool IsFinished { get; set; } = false;
+
 }
 
 public class OutWardItemModel
