@@ -21,12 +21,15 @@ public class SaleReturn : Common
     [Required]
     public ReturnType ReturnType { get; set; }
 
-    [Required]
     [StringLength(100)]
     public string BarcodeNo { get; set; } = string.Empty;
 
     [Required]
     public int Quantity { get; set; } = 1;
+
+    public int BoxQuantity { get; set; } = 0;
+    [Required]
+    public int UnitId { get; set; } 
 
     [StringLength(500)]
     public string? Reason { get; set; }
@@ -34,5 +37,16 @@ public class SaleReturn : Common
     [StringLength(500)]
     public string? Remarks { get; set; }
 
+    [Required]
+    public DateTime BillingDate { get; set; }
+
+    [Required]
+    public int ProductId { get; set; }
+
+    public bool IsTakeInStock { get; set; }        
+    public int? ReturnInwardItemId { get; set; }     
+   
     public virtual Company BillToCompany { get; set; } = null!;
+
+    public virtual Product Product { get; set; }
 }

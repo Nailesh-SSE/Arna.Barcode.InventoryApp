@@ -1,0 +1,133 @@
+﻿<Modal @ref="modal" Title="@Title" Size="ModalSize.Large">
+    <BodyTemplate>
+        <EditForm EditContext="@editContext" OnValidSubmit="HandleSubmit">
+            <DataAnnotationsValidator />
+
+            <div class="modal-content-custom">
+                <div class="modal-body-section">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label">Inward Date <span class="text-danger">*</span></label>
+                            <InputDate class="form-control" @bind-Value="Inward.InwardDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                            <ValidationMessage For="@(() => Inward.InwardDate)" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Inward Time</label>
+                            <input type="time" class="form-control"
+                                   value="@Inward.InwardTime.ToString(@"hh\:mm")"
+                                   @onchange="OnTimeChanged" required />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Ship Company <span class="text-danger">*</span></label>
+                             <InputSelect class="form-select" @bind-Value="Inward.ShipMentCompanyId">
+                                <option value="0">-- Select Company --</option>
+                                @foreach (var company in ShipCompanies)
+                                {
+                                    <option value="@company.Id">@company.Name</option>
+                                }
+                            </InputSelect>
+                        <ValidationMessage For="@(() => Inward.ShipMentCompanyId)" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Category</label>
+                            <InputSelect class="form-select" @bind-Value="Inward.CategoryId">
+                                <option value="">-- All Categories --</option>
+                                @foreach (var cat in Categories)
+                                {
+                                    <option value="@cat.Id">@cat.Name</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 mt-2">
+                        <label class="form-label">Remarks</label>
+                        <InputText class="form-control" @bind-Value="Inward.Remarks" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 ms-1">
+                            @if (Inward.Id > 0)
+                            {
+                                <div class="form-check mt-3">
+                                    <InputCheckbox id="isActiveCheck" class="form-check-input" @bind-Value="Inward.IsActive" />
+                                    <label class="form-check-label" for="isActiveCheck">Is Active</label>
+                                </div>
+                            }
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer-section mt-3 text-end">
+                    <button type="button" class="btn btn-secondary me-2" @onclick="HandleCancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary"> Next</button>
+                </div>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+@code {
+    private Modal modal = new();
+    private EditContext? editContext;
+    private ValidationMessageStore? validationMessage;
+    private string? selectedCategoryId;
+
+    [Parameter] public string Title { get; set; } = "Inward Form";
+    [Parameter] public InwardModel Inward { get; set; } = new();
+    [Parameter] public List<CompanyModel> ShipCompanies { get; set; } = new();
+    [Parameter] public List<CategoryModel> Categories { get; set; } = new();
+    [Parameter] public List<ProductModel> Products { get; set; } = new();
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        InitializeEditContext();
+    }
+
+    private void InitializeEditContext()
+    {
+        editContext = new EditContext(Inward);
+        validationMessage = new ValidationMessageStore(editContext);
+    }
+
+    public async Task Show()
+    {
+        selectedCategoryId = null;
+        InitializeEditContext();
+        await modal.ShowAsync();
+    }
+
+    public async Task Hide()
+    {
+        await modal.HideAsync();
+    }
+
+    private void OnTimeChanged(ChangeEventArgs e)
+    {
+        if (TimeSpan.TryParse(e.Value?.ToString(), out TimeSpan time))
+            Inward.InwardTime = time;
+    }
+
+    private void OnCategoryChanged(ChangeEventArgs e)
+    {
+        selectedCategoryId = e.Value?.ToString();
+        StateHasChanged();
+    }
+
+    private async Task HandleSubmit()
+    {
+        await OnSave.InvokeAsync();
+    }
+
+    private async Task HandleCancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+}

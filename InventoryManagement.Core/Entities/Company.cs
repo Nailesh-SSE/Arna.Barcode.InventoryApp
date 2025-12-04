@@ -4,22 +4,26 @@ using InventoryManagement.Core.Enums;
 
 namespace InventoryManagement.Core.Entities;
 
-public class Company : Common
+public class Company : Common 
 {
     [Key]
     public int Id { get; set; }
 
-    [Required(ErrorMessage = "Company name is required")]
+    [Required]
     [StringLength(100)]
     public string Name { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Company code is required")]
+    [Required]
     [StringLength(20)]
     public string Code { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Company type is required")]
+    [Required]
     public CompanyType CompanyType { get; set; }
 
     [NotMapped]
     public string TypeName => CompanyType.ToString();
+
+    public int SerialNumber { get; set; }
+    [StringLength(1000)]
+    public string? Remark { get; set; }
 }

@@ -1,0 +1,21 @@
+﻿@inject NavigationManager Navigation
+
+@if (IsPublicRoute())
+{
+    <RouteView RouteData="@RouteData" />
+}
+else
+{
+    <RedirectToLogin />
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public RouteData RouteData { get; set; } = default!;
+
+    private bool IsPublicRoute()
+    {
+        var path = new Uri(Navigation.Uri).AbsolutePath.ToLower();
+        return path.StartsWith("/login") || path.StartsWith("/logout");
+    }
+}

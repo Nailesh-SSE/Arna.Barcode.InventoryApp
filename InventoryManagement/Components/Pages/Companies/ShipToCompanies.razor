@@ -1,6 +1,8 @@
 @page "/companies/ship-to"
+@using InventoryManagement.Components.Auth
+@inherits AuthComponentBase
 @inject ICompanyService CompanyService
-@inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Ship To Companies</PageTitle>
 
@@ -24,26 +26,27 @@
     }
     else
     {
-        <Grid TItem="Company"
+        <Grid TItem="CompanyModel"
               Class="table table-hover table-bordered table-striped"
-              DataProvider="CompaniesDataProvider"
+              Data="companyList"
               AllowPaging="true"
               PageSize="10"
-              Responsive="true">
+              Responsive="true"
+              @ref=shipToCompanyGrid>
 
-            <GridColumn TItem="Company" HeaderText="ID" PropertyName="Id">
-                @context.Id
+            <GridColumn TItem="CompanyModel" HeaderText="No">
+                @(companyList?.IndexOf(context) + 1)
             </GridColumn>
 
-            <GridColumn TItem="Company" HeaderText="Code" PropertyName="Code">
-                @context.Code
-            </GridColumn>
-
-            <GridColumn TItem="Company" HeaderText="Name" PropertyName="Name">
+            <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name">
                 @context.Name
             </GridColumn>
 
-            <GridColumn TItem="Company" HeaderText="Status" PropertyName="IsActive">
+            <GridColumn TItem="CompanyModel" HeaderText="Remark" PropertyName="Remark">
+                @context.Remark
+            </GridColumn>
+
+            <GridColumn TItem="CompanyModel" HeaderText="Status" PropertyName="IsActive">
                 @if (context.IsActive)
                 {
                     <Badge Color="BadgeColor.Success">Active</Badge>
@@ -54,7 +57,7 @@
                 }
             </GridColumn>
 
-            <GridColumn TItem="Company" HeaderText="Actions">
+            <GridColumn TItem="CompanyModel" HeaderText="Actions">
                 <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                     <Icon Name="IconName.PencilSquare" /> Edit
                 </Button>
@@ -68,27 +71,27 @@
 
 <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
     <BodyTemplate>
-        <EditForm Model="company" OnValidSubmit="SaveCompany">
+        <EditForm EditContext="@editContext" OnValidSubmit="SaveCompany">
             <DataAnnotationsValidator />
-            
+
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">Code <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="company.Code" />
-                    <ValidationMessage For="@(() => company.Code)" />
-                </div>
-
-                <div class="col-md-6 mb-3">
                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="company.Name" />
-                    <ValidationMessage For="@(() => company.Name)" />
+                    <InputText class="form-control" @bind-Value="companyModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
+                    <ValidationMessage For="@(() => companyModel.Name)" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Remark </label>
+                    <InputText class="form-control" @bind-Value="companyModel.Remark" />
                 </div>
             </div>
 
-            <div class="mb-3">
-                <InputCheckbox @bind-Value="company.IsActive" /> Active
-            </div>
-
+            @if (companyModel.Id > 0)
+            {
+                <div class="mb-3">
+                    <InputCheckbox @bind-Value="companyModel.IsActive" /> Active
+                </div>
+            }
             <div class="text-end">
                 <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
                 <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
@@ -97,81 +100,102 @@
     </BodyTemplate>
 </Modal>
 
-
 @code {
-    private Modal modal = default!;
-    private List<Company> companies = new();
-    private Company company = new();
+    private Modal modal;
     private bool isLoading = true;
     private string modalTitle = "Add Ship To Company";
-    private bool isEditMode = false;
+    private bool isEditMode;
+    private CompanyModel companyModel = new CompanyModel();
+    private Grid<CompanyModel> shipToCompanyGrid;
+    private List<CompanyModel> companyList = new List<CompanyModel>();
+    private EditContext editContext;
+    private ValidationMessageStore validationMessage;
+
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync(); // This will call the base authentication check
+
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
         await LoadCompanies();
     }
 
+    private void InitializeEditContext()
+    {
+        editContext = new EditContext(companyModel);
+        validationMessage = new ValidationMessageStore(editContext);
+    }
     private async Task LoadCompanies()
     {
         isLoading = true;
-        companies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
+        companyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo))?.ToList() ?? new List<CompanyModel>();
         isLoading = false;
-    }
-
-    private async Task<GridDataProviderResult<Company>> CompaniesDataProvider(GridDataProviderRequest<Company> request)
-    {
-        if (companies == null || !companies.Any())
-            return await Task.FromResult(new GridDataProviderResult<Company> { Data = new List<Company>(), TotalCount = 0 });
-
-        return await Task.FromResult(new GridDataProviderResult<Company> { Data = companies, TotalCount = companies.Count });
     }
 
     private void ShowAddModal()
     {
         modalTitle = "Add Ship To Company";
         isEditMode = false;
-        company = new Company { CompanyType = CompanyType.ShipTo, IsActive = true };
-        modal.ShowAsync();
+        companyModel = new CompanyModel 
+        {
+            CompanyType = CompanyType.ShipTo, IsActive = true ,
+            CreatedBy = Convert.ToInt32(CurrentUserId),
+
+        };        
+            InitializeEditContext();
+            modal?.ShowAsync();
     }
 
-    private void ShowEditModal(Company editCompany)
+    private void ShowEditModal(CompanyModel editCompany)
     {
         modalTitle = "Edit Ship To Company";
         isEditMode = true;
-        company = new Company
+        companyModel = new CompanyModel
         {
             Id = editCompany.Id,
             Code = editCompany.Code,
             Name = editCompany.Name,
             CompanyType = CompanyType.ShipTo,
-            IsActive = editCompany.IsActive
+            IsActive = editCompany.IsActive,
+            Remark = editCompany.Remark,
+            UpdatedBy = Convert.ToInt32(CurrentUserId),
         };
-        modal.ShowAsync();
+        InitializeEditContext();
+        modal?.ShowAsync();
     }
 
     private async Task SaveCompany()
     {
         try
         {
-            company.CompanyType = CompanyType.ShipTo;
-            
+            companyModel.CompanyType = CompanyType.ShipTo;
+            if (!editContext.Validate()) return;
+
+            await ValidateNameAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
+
+            await ValidateDuplicateNameAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
+
             if (isEditMode)
-            {
-                await CompanyService.UpdateAsync(company);
-                // Toast notification removed
-            }
+                await CompanyService.UpdateCompanyAsync(companyModel);
             else
-            {
-                await CompanyService.AddAsync(company);
-                // Toast notification removed
-            }
+                await CompanyService.CreateCompanyAsync(companyModel);
 
             await HideModal();
             await LoadCompanies();
+            if (shipToCompanyGrid != null)
+                await shipToCompanyGrid.RefreshDataAsync();
         }
-        catch (Exception ex)
+        catch
         {
-            // Toast notification removed
+            // Exception handling omitted for brevity
         }
     }
 
@@ -179,19 +203,62 @@
     {
         try
         {
-            await CompanyService.DeleteAsync(id);
-            // Toast notification removed
-            await LoadCompanies();
+            var isConfirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
+            if (isConfirm)
+            {
+                var deletedBy = Convert.ToInt32(CurrentUserId);
+                await CompanyService.DeleteCompanyAsync(id, deletedBy);
+                await LoadCompanies();
+                if (shipToCompanyGrid != null)
+                    await shipToCompanyGrid.RefreshDataAsync();
+            }
         }
-        catch (Exception ex)
+        catch
         {
-            // Toast notification removed
+
         }
     }
 
     private async Task HideModal()
     {
-        await modal.HideAsync();
+        if (modal != null)
+            await modal.HideAsync();
     }
 
+    private async Task ValidateDuplicateNameAsync()
+    {
+        validationMessage.Clear();
+        if (!string.IsNullOrEmpty(companyModel.Name))
+        {
+            var isCompanyNameUnique = await CompanyService.IsCompanyNameUniqueAsync(companyModel.Name, companyModel.CompanyType = CompanyType.ShipTo, companyModel.Id);
+            if (!isCompanyNameUnique)
+            {
+                validationMessage.Add(() => companyModel.Name, "Name is Already Exist");
+            }
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+
+    private async Task ValidateNameAsync()
+    {
+        validationMessage.Clear();
+        if (string.IsNullOrWhiteSpace(companyModel.Name))
+        {
+            validationMessage.Add(() => companyModel.Name, "Company name is required");
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+
+    private async Task HandleNameChangeAsync(string newValue)
+    {
+        companyModel.Name = newValue;
+        try
+        {
+            await ValidateNameAsync();
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
 }

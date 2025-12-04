@@ -1,7 +1,8 @@
 using InventoryManagement.Core.Entities;
-using InventoryManagement.Core.Interfaces;
+using InventoryManagement.Infrastructure.Repositories;
+using InventoryManagement.Services.Interfaces;
 
-namespace InventoryManagement.Services.Services;
+namespace InventoryManagement.Services;
 
 public class UserService : IUserService
 {
@@ -27,7 +28,7 @@ public class UserService : IUserService
     public async Task<Users?> GetUserByUsernameAsync(string username)
     {
         var userRepository = _unitOfWork.GetRepository<Users>();
-        return (await userRepository.FindAsync(u => u.UserName == username && u.IsActive && !u.IsDeleted)).FirstOrDefault();
+        return (await userRepository.FindAsync(u => u.UserName.ToLower() == username.ToLower() && u.IsActive && !u.IsDeleted)).FirstOrDefault();
     }
 
     public async Task<bool> CreateUserAsync(Users user)
@@ -61,7 +62,7 @@ public class UserService : IUserService
         try
         {
             var userRepository = _unitOfWork.GetRepository<Users>();
-            userRepository.UpdateAsync(user);
+            userRepository.Update(user);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -81,7 +82,7 @@ public class UserService : IUserService
 
             user.IsDeleted = true;
             user.IsActive = false;
-            userRepository.UpdateAsync(user);
+            userRepository.Update(user);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }

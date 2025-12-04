@@ -1,0 +1,62 @@
+﻿<div class="table-responsive">
+    <Grid TItem="InwardModel"
+          Class="table table-hover table-bordered table-striped"
+          Data="Inwards"
+          AllowPaging="true"
+          PageSize="10"
+          Responsive="true"
+          @ref="InwardGrid">
+
+        <GridColumn TItem="InwardModel" HeaderText="No">
+            @(Inwards.IndexOf(context) + 1)
+        </GridColumn>
+
+        <GridColumn TItem="InwardModel" HeaderText="Inward No" PropertyName="InwardNo">
+            @context.InwardNo
+        </GridColumn>
+
+        <GridColumn TItem="InwardModel" HeaderText="Inward Date/Time">
+            @context.InwardDate.ToString("dd/MM/yyyy hh:mm tt")
+        </GridColumn>
+
+        <GridColumn TItem="InwardModel" HeaderText="Ship Company">
+            @(ShipCompanies.FirstOrDefault(c => c.Id == context.ShipMentCompanyId)?.Name.ToUpper() ?? "N/A")
+        </GridColumn>
+
+        <GridColumn TItem="InwardModel" HeaderText="Status">
+            @if (context.IsActive)
+            {
+                <Badge Color="BadgeColor.Success">Active</Badge>
+            }
+            else
+            {
+                <Badge Color="BadgeColor.Danger">Inactive</Badge>
+            }
+        </GridColumn>
+
+        <GridColumn TItem="InwardModel" HeaderText="Actions">
+            <div class="d-flex flex-wrap gap-1">
+                <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
+                    <Icon Name="IconName.Plus" /> Add Items
+                </Button>
+
+                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => OnEdit.InvokeAsync(context)">
+                    <Icon Name="IconName.PencilSquare" /> Edit
+                </Button>
+
+                @* <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => OnDelete.InvokeAsync(context.Id)">
+                    <Icon Name="IconName.Trash" /> Delete
+                </Button> *@
+            </div>
+        </GridColumn>
+    </Grid>
+</div>
+
+@code {
+    private Grid<InwardModel>? InwardGrid;
+    [Parameter] public List<InwardModel> Inwards { get; set; } = new();
+    [Parameter] public List<CompanyModel> ShipCompanies { get; set; } = new();
+    [Parameter] public EventCallback<InwardModel> OnEdit { get; set; }
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+    [Parameter] public EventCallback<InwardModel?> OnAddItems { get; set; }
+}

@@ -1,0 +1,279 @@
+﻿@page "/colour"
+@using InventoryManagement.Components.Auth
+@inherits AuthComponentBase
+@inject IColourService ColourService
+@inject IJSRuntime JS
+
+<PageTitle>Colour</PageTitle>
+
+@if (isLoading)
+{
+    <div class="text-center">
+        <Spinner Type="SpinnerType.Border" />
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col">
+                <h3><Icon Name="IconName.Palette" />Colour</h3>
+            </div>
+            <div class="col-auto">
+                <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                    <Icon Name="IconName.Plus" /> Add New
+                </Button>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center">
+                <Spinner Type="SpinnerType.Border" />
+            </div>
+        }
+        else
+        {
+            <Grid TItem="ColourModel"
+                  Class="table table-hover table-bordered table-striped"
+                  Data="colourList"
+                  AllowPaging="true"
+                  PageSize="10"
+                  Responsive="true"
+                  @ref=ColourGrid>
+
+                <GridColumn TItem="ColourModel" HeaderText="No">
+                    @(colourList.IndexOf(context) + 1)
+                </GridColumn>
+                <GridColumn TItem="ColourModel" HeaderText="Name" PropertyName="Name">
+                    @context.Name
+                </GridColumn>
+                <GridColumn TItem="ColourModel" HeaderText="Code" PropertyName="Code">
+                    @context.Code
+                </GridColumn>
+
+                <GridColumn TItem="ColourModel" HeaderText="Status" PropertyName="IsActive">
+                    @if (context.IsActive)
+                    {
+                        <Badge Color="BadgeColor.Success">Active</Badge>
+                    }
+                    else
+                    {
+                        <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                    }
+                </GridColumn>
+
+                <GridColumn TItem="ColourModel" HeaderText="Actions">
+                    <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                        <Icon Name="IconName.PencilSquare" /> Edit
+                    </Button>
+                    <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteColour(context.Id)">
+                        <Icon Name="IconName.Trash" /> Delete
+                    </Button>
+                </GridColumn>
+            </Grid>
+        }
+    </div>
+}
+<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+    <BodyTemplate>
+        <EditForm EditContext="@editContext" OnValidSubmit="SaveColour">
+            <DataAnnotationsValidator />
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                    <InputText class="form-control" @bind-Value="colourModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
+                    <ValidationMessage For="@(() => colourModel.Name)" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Code <span class="text-danger">*</span> </label>
+                    <InputText class="form-control" @bind-Value="colourModel.Code" @oninput="(e) => HandleCodeChangeAsync(e.Value?.ToString())" />
+                    <ValidationMessage For="@(() => colourModel.Code)" />
+                </div>
+            </div>
+            @if (colourModel.Id > 0)
+            {
+                <div class="mb-3">
+                    <InputCheckbox @bind-Value="colourModel.IsActive" /> Active
+                </div>
+            }
+            <div class="text-end">
+                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+@code {
+    private Modal modal { get; set; }
+    private bool isEditMode = false;
+    private bool isLoading = true;
+    private ColourModel colourModel { get; set; }
+    private string modalTitle = "Add Colours";
+    private Grid<ColourModel> ColourGrid;
+    private List<ColourModel> colourList = new();
+
+    private EditContext editContext { get; set; }
+    private ValidationMessageStore validationMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync(); 
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
+        await LoadColour();
+        StateHasChanged();
+    }
+
+    private async Task LoadColour()
+    {
+        isLoading = true;
+        colourList = await ColourService.GetAllColourAsync();
+        isLoading = false;
+    }
+    public void InitializeEditContextAsync()
+    {
+        editContext = new EditContext(colourModel);
+        validationMessage = new ValidationMessageStore(editContext);
+    }
+
+    private void ShowAddModal()
+    {
+        modalTitle = "Add Colour";
+        isEditMode = false;
+        colourModel = new ColourModel()
+        {
+            CreatedBy = Convert.ToInt32(CurrentUserId),           
+        };
+        InitializeEditContextAsync();
+        modal.ShowAsync();
+    }
+    private void ShowEditModal(ColourModel editColour)
+    {
+        modalTitle = "Edit Colour";
+        isEditMode = true;
+        colourModel = new ColourModel
+        {
+            Id = editColour.Id,
+            Code = editColour.Code,
+            Name = editColour.Name,
+            IsActive = editColour.IsActive,
+            UpdatedBy = Convert.ToInt32(CurrentUserId),
+        };
+        InitializeEditContextAsync();
+        modal.ShowAsync();
+    }
+    private async Task SaveColour()
+    {
+        if (!editContext.Validate()) return;
+        await HandleNameChangeAsync(colourModel.Name);
+        await HandleCodeChangeAsync(colourModel.Code);
+        if (editContext.GetValidationMessages().Any())
+            return;
+
+        await ValidateDuplicateNameAndCode();
+        if (editContext.GetValidationMessages().Any())
+            return;
+
+        if (isEditMode)
+        {
+            await ColourService.UpdateColourAsync(colourModel);
+        }
+        else
+        {
+            await ColourService.CreateColourAsync(colourModel);
+        }
+        await HideModal();
+        await LoadColour();
+        if (ColourGrid != null)
+            await ColourGrid.RefreshDataAsync();
+    }
+
+    private async Task DeleteColour(int id)
+    {
+        try
+        {
+            bool isConfirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
+            if (isConfirm)
+            {
+                var deletedBy = Convert.ToInt32(CurrentUserId);
+
+                await ColourService.DeleteColourAsync(id, deletedBy);
+                await LoadColour();
+                await ColourGrid.RefreshDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
+
+    private async Task HideModal()
+    {
+        await modal.HideAsync();
+
+    }
+    private async Task ValidateDuplicateNameAndCode()
+    {
+        validationMessage.Clear();
+        if (!string.IsNullOrEmpty(colourModel.Name) || (!string.IsNullOrEmpty(colourModel.Code)))
+        {
+            var isColourNameAndCodeUnique = await ColourService.IsColourAndNameUniqueAsync(colourModel.Name, colourModel.Code, colourModel.Id);
+            if (!isColourNameAndCodeUnique)
+            {
+                validationMessage.Add(() => colourModel.Name, "Name And Code  is Already Exist");
+
+            }
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+
+    private async Task ValidateNameAsync()
+    {
+        validationMessage.Clear(() => colourModel.Name);
+        if (string.IsNullOrWhiteSpace(colourModel.Name))
+        {
+            validationMessage.Add(() => colourModel.Name, "Colour name is required");
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+    private async Task ValidateCodeAsync()
+    {
+        validationMessage.Clear(() => colourModel.Code);
+        if (string.IsNullOrWhiteSpace(colourModel.Code))
+        {
+            validationMessage.Add(() => colourModel.Code, "Colour Code is required");
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+    private async Task HandleNameChangeAsync(string newValue)
+    {
+        colourModel.Name = newValue;
+        try
+        {
+            await ValidateNameAsync();
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
+    private async Task HandleCodeChangeAsync(string newValue)
+    {
+        colourModel.Code = newValue;
+        try
+        {
+            await ValidateCodeAsync();
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
+}

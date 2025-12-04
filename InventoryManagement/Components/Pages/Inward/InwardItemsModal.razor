@@ -1,0 +1,466 @@
+﻿@inject IJSRuntime JSRuntime
+@inject IInwardService inwardService
+<Modal @ref="modal" Title="Manage Inward Items" Size="ModalSize.Large">
+    <BodyTemplate>
+        @if (SelectedInward != null)
+        {
+            <div class="modal-content-custom">
+                <div class="modal-header-section">
+                    <h5 class="mb-2"> Inward No: @SelectedInward.InwardNo</h5>
+                </div>
+
+                <div class="modal-body-section">
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+                            <button type="button" class="btn-close" @onclick="@(() => errorMessage = "")"></button>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="bi bi-check-circle-fill me-2"></i>@successMessage
+                            <button type="button" class="btn-close" @onclick="@(() => successMessage = "")"></button>
+                        </div>
+                    }
+
+                    @if (InwardItems.Any())
+                    {
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-bordered table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Units</th>
+                                        <th>Item Quantity</th>
+                                        <th>Box Quantity</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in InwardItems)
+                                    {
+                                        var productClass = $"form-select form-select-sm {GetValidationClass(item, "product")} w-100";
+                                        var itemQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "itemQuantity")}";
+                                        var unitsClass = $"form-control form-control-sm {GetValidationClass(item, "units")}";
+                                        var boxQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "boxQuantity")}";
+                                        var rowClasses = $"{(item.Id == 0 ? "table-warning" : "")} {(IsRowDisabled(item) ? "opacity-30 text-muted" : "")}";
+
+                                        <tr class="@rowClasses">
+                                            <td>
+                                                    <AutoComplete TItem="ProductModel"
+                                                                   class="@productClass"
+                                                                   @bind-Value="item.ProductSearchText"
+                                                                   DataProvider="ProductsDataProvider"
+                                                                   PropertyName="SKU"
+                                                                   Placeholder="Search product..."
+                                                                   StringComparison="StringComparison.OrdinalIgnoreCase"
+                                                                   OnChanged="(ProductModel product) => OnProductAutoCompleteChanged(item, product)" />
+ 
+                                                     @if (showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))
+                                                     {
+                                                         <small class="text-danger">Product is required</small>
+                                                     }
+                                            </td>
+
+                                            <td>
+                                                <InputSelect class="@unitsClass"
+                                                             @bind-Value="item.InwardUnitId"
+                                                             disabled="@IsRowDisabled(item)"
+                                                             title="@(IsRowDisabled(item) ? "Item is locked or out-of-stock" : "")">
+                                                    <option value="0">-- Select Units --</option>
+                                                    @foreach (var unit in Units)
+                                                    {
+                                                        <option value="@unit.Id">@unit.Name</option>
+                                                    }
+                                                </InputSelect>
+                                                @if (showValidation && item.InwardUnitId == 0 && IsLastUnsavedItem(item))
+                                                {
+                                                    <small class="text-danger">Unit is required</small>
+                                                }
+                                            </td>
+
+                                            <td>
+                                                <InputNumber class="@itemQuantityClass"
+                                                             @bind-Value="item.ItemQuantity"
+                                                             @onchange="@(() => ClearMessages())"
+                                                             disabled="@IsRowDisabled(item)"
+                                                             title="@(IsRowDisabled(item) ? "Item is locked or out-of-stock" : "")" />
+                                                @if (showValidation && item.ItemQuantity <= 0 && IsLastUnsavedItem(item))
+                                                {
+                                                    <small class="text-danger">Quantity must be greater than 0</small>
+                                                }
+                                            </td>
+
+                                            <td>
+                                                @if (IsRequired(item))
+                                                {
+                                                    <InputNumber class="@boxQuantityClass"
+                                                                 @bind-Value="item.BoxQuantity"
+                                                                 @onchange="@(() => ClearMessages())"
+                                                                 disabled="@IsRowDisabled(item)"
+                                                                 title="@(IsRowDisabled(item) ? "Item is locked or out-of-stock" : "")" />
+                                                    @if (showValidation && item.BoxQuantity <= 0 && IsRequired(item) && IsLastUnsavedItem(item))
+                                                    {
+                                                        <small class="text-danger">BoxQuantity must be greater than 0</small>
+                                                    }
+                                                }
+                                            </td>
+
+                                            <td>
+                                                <div class="d-flex gap-1">
+                                                    <button type="button"
+                                                            class="btn btn-primary btn-sm"
+                                                            @onclick="@(() => HandleSaveItem(item))"
+                                                            disabled="@(IsRowDisabled(item) || (isSaving && currentSavingItem != null && currentSavingItem != item))"
+                                                            title="@(IsRowDisabled(item) ? "Cannot edit this item" : "")">
+                                                        @if (isSaving && currentSavingItem == item)
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                                        }
+                                                        Save
+                                                    </button>
+                                                    @if (item.Id > 0)
+                                                    {
+                                                        <button type="button"
+                                                                class="btn btn-danger btn-sm"
+                                                                @onclick="@(() => HandleDeleteItem(item.Id))"
+                                                                disabled="@IsRowDisabled(item)"
+                                                                title="@(IsRowDisabled(item) ? "Cannot delete this item" : "")">
+                                                            Delete
+                                                        </button>
+
+                                                        <button type="button" class="btn btn-dark btn-sm opacity-10"
+                                                                title="Download Barcodes"
+                                                                @onclick="@(() => OnDownloadPdf.InvokeAsync(item))">
+                                                            <Icon Name="IconName.UpcScan" /> PDF
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button type="button"
+                                                                class="btn btn-outline-secondary btn-sm"
+                                                                @onclick="@(() => RemoveUnsavedItem(item))"
+                                                                disabled="@isSaving">
+                                                            Cancel
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                            <div class="text-end mt-2">
+                                <button type="button"
+                                        class="btn btn-success btn-sm"
+                                        @onclick="HandleAddItem"
+                                        disabled="@isSaving">
+                                    <i class="bi bi-plus-circle me-1"></i>Add New Item
+                                </button>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-3 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            No items added yet. Click "Add Item" to get started.
+                        </div>
+                        <div class="text-center mt-2">
+                            <button type="button"
+                                    class="btn btn-success btn-sm"
+                                    @onclick="HandleAddItem">
+                                <i class="bi bi-plus-circle me-1"></i>Add New Item
+                            </button>
+                        </div>
+                    }
+                </div>
+
+                <div class="modal-footer-section">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            @onclick="HandleClose"
+                            disabled="@isSaving">
+                        Close
+                    </button>
+                </div>
+            </div>
+        }
+    </BodyTemplate>
+</Modal>
+
+@code {
+    private Modal modal = new();
+    private string errorMessage = "";
+    private string successMessage = "";
+    private bool showValidation = false;
+    private bool isSaving = false;
+    private InwardItemModel? currentSavingItem = null;
+
+    [Parameter] public InwardModel? SelectedInward { get; set; }
+    [Parameter] public List<InwardItemModel> InwardItems { get; set; } = new();
+    [Parameter] public List<ProductModel> FilteredProducts { get; set; } = new();
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback<InwardItemModel> OnSaveItem { get; set; }
+    [Parameter] public EventCallback<int> OnDeleteItem { get; set; }
+    [Parameter] public EventCallback OnAddItem { get; set; }
+    [Parameter] public EventCallback<InwardItemModel> OnRemoveUnsaved { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<InwardItemModel> OnDownloadPdf { get; set; }
+    [Parameter] public Dictionary<int, bool> LockedItems { get; set; } = new();
+
+    public List<UnitModel> Units => CommonUtils.UnitList;
+    private Dictionary<int, bool> ItemStockStatus = new();
+
+    public async Task Show()
+    {
+        ClearMessages();
+        showValidation = false;
+        foreach (var item in InwardItems)
+        {
+            if (item.Id > 0)
+            {
+                bool isAllInStock = await inwardService.AreAllBarcodesInStock(item.Id);
+                ItemStockStatus[item.Id] = isAllInStock;
+            }
+        }
+        await modal.ShowAsync();
+    }
+
+    public async Task Hide()
+    {
+        await modal.HideAsync();
+    }
+
+    private async Task HandleSaveItem(InwardItemModel item)
+    {
+        ClearMessages();
+        showValidation = true;
+
+        // Validate Product
+        if (item.ProductId == 0)
+        {
+            errorMessage = "Please select a product before saving.";
+            StateHasChanged();
+            return;
+        }
+
+        // Validate Quantity
+        if (item.ItemQuantity <= 0)
+        {
+            errorMessage = "Item Quantity must be greater than 0.";
+            StateHasChanged();
+            return;
+        }
+
+        // Validate Unit
+        if (item.InwardUnitId <= 0)
+        {
+            errorMessage = "Unit is required.";
+            StateHasChanged();
+            return;
+        }
+
+        // Validate BoxQuantity
+        if (IsRequired(item))
+        {
+            if (item.BoxQuantity <= 0)
+            {
+                errorMessage = "Box Quantity must be greater than 0.";
+                StateHasChanged();
+                return;
+            }
+        }
+
+        if (IsRowDisabled(item))
+        {
+            errorMessage = "This item is locked and cannot be edited.";
+            StateHasChanged();
+            return;
+        }
+
+        isSaving = true;
+        currentSavingItem = item;
+        StateHasChanged();
+
+        try
+        {
+            await OnSaveItem.InvokeAsync(item);
+            successMessage = item.Id == 0 ? "Item added successfully!" : "Item updated successfully!";
+            showValidation = false;
+            await HandleAddItem();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving item: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            currentSavingItem = null;
+            StateHasChanged();
+        }
+
+        // Auto-hide success message after 3 seconds
+        if (!string.IsNullOrEmpty(successMessage))
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                successMessage = "";
+                await InvokeAsync(StateHasChanged);
+            });
+        }
+    }
+
+    private async Task HandleDeleteItem(int itemId)
+    {
+
+        if (LockedItems.TryGetValue(itemId, out var locked) && locked)
+        {
+            errorMessage = "This item is linked to sale/return/outward and cannot be deleted.";
+            StateHasChanged();
+            return;
+        }
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to remove item?");
+
+        if (!confirmed) return;
+        ClearMessages();
+        await OnDeleteItem.InvokeAsync(itemId);
+        successMessage = "Item deleted successfully!";
+        StateHasChanged();
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(3000);
+            successMessage = "";
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private async Task HandleAddItem()
+    {
+        ClearMessages();
+
+        // Check if there's an unsaved item with no data
+        var hasBlankUnsavedRow = InwardItems.Any(item =>
+            item.Id == 0 && (item.ProductId == 0 || item.ItemQuantity == 0));
+
+        if (hasBlankUnsavedRow)
+        {
+            errorMessage = "Please save or cancel the existing unsaved item before adding a new one.";
+            showValidation = true;
+            StateHasChanged();
+            return;
+        }
+
+        showValidation = false;
+        await OnAddItem.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private void RemoveUnsavedItem(InwardItemModel item)
+    {
+        ClearMessages();
+        OnRemoveUnsaved.InvokeAsync(item);
+        StateHasChanged();
+    }
+
+    private async Task HandleClose()
+    {
+        // Check for unsaved items before closing
+        var hasUnsavedItems = InwardItems.Any(item => item.Id == 0);
+
+        if (hasUnsavedItems)
+        {
+            bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
+                "You have unsaved items. Are you sure you want to close?");
+
+            if (!confirmed)
+            {
+                return;
+            }
+        }
+
+        await OnClose.InvokeAsync();
+    }
+
+    private void ClearMessages()
+    {
+        errorMessage = "";
+        successMessage = "";
+    }
+
+    private string GetValidationClass(InwardItemModel item, string field)
+    {
+        if (!showValidation || !IsLastUnsavedItem(item))
+            return "";
+
+        return field switch
+        {
+            "product" => item.ProductId == 0 ? "is-invalid" : "is-valid",
+            "itemQuantity" => item.ItemQuantity <= 0 ? "is-invalid" : "is-valid",
+            "units" => item.InwardUnitId == 0 ? "is-invalid" : "is-valid",
+            "boxQuantity" => item.InwardUnitId == 0 || !IsRequired(item) || item.BoxQuantity > 0 ? "is-valid" : "is-invalid",
+            _ => ""
+        };
+    }
+
+    private bool IsLastUnsavedItem(InwardItemModel item)
+    {
+        return item.Id == 0;
+    }
+
+    private bool IsRequired(InwardItemModel item)
+    {
+        var inwardUnitName = Units.FirstOrDefault(u => u.Id == item.InwardUnitId)?.Name ?? string.Empty;
+        return inwardUnitName == "BOX";
+    }
+
+    private bool IsRowDisabled(InwardItemModel item)
+    {
+        if (item.Id == 0) return false; // unsaved rows remain editable
+        var outOfStock = ItemStockStatus.TryGetValue(item.Id, out var inStock) && !inStock;
+        var locked = LockedItems.TryGetValue(item.Id, out var isLocked) && isLocked;
+        return outOfStock || locked;
+    }
+
+
+    private async Task<AutoCompleteDataProviderResult<ProductModel>> ProductsDataProvider(AutoCompleteDataProviderRequest<ProductModel> request)
+    {
+        if (FilteredProducts == null || !FilteredProducts.Any())
+        {
+            return await Task.FromResult(new AutoCompleteDataProviderResult<ProductModel>
+            {
+                Data = Array.Empty<ProductModel>()
+            });
+        }
+    
+        var query = FilteredProducts
+            .OrderBy(p => p.Name)
+            .ToList();
+    
+        return await Task.FromResult(request.ApplyTo(query));
+    }
+
+    private void OnProductAutoCompleteChanged(InwardItemModel item, ProductModel? product)
+    {
+        ClearMessages();
+    
+        if (product is null)
+        {
+            item.ProductId = 0;
+            item.ProductSearchText = string.Empty;
+        }
+        else
+        {
+            item.ProductId = product.Id;
+            item.ProductSearchText = product.SKU;
+        }
+    }
+}
+}

@@ -1,8 +1,14 @@
 using InventoryManagement.Core.Data;
-using InventoryManagement.Core.Interfaces;
 
 namespace InventoryManagement.Infrastructure.Repositories;
-
+public interface IUnitOfWork : IDisposable
+{
+    IRepository<T> GetRepository<T>() where T : class;
+    Task<int> SaveChangesAsync();
+    Task BeginTransactionAsync();
+    Task CommitTransactionAsync();
+    Task RollbackTransactionAsync();
+}
 public class UnitOfWork : IUnitOfWork
 {
     private readonly InventoryDbContext _context;

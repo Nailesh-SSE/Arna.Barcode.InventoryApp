@@ -20,13 +20,18 @@ public class InventoryDbContext : DbContext
     public DbSet<Outward> Outwards { get; set; }
     public DbSet<OutwardDetail> OutwardDetails { get; set; }
     public DbSet<SaleReturn> SaleReturns { get; set; }
+    public DbSet<Colour> Colour { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-    
         // Configure relationships
+        modelBuilder.Entity<Colour>()
+            .HasIndex(c => new { c.Name, c.Code })
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0");
+
         modelBuilder.Entity<UsersInRole>()
             .HasOne(uir => uir.User)
             .WithMany()
@@ -40,12 +45,10 @@ public class InventoryDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Company>()
-            .HasIndex(c => c.Code)
-            .IsUnique();
+       .HasIndex(c => c.Code)
+       .IsUnique()
+       .HasFilter("[IsDeleted] = 0");
 
-        modelBuilder.Entity<Company>()
-            .Property(c => c.CompanyType)
-            .HasConversion<int>();
 
         modelBuilder.Entity<Category>()
             .HasOne(c => c.ParentCategory)
@@ -102,12 +105,8 @@ public class InventoryDbContext : DbContext
             .HasForeignKey(od => od.OutwardId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<OutwardDetail>()
-            .HasOne(od => od.InwardBarcodeItem)
-            .WithMany(ibi => ibi.OutwardDetails)
-            .HasForeignKey(od => od.InwardBarcodeItemId)
-            .OnDelete(DeleteBehavior.Restrict);
-
+        modelBuilder.Entity<OutwardDetail>();
+         
         modelBuilder.Entity<SaleReturn>()
             .HasOne(sr => sr.BillToCompany)
             .WithMany()
@@ -116,7 +115,7 @@ public class InventoryDbContext : DbContext
 
         // Configure decimal precision
         modelBuilder.Entity<InwardItem>()
-            .Property(ii => ii.Quantity)
+            .Property(ii => ii.ItemQuantity)
             .HasPrecision(18, 2);
 
         // Configure indexes

@@ -1,9 +1,23 @@
-using System.Linq.Expressions;
 using InventoryManagement.Core.Data;
-using InventoryManagement.Core.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace InventoryManagement.Infrastructure.Repositories;
+public interface IRepository<T> where T : class
+{
+    Task<T?> GetByIdAsync(int id, params Expression<Func<T, object>>[]? includes);
+    Task<IEnumerable<T>> GetAllAsync();
+    Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate);
+    Task<IEnumerable<T>> FindWithIncludesAsync(Expression<Func<T, bool>> predicate, params Expression<Func<T, object>>[] includes);
+    Task<T> AddAsync(T entity);
+    Task AddRangeAsync(IEnumerable<T> entities);
+    T Update(T entity);
+    Task<bool> DeleteAsync(int id);
+    Task<int> CountAsync();
+    Task<bool> ExistsAsync(int id);
+    IQueryable<T> GetQueryable(); // Added GetQueryable method
+    IQueryable<T> GetQueryableWithIncludes(params Expression<Func<T, object>>[] includes);
+}
 
 public class Repository<T> : IRepository<T> where T : class
 {
@@ -16,9 +30,37 @@ public class Repository<T> : IRepository<T> where T : class
         _dbSet = context.Set<T>();
     }
 
-    public async Task<T?> GetByIdAsync(int id)
+    public IQueryable<T> GetQueryable()
     {
-        return await _dbSet.FindAsync(id);
+        return _dbSet.AsQueryable();
+    }
+    public IQueryable<T> GetQueryableWithIncludes(params Expression<Func<T, object>>[] includes)
+    {
+        IQueryable<T> query = _dbSet;
+
+        if (includes != null)
+        {
+            foreach (var include in includes)
+            {
+                query = query.Include(include);
+            }
+        }
+
+        return query;
+    }
+    public async Task<T?> GetByIdAsync(int id, params Expression<Func<T, object>>[]? includes)
+    {
+        IQueryable<T> query = _dbSet;
+
+        if (includes != null)
+        {
+            foreach (var include in includes)
+            {
+                query = query.Include(include);
+            }
+        }
+
+        return await query.FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
     }
 
     public async Task<IEnumerable<T>> GetAllAsync()
@@ -37,7 +79,15 @@ public class Repository<T> : IRepository<T> where T : class
         return entity;
     }
 
-    public T UpdateAsync(T entity)
+    public async Task AddRangeAsync(IEnumerable<T> entities)
+    {
+        if (entities == null)
+            throw new ArgumentNullException(nameof(entities));
+
+        await _dbSet.AddRangeAsync(entities);
+    }
+
+    public T Update(T entity)
     {
         _dbSet.Update(entity);
         return entity;
@@ -45,8 +95,9 @@ public class Repository<T> : IRepository<T> where T : class
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var entity = await GetByIdAsync(id);
-        if (entity == null) return false;
+        var entity = await _dbSet.FindAsync(id);
+        if (entity == null)
+            return false;
 
         _dbSet.Remove(entity);
         return true;
@@ -62,4 +113,18 @@ public class Repository<T> : IRepository<T> where T : class
         var entity = await GetByIdAsync(id);
         return entity != null;
     }
+    public async Task<IEnumerable<T>> FindWithIncludesAsync(
+    Expression<Func<T, bool>> predicate,
+    params Expression<Func<T, object>>[] includes)
+    {
+        IQueryable<T> query = _dbSet;
+
+        foreach (var include in includes)
+        {
+            query = query.Include(include);
+        }
+
+        return await query.Where(predicate).ToListAsync();
+    }
+
 }

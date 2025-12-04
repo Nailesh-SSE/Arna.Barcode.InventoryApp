@@ -1,0 +1,72 @@
+@page "/reports/outstock"
+@using InventoryManagement.Services.Models
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <Icon Name="IconName.Box" /> Product Wise Sales Report
+        </h5>
+    </div>
+    <div class="card-body">
+        @if (ProductSalesData.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Product Name</th>
+                            <th>SKU</th>
+                            <th>Category</th>
+                            <th>Make Company</th>
+                            <th>Quantity Sold</th>
+                            <th>Times Sold</th>
+                            <th>Last Sold</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var product in ProductSalesData.Take(50))
+                        {
+                            <tr>
+                                <td><strong>@product.ProductName</strong></td>
+                                <td><code>@product.SKU</code></td>
+                                <td>@product.Category</td>
+                                <td>@product.MakeCompany</td>
+                                <td class="text-center">
+                                    <span class="badge bg-success">@product.TotalQuantitySold</span>
+                                </td>
+                                <td class="text-center">@product.TimesSold</td>
+                                <td>@(product.LastSoldDate?.ToString("dd-MM-yyyy") ?? "Never")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-secondary">
+                        <tr>
+                            <th colspan="4">Total</th>
+                            <th>@ProductSalesData.Sum(p => p.TotalQuantitySold)</th>
+                            <th>@ProductSalesData.Sum(p => p.TimesSold)</th>
+                            <th>-</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            @if (ProductSalesData.Count > 50)
+            {
+                <div class="text-center mt-3">
+                    <p class="text-muted">Showing top 50 of @ProductSalesData.Count products</p>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-center text-muted py-4">
+                <Icon Name="IconName.Box" Size="IconSize.x3" />
+                <p class="mt-2">No product sales data available</p>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<ProductSalesModel> ProductSalesData { get; set; } = new();
+}

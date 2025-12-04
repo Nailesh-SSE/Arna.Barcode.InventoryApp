@@ -1,16 +1,78 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(Program).Assembly">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)">
+                <Authorizing>
+                    <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <span class="ms-2">Validating session...</span>
+                    </div>
+                </Authorizing>
                 <NotAuthorized>
-                    <RedirectToLogin />
+                    @if (isInitializing)
+                    {
+                        <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Initializing...</span>
+                            </div>
+                            <span class="ms-2">Initializing...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <RedirectToLogin CurrentUrl="@currentUrl" />
+                    }
                 </NotAuthorized>
             </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
         </Found>
         <NotFound>
             <LayoutView Layout="@typeof(Layout.MainLayout)">
-                <p>Sorry, there's nothing at this address.</p>
+                <PageTitle>Not found</PageTitle>
+                <div class="text-center mt-5">
+                    <h1>404</h1>
+                    <p>Sorry, there's nothing at this address.</p>
+                    <Button Color="ButtonColor.Primary" To="/">Go Home</Button>
+                </div>
             </LayoutView>
         </NotFound>
     </Router>
 </CascadingAuthenticationState>
+
+
+
+@code {
+    private bool isInitializing = true;
+    private string currentUrl = string.Empty;
+
+
+protected override async Task OnInitializedAsync()
+{
+    try
+    {
+        // Store the current URL for potential redirect
+        currentUrl = NavigationManager.Uri;
+        
+        // Wait a brief moment for authentication state to initialize
+        await Task.Delay(100);
+        
+        // Check if user is already authenticated
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        
+        // Only show loading during initial page load, not during navigation
+        isInitializing = false;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error initializing routes: {ex.Message}");
+        isInitializing = false;
+    }
+}
+
+}

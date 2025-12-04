@@ -1,0 +1,37 @@
+﻿@page "/logout"
+@using InventoryManagement.Services.Auth
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ILogger<Logout> Logger
+@inject NavigationManager NavigationManager
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity?.IsAuthenticated == true)
+            {
+                var username = authState.User.Identity.Name;
+                Logger.LogInformation("User {Username} is logging out", username);
+
+
+            var authProvider = AuthStateProvider as CustomAuthStateProvider;
+            if (authProvider != null)
+            {
+                await authProvider.MarkUserAsLoggedOut();
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Logger.LogError(ex, "Error during logout");
+    }
+    finally
+    {
+        // Always redirect to login page
+        NavigationManager.NavigateTo("/login", forceLoad: true);
+    }
+}
+}

@@ -1,0 +1,60 @@
+@page "/reports/salereport"
+@using InventoryManagement.Services.Models
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <Icon Name="IconName.Calendar" /> Monthly Sales Report (@DateTime.Now.Year)
+        </h5>
+    </div>
+    <div class="card-body">
+        @if (MonthlySalesData.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Month</th>
+                            <th>Orders</th>
+                            <th>Items Sold</th>
+                            <th>Unique Customers</th>
+                            <th>Avg Order Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var month in MonthlySalesData.OrderByDescending(m => m.Month))
+                        {
+                            <tr>
+                                <td><strong>@month.MonthName</strong></td>
+                                <td>@month.TotalOutwardCount</td>
+                                <td>@month.TotalItemsSold</td>
+                                <td>@month.UniqueCustomers</td>
+                                <td>@month.AverageOrderValue.ToString("C")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-secondary">
+                        <tr>
+                            <th>Total</th>
+                            <th>@MonthlySalesData.Sum(m => m.TotalOutwardCount)</th>
+                            <th>@MonthlySalesData.Sum(m => m.TotalItemsSold)</th>
+                            <th>-</th>
+                            <th>@MonthlySalesData.Where(m => m.AverageOrderValue > 0).DefaultIfEmpty().Average(m => m.AverageOrderValue).ToString("C")</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center text-muted py-4">
+                <Icon Name="IconName.CalendarX" Size="IconSize.x3" />
+                <p class="mt-2">No monthly sales data available</p>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<MonthlySalesModel> MonthlySalesData { get; set; } = new();
+}
