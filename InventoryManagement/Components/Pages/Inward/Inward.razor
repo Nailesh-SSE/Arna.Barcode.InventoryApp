@@ -39,7 +39,7 @@
 <InwardFormModal @ref="inwardFormModal" Title="@modalTitle" Inward="inward" ShipCompanies="shipCompanies" Categories="categories"
                  Products="products" OnSave="SaveInward" OnCancel="HideModal" />
 
-<InwardItemsModal @ref="itemsModal" SelectedInward="selectedInward" InwardItems="inwardItems" FilteredProducts="filteredProducts"
+<InwardItemsModal @ref="itemsModal" Title="@itemTitle" SelectedInward="selectedInward" InwardItems="inwardItems" FilteredProducts="filteredProducts"
                   OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnDownloadPdf="DownloadSingleItemPdf" OnAddItem="AddNewItemRow"
                   OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" />
 
@@ -53,6 +53,7 @@
     private List<InwardItemModel> inwardItems = new();
     private bool isLoading = true;
     private string modalTitle = "Add Inward";
+    private string itemTitle = "Manage Inward Items";
     private bool isEditMode = false;
     private InwardFormModal inwardFormModal = new();
     private InwardItemsModal itemsModal = new();
@@ -177,6 +178,7 @@
     {
         selectedInward = inwards.FirstOrDefault(i => i.Id == inward.Id);
         if (selectedInward == null) return;
+        itemTitle = $"Manage Inward Items | Inward No: {selectedInward?.InwardNo}";
 
         inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(inward.Id);
         filteredProducts = products;
@@ -184,17 +186,6 @@
         {
             filteredProducts = products.Where(p => p.CategoryId == inward.CategoryId).ToList();
         }
-      if (inwardItems.Any())
-  {
-      foreach (var item in inwardItems)
-      {
-          var product = filteredProducts.FirstOrDefault(p => p.Id == item.ProductId);
-          if (product != null)
-          {
-              item.ProductSearchText = product.SKU;
-          }
-      }
-  }
         StateHasChanged();
         await itemsModal.Show();
         isLoading = false;

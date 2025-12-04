@@ -27,5 +27,6 @@ public class ProductModel : CommonModel
     public int SerialNumber { get; set; }
     public int ColourId { get; set; }
     public string ColourName { get; set; }
+    public string ColourSearchText { get; set; } = string.Empty;
 }
 
