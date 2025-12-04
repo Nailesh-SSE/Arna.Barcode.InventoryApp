@@ -6,7 +6,7 @@ public interface IOutwardService
 {
     Task<List<OutwardModel>> GetAllOutwardsAsync();
     Task<OutwardModel?> GetOutwardByIdAsync(int id);
-    Task<bool> CreateOutwardAsync(OutwardModel model);
+    Task<int> CreateOutwardAsync(OutwardModel model);
     Task<bool> UpdateOutwardAsync(OutwardModel model);
     Task<bool> DeleteOutwardAsync(int id,int userid);
     Task<List<OutWardItemModel>> GetOutwardDetailsByOutwardIdAsync(int outwardId);

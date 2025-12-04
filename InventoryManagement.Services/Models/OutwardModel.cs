@@ -8,8 +8,11 @@ public class OutwardModel:CommonModel
     public string OutwardNo { get; set; } = string.Empty;
     public DateTime OutwardDate { get; set; } = DateTime.UtcNow.Date;
     public int BillToCompanyId { get; set; }
+    public int PlatformId { get; set; }
     public string? Remarks { get; set; }
     public List<OutWardItemModel> OutwardItems { get; set; } = new();
+    public bool IsFinished { get; set; } = false;
+
 }
 
 public class OutWardItemModel

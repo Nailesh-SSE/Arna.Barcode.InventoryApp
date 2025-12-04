@@ -97,7 +97,7 @@ public class InwardService : IInwardService
         }
     }
 
-    public async Task<bool> DeleteAsync(int id,int deletedBy)
+    public async Task<bool> DeleteAsync(int id, int deletedBy)
     {
         try
         {
@@ -120,9 +120,17 @@ public class InwardService : IInwardService
     public async Task<List<InwardItemModel>> GetInwardItemsByInwardIdAsync(int inwardId)
     {
         var itemRepo = _unitOfWork.GetRepository<InwardItem>();
-        var items = await itemRepo.FindAsync(ii => ii.InwardId == inwardId && !ii.IsDeleted);
+
+        var query = itemRepo.GetQueryable();
+
+        var items = await query.Include(a => a.InwardBarcodeItems).Include(a => a.Product)
+            .Where(ii => ii.InwardId == inwardId && !ii.IsDeleted)
+            .ToListAsync();
+
+
         return items.Select(MapItemToModel).ToList();
     }
+
 
     public async Task<bool> CreateInwardItemAsync(InwardItemModel model)
     {
@@ -228,24 +236,24 @@ public class InwardService : IInwardService
                 throw new Exception($"Inward {parameter.InwardId} not found.");
             }
 
-            var serialNo = await inwardItemRepo.CountAsync() + 1;     
+            var serialNo = await inwardItemRepo.CountAsync() + 1;
             var inwardItem = new InwardItem
             {
                 InwardId = inward.Id,
                 ProductId = parameter.ProductId,
                 InwardUnitId = parameter.UnitId,
-            
+
                 InwardUnitName = parameter.UnitName,
-                ItemQuantity= parameter.ItemQuantity,
-                BoxQuantity= parameter.BoxQuantity,
+                ItemQuantity = parameter.ItemQuantity,
+                BoxQuantity = parameter.BoxQuantity,
                 SerialNo = serialNo.ToString(),
                 BatchNo = GenerateBatchNo(serialNo),
                 IsDeleted = false,
 
                 CreatedBy = parameter.CreatedBy,
                 CreatedOn = DateTime.UtcNow
-              };
-           
+            };
+
             await inwardItemRepo.AddAsync(inwardItem);
             await _unitOfWork.SaveChangesAsync();
 
@@ -482,7 +490,7 @@ public class InwardService : IInwardService
             SerialNo = serialNo.ToString(),
             BatchNo = GenerateBatchNo(serialNo),
             IsDeleted = false,
-            CreatedBy = model.CreatedBy ,
+            CreatedBy = model.CreatedBy,
             CreatedOn = model.CreatedOn,
             BoxQuantity = model.BoxQuantity
         };
@@ -515,7 +523,7 @@ public class InwardService : IInwardService
 
         foreach (var item in items)
         {
-            if(item.InwardUnitId == (int)UnitType.BOX)
+            if (item.InwardUnitId == (int)UnitType.BOX)
             {
                 for (int i = 0; i < item.BoxQuantity; i++)
                 {
@@ -567,7 +575,7 @@ public class InwardService : IInwardService
 
             var barcodes = new List<InwardBarcodeItem>();
 
-            if(item.InwardUnitId == (int)UnitType.BOX)
+            if (item.InwardUnitId == (int)UnitType.BOX)
             {
                 for (int i = 0; i < item.BoxQuantity; i++)
                 {
@@ -634,7 +642,7 @@ public class InwardService : IInwardService
         return $"IN-{startYear % 100}-{endYear % 100}/{count}";
     }
 
-    private string GenerateBarcodeNumber(DateTime TransactionDate,int inwardId, int counter)
+    private string GenerateBarcodeNumber(DateTime TransactionDate, int inwardId, int counter)
     {
         string datePart = TransactionDate.ToString("ddMMyy");
 
@@ -669,7 +677,7 @@ public class InwardService : IInwardService
             ShipMentCompanyId = entity.ShipMentCompanyId,
             Remarks = entity.Remarks,
             IsActive = entity.IsActive,
-            CategoryId=entity.CategoryId,
+            CategoryId = entity.CategoryId,
             CreatedBy = entity.CreatedBy,
         };
     }
@@ -687,24 +695,12 @@ public class InwardService : IInwardService
             BatchNo = entity.BatchNo,
             CreatedBy = entity.CreatedBy,
             BoxQuantity = entity.BoxQuantity,
-            ProductSearchText = entity.Product.SKU
+            ProductSearchText = entity.Product.SKU,
+            HasOutOfStockBarcodes = entity.InwardBarcodeItems.Any(b => !b.IsInStock)
         };
     }
 
     #endregion
 
-    #region Are All barcode Isinstock
-    public async Task<bool> AreAllBarcodesInStock(int itemId)
-    {
-        var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
 
-        var barcodes = await barcodeRepo.FindAsync(b => b.InwardItemId == itemId);
-
-        // If any barcode is outwarded (IsInStock == false)
-        if (barcodes.Any(b => !b.IsInStock))
-            return false;
-
-        return true;
-    }
-    #endregion
 }

@@ -21,6 +21,7 @@ public class InventoryDbContext : DbContext
     public DbSet<OutwardDetail> OutwardDetails { get; set; }
     public DbSet<SaleReturn> SaleReturns { get; set; }
     public DbSet<Colour> Colour { get; set; }
+    public DbSet<Platform> Platform { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
