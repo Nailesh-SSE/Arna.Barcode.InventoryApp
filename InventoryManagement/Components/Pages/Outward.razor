@@ -1,6 +1,7 @@
 @page "/outward"
 @inject IOutwardService OutwardService
 @inject ICompanyService CompanyService
+@inject IPlatformService PlatformService
 @inject IJSRuntime JSRuntime
 @inherits InventoryManagement.Components.Auth.AuthComponentBase
 <PageTitle>Outward Management</PageTitle>
@@ -38,6 +39,7 @@
             <GridColumn TItem="OutwardModel" HeaderText="Sr. No." Sortable="false" HeaderTextAlignment="Alignment.Center" TextAlignment="Alignment.Center">
                 @(outwards.IndexOf(context) + 1)
             </GridColumn>
+
             <GridColumn TItem="OutwardModel" HeaderText="Outward No" PropertyName="OutwardNo">
                 @context.OutwardNo
             </GridColumn>
@@ -48,6 +50,10 @@
 
             <GridColumn TItem="OutwardModel" HeaderText="Bill To Company" PropertyName="BillToCompanyId">
                 @(billCompanies.FirstOrDefault(c => c.Id == context.BillToCompanyId)?.Name ?? "N/A")
+            </GridColumn>
+
+            <GridColumn TItem="OutwardModel" HeaderText="Platform" PropertyName="PlatformId">
+                @(platforms.FirstOrDefault(p => p.Id == context.PlatformId)?.Name ?? "N/A")
             </GridColumn>
 
             <GridColumn TItem="OutwardModel" HeaderText="Status" PropertyName="IsActive">
@@ -111,7 +117,18 @@
                     <ValidationMessage For="@(() => outward.BillToCompanyId)" />
                 </div>
             </div>
-
+            <div class="col-md-12 mb-3">
+                    <label class="form-label">Platform <span class="text-danger">*</span></label>
+                    <InputSelect class="form-select" @bind-Value="outward.PlatformId"
+                                 @oninput="(e) => HandlePlatformChange(Convert.ToInt32(e.Value))">
+                        <option value="0">-- Select Platform --</option>
+                        @foreach (var platform in platforms)
+                        {
+                            <option value="@platform.Id">@platform.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => outward.PlatformId)" />
+           </div>
 
             <div class="mb-3">
                 <label class="form-label">Remarks</label>
@@ -253,6 +270,7 @@
 
     private List<OutwardModel> outwards = new();
     private List<CompanyModel> billCompanies = new();
+    private List<PlatformModel> platforms = new();
     private OutwardModel outward = new();
     private OutwardModel? selectedOutward;
 
@@ -301,6 +319,7 @@
             isLoading = true;
             outwards = await OutwardService.GetAllOutwardsAsync();
             billCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
+            platforms = (await PlatformService.GetAllPlatformAsync()).ToList();
             InitializeEditContext();
         }
         catch (Exception ex)
@@ -340,6 +359,7 @@
             OutwardNo = editOutward.OutwardNo,
             OutwardDate = editOutward.OutwardDate,
             BillToCompanyId = editOutward.BillToCompanyId,
+            PlatformId = editOutward.PlatformId,
             Remarks = editOutward.Remarks,
             IsActive = editOutward.IsActive,
             UpdatedBy=Convert.ToInt32(CurrentUserId),
@@ -356,6 +376,7 @@
             if (!editContext.Validate()) return;
 
             ValidateBillToCompany();
+            ValidatePlatform();
             if (editContext.GetValidationMessages().Any())
                 return;
 
@@ -577,6 +598,20 @@
     {
         outward.BillToCompanyId = id;
         ValidateBillToCompany();
+    }
+    private void ValidatePlatform()
+    {
+        messageStore.Clear(() => outward.PlatformId);
+        if (outward.PlatformId == 0)
+        {
+            messageStore.Add(() => outward.PlatformId, "Please select a Platform");
+        }
+        editContext.NotifyValidationStateChanged();
+    }
+    private void HandlePlatformChange(int id)
+    {
+        outward.PlatformId = id;
+        ValidatePlatform();
     }
 
     #endregion
