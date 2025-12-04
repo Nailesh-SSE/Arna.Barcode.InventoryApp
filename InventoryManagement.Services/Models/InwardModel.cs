@@ -40,4 +40,5 @@ public class InwardItemModel
     public string? InwardUnitName { get; set; }
     public decimal BoxQuantity { get; set; }
     public string ProductSearchText { get; set; } = string.Empty;
+    public bool HasOutOfStockBarcodes { get; set; } = false;
 }

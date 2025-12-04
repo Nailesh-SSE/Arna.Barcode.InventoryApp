@@ -152,26 +152,26 @@
     </BodyTemplate>
 </Modal>
 
-<Modal @ref="itemModal" Title="@($"Manage Items - {selectedOutward?.OutwardNo}")" Size="ModalSize.ExtraLarge">
+<Modal @ref="itemModal" Title="@($"Manage Items - {selectedOutward?.OutwardNo}")" Size="ModalSize.Regular">
     <BodyTemplate>
 @if (selectedOutward != null)
 {
-            <div class="card mb-3">
+            <div class="card">
                 <div class="card-body">
                     <EditForm EditContext="@itemEditContext" OnValidSubmit="AddItemToList">
                         <DataAnnotationsValidator />
                         @if (!selectedOutward.IsFinished)
                         {
                             <div class="row">
-                                <div class="col-md-8">
+                                <div class="col-sm-10">
                                     <label class="form-label">Barcode <span class="text-danger">*</span></label>
                                     <InputText class="form-control" @bind-Value="newItem.BarcodeNo"
                                                placeholder="Scan or enter barcode" @ref="barcodeInput" />
                                     <ValidationMessage For="@(() => newItem.BarcodeNo)" />
                                 </div>
-                                <div class="col-md-4 d-flex align-items-end">
+                                <div class="col-md-2 d-flex align-items-end ms-auto">
                                     <Button Color="ButtonColor.Primary" Type="ButtonType.Submit" class="w-100">
-                                        <Icon Name="IconName.Plus" /> Add Item
+                                        <Icon Name="IconName.Plus" />
                                     </Button>
                                 </div>
                                 @if (!string.IsNullOrEmpty(barcodeErrorMessage))
@@ -198,8 +198,10 @@
                             <thead>
                                 <tr>
                                     <th style="width: 5%">#</th>
-                                    <th style="width: 20%">Barcode</th>
-                                    <th style="width: 45%">Product Name</th>
+                                    <th style="width: 15%">Barcode</th>
+                                    <th style="width: 45%">Product Name</th>                               
+                                    <th style="width: 10%">Unit</th>
+
                                      @if (!selectedOutward.IsFinished)
                                     {
                                         <th style="width: 10%">Action</th>
@@ -248,17 +250,17 @@
                 </div>
             </div>
 
-            <div class="d-flex justify-content-between mt-3">
+            <div class="d-flex justify-content-end gap-2 mt-3">
                 @if (!selectedOutward.IsFinished)
                 {
-                    <Button Color="ButtonColor.Danger" @onclick="() => FinalizeOutward(selectedOutward)">Finish</Button>
+                    <Button Color="ButtonColor.Primary" @onclick="() => FinalizeOutward(selectedOutward)">Finish</Button>
                 }
                 else
                 {
                     <Button Color="ButtonColor.Success" data-bs-toggle="tooltip" title="This outward is already finished">Finished</Button>
                 }            
                     <Button Color="ButtonColor.Secondary" @onclick="HideItemModal">Close</Button>
-                 </div>
+            </div>
     }
 </BodyTemplate>
 </Modal>
