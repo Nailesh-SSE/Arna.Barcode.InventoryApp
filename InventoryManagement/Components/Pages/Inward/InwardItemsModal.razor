@@ -1,5 +1,6 @@
 ﻿@inject IJSRuntime JSRuntime
 @inject IInwardService inwardService
+@using InventoryManagement.Components.Pages.CommonComponents;
 <Modal @ref="modal" Title="@Title" Size="ModalSize.Large">
     <BodyTemplate>
         @if (SelectedInward != null)
@@ -46,28 +47,27 @@
 
                                         <tr class="@rowClasses">
                                             <td>
-                                                    <AutoComplete TItem="ProductModel"
-                                                                   class="@productClass"
-                                                                   @bind-Value="item.ProductSearchText"
-                                                                   DataProvider="ProductsDataProvider"
-                                                                   PropertyName="SKU"
-                                                                   Placeholder="Search product..."
-                                                                   StringComparison="StringComparison.OrdinalIgnoreCase"
-                                                                   OnChanged="(ProductModel product) => OnProductAutoCompleteChanged(item, product)"
-                                                                   disabled="@item.HasOutOfStockBarcodes" />
- 
-                                                     @if (showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))
-                                                     {
-                                                         <small class="text-danger">Product is required</small>
-                                                     }
+                                                <SearchableDropdown TItem="ProductModel"
+                                                                    Items="@FilteredProducts"
+                                                                    ItemTextSelector="@(p => p.SKU)"
+                                                                    SelectedText="@item.ProductSearchText"
+                                                                    Placeholder="Search product..."
+                                                                    OnItemSelected="@(p => OnProductDropdownSelected(item, p))"
+                                                                    ShowValidationMessage="@(showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))"
+                                                                    IsRequired="true" IsDisabled="@item.HasOutOfStockBarcodes" />
+
+                                                @if (showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))
+                                                {
+                                                    <small class="text-danger">Product is required</small>
+                                                }
                                             </td>
 
                                             <td>
                                                 <InputSelect class="@unitsClass"
                                                              @bind-Value="item.InwardUnitId"
                                                              disabled="@item.HasOutOfStockBarcodes"
-                                                             title="@(item.HasOutOfStockBarcodes ? " Item is locked or out-of-stock" : "" )">
-                                                    <option value="0">-- Select Units --</option>
+                                                             title="@(item.HasOutOfStockBarcodes ? " Item is locked or out-of-stock" : "")">
+                                                    <option value="0">-- Select --</option>
                                                     @foreach (var unit in Units)
                                                     {
                                                         <option value="@unit.Id">@unit.Name</option>
@@ -84,10 +84,14 @@
                                                              @bind-Value="item.ItemQuantity"
                                                              @onchange="@(() => ClearMessages())"
                                                              disabled="@item.HasOutOfStockBarcodes"
-                                                             title="@(item.HasOutOfStockBarcodes ? "Item is locked or out-of-stock" : "" )" />
-                                                @if (showValidation && item.ItemQuantity <= 0 && IsLastUnsavedItem(item))
+                                                             title="@(item.HasOutOfStockBarcodes ? "Item is locked or out-of-stock" : "")" />
+                                                @if (showValidation && item.ItemQuantity == 0 && IsLastUnsavedItem(item))
                                                 {
-                                                    <small class="text-danger">Quantity must be greater than 0</small>
+                                                    <small class="text-danger">Qty required.</small>
+                                                }
+                                                @if (showValidation && item.ItemQuantity < 0 && IsLastUnsavedItem(item))
+                                                {
+                                                    <small class="text-danger">Invalid Qty!</small>
                                                 }
                                             </td>
 
@@ -208,7 +212,7 @@
     [Parameter] public EventCallback<InwardItemModel> OnRemoveUnsaved { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<InwardItemModel> OnDownloadPdf { get; set; }
-  
+
     public List<UnitModel> Units => CommonUtils.UnitList;
 
     public async Task Show()
@@ -402,36 +406,18 @@
         return inwardUnitName == "BOX";
     }
 
-    private async Task<AutoCompleteDataProviderResult<ProductModel>> ProductsDataProvider(AutoCompleteDataProviderRequest<ProductModel> request)
-    {
-        if (FilteredProducts == null || !FilteredProducts.Any())
-        {
-            return await Task.FromResult(new AutoCompleteDataProviderResult<ProductModel>
-            {
-                Data = Array.Empty<ProductModel>()
-            });
-        }
-    
-        var query = FilteredProducts
-            .OrderBy(p => p.Name)
-            .ToList();
-    
-        return await Task.FromResult(request.ApplyTo(query));
-    }
-
-    private void OnProductAutoCompleteChanged(InwardItemModel item, ProductModel? product)
+    private void OnProductDropdownSelected(InwardItemModel inwardItem, ProductModel product)
     {
         ClearMessages();
-    
+
         if (product is null)
         {
-            item.ProductId = 0;
-            item.ProductSearchText = string.Empty;
+            inwardItem.ProductSearchText = "";
+            inwardItem.ProductId = 0;
+            return;
         }
-        else
-        {
-            item.ProductId = product.Id;
-            item.ProductSearchText = product.SKU;
-        }
+
+        inwardItem.ProductId = product.Id;
+        inwardItem.ProductSearchText = product.SKU;
     }
 }
