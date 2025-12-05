@@ -208,6 +208,7 @@ else
 
 @code {
     private bool hasCheckedAuth = false;
+    private bool _redirectInitiated = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -217,9 +218,12 @@ else
 
     protected override void OnAfterRender(bool firstRender)
     {
-        if (firstRender && hasCheckedAuth && !IsAuthenticated)
+        if (!_redirectInitiated && hasCheckedAuth && !IsAuthenticated)
         {
-            NavigationManager.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}", true);
+            _redirectInitiated = true;
+            var currentRelativeUrL = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+
+            NavigationManager.NavigateTo($"/login?returnUrl={Uri.EscapeDataString("/" + currentRelativeUrL)}", forceLoad: true);
         }
     }
 }
