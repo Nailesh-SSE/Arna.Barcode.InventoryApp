@@ -7,6 +7,7 @@
 @inject IColourService ColourService
 @using InventoryManagement.Components.Auth
 @using InventoryManagement.Services.Models;
+@using InventoryManagement.Components.Pages.CommonComponents;
 @inherits AuthComponentBase
 
 <PageTitle>Products</PageTitle>
@@ -139,13 +140,15 @@
                 <div class="col-md-6 mb-3 position-relative">
                     <label class="form-label">Colour <span class="text-danger">*</span></label>
 
-                    <AutoComplete TItem="ColourModel"
-                                  @bind-Value="productModel.ColourSearchText"
-                                  DataProvider="ColoursDataProvider"
-                                  PropertyName="Name"
-                                  Placeholder="Search Colour..."
-                                  StringComparison="StringComparison.OrdinalIgnoreCase"
-                                  OnChanged="OnColourChanged" />
+                    <SearchableDropdown TItem="ColourModel"
+                    Items="@Colours"
+                    ItemTextSelector="@(c => c.Name)"
+                    SelectedText="@productModel.ColourSearchText"
+                    Placeholder="Search Colour..."
+                    OnItemSelected="OnColourSelected"
+                    IsRequired="true"
+                    ShowValidationMessage="true"/>
+
                     <ValidationMessage For="@(() => productModel.ColourId)" />
                 </div>
             </div>
@@ -250,9 +253,9 @@
             SerialNumber = editProduct.SerialNumber,
             ColourId = editProduct.ColourId,
             ColourName = editProduct.ColourName,
+            ColourSearchText = editProduct.ColourName,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
-            UpdatedOn = DateTime.UtcNow,
-            ColourSearchText = editProduct.ColourName
+            UpdatedOn = DateTime.UtcNow
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -426,29 +429,13 @@
         ValidateColour();
     }
 
-    private async Task<AutoCompleteDataProviderResult<ColourModel>> ColoursDataProvider(AutoCompleteDataProviderRequest<ColourModel> request)
-    {
-        if (Colours == null || !Colours.Any())
-        {
-            return await Task.FromResult(new AutoCompleteDataProviderResult<ColourModel>
-            {
-                Data = Array.Empty<ColourModel>()
-            });
-        }
-
-        var query = Colours
-            .OrderBy(p => p.Name)
-            .ToList();
-
-        return await Task.FromResult(request.ApplyTo(query));
-    }
-
-    private void OnColourChanged(ColourModel colour)
+    private void OnColourSelected(ColourModel colour)
     {
         if (colour == null)
         {
             productModel.ColourId = 0;
-            productModel.ColourSearchText = string.Empty;
+            productModel.ColourSearchText = "";
+            productModel.ColourName = "";
         }
         else
         {
@@ -458,6 +445,7 @@
         }
 
         ValidateColour();
+        StateHasChanged();
     }
 
 }
