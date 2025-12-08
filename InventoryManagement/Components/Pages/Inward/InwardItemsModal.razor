@@ -1,7 +1,7 @@
 ﻿@inject IJSRuntime JSRuntime
 @inject IInwardService inwardService
 @using InventoryManagement.Components.Pages.CommonComponents;
-<Modal @ref="modal" Title="@Title" Size="ModalSize.Large">
+<Modal @ref="modal" Title="@Title" Size="ModalSize.ExtraLarge">
     <BodyTemplate>
         @if (SelectedInward != null)
         {
@@ -26,27 +26,27 @@
                     @if (InwardItems.Any())
                     {
                         <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                            <table class="table table-bordered table-sm align-middle">
+                            <table class="table table-bordered align-middle">
                                 <thead class="table-light">
                                     <tr>
-                                        <th Style="width: 45%">Product</th>
-                                        <th Style="width: 10%">Units</th>
-                                        <th Style="width: 10%">Item Qty</th>
-                                        <th Style="width: 10%">Box Qty</th>
-                                        <th Style="width: 25%">Actions</th>
+                                        <th class="col-12 col-md-5">Product</th>
+                                        <th class="col-4 col-md-1 text-center">Units</th>
+                                        <th class="col-4 col-md-1 text-center">Item Qty</th>
+                                        <th class="col-4 col-md-1 text-center">Box Qty</th>
+                                        <th class="col-12 col-md-3 text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach (var item in InwardItems)
                                     {
                                         var productClass = $"form-select form-select-sm {GetValidationClass(item, "product")} w-100";
-                                        var itemQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "itemQuantity")}";
-                                        var unitsClass = $"form-control form-control-sm {GetValidationClass(item, "units")}";
-                                        var boxQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "boxQuantity")}";
+                                        var itemQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "itemQuantity")} w-auto";
+                                        var unitsClass = $"form-control form-control-sm {GetValidationClass(item, "units")} w-auto";
+                                        var boxQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "boxQuantity")} w-auto";
                                         var rowClasses = $"{(item.Id == 0 ? "table-warning" : "")} {(item.HasOutOfStockBarcodes ? "opacity-30 text-muted" : "")}";
 
                                         <tr class="@rowClasses">
-                                            <td>
+                                            <td class="col-5">
                                                 <SearchableDropdown TItem="ProductModel"
                                                                     Items="@FilteredProducts"
                                                                     ItemTextSelector="@(p => p.SKU)"
@@ -61,12 +61,10 @@
                                                     <small class="text-danger">Product is required</small>
                                                 }
                                             </td>
-
-                                            <td>
+                                            <td class="col-1">
                                                 <InputSelect class="@unitsClass"
                                                              @bind-Value="item.InwardUnitId"
-                                                             disabled="@item.HasOutOfStockBarcodes"
-                                                             title="@(item.HasOutOfStockBarcodes ? " Item is locked or out-of-stock" : "")">
+                                                             disabled="@item.HasOutOfStockBarcodes">
                                                     <option value="0">-- Select --</option>
                                                     @foreach (var unit in Units)
                                                     {
@@ -75,16 +73,15 @@
                                                 </InputSelect>
                                                 @if (showValidation && item.InwardUnitId == 0 && IsLastUnsavedItem(item))
                                                 {
-                                                    <small class="text-danger">Unit is required</small>
+                                                    <small class="text-danger">Unit required</small>
                                                 }
                                             </td>
-
-                                            <td>
+                                            <td class="col-1">
                                                 <InputNumber class="@itemQuantityClass"
                                                              @bind-Value="item.ItemQuantity"
                                                              @onchange="@(() => ClearMessages())"
-                                                             disabled="@item.HasOutOfStockBarcodes"
-                                                             title="@(item.HasOutOfStockBarcodes ? "Item is locked or out-of-stock" : "")" />
+                                                             disabled="@item.HasOutOfStockBarcodes" />
+
                                                 @if (showValidation && item.ItemQuantity == 0 && IsLastUnsavedItem(item))
                                                 {
                                                     <small class="text-danger">Qty required.</small>
@@ -94,57 +91,51 @@
                                                     <small class="text-danger">Invalid Qty!</small>
                                                 }
                                             </td>
-
-                                            <td>
+                                            <td class="col-1">
                                                 @if (IsRequired(item))
                                                 {
                                                     <InputNumber class="@boxQuantityClass"
                                                                  @bind-Value="item.BoxQuantity"
                                                                  @onchange="@(() => ClearMessages())"
-                                                                 disabled="@item.HasOutOfStockBarcodes"
-                                                                 title="@(item.HasOutOfStockBarcodes ? "Item is locked or out-of-stock" : "")" />
-                                                    @if (showValidation && item.BoxQuantity <= 0 && IsRequired(item) && IsLastUnsavedItem(item))
+                                                                 disabled="@item.HasOutOfStockBarcodes" />
+
+                                                    @if (showValidation && item.BoxQuantity == 0 && IsRequired(item) && IsLastUnsavedItem(item))
                                                     {
-                                                        <small class="text-danger">BoxQuantity must be greater than 0</small>
+                                                        <small class="text-danger">Qty required.</small>
+                                                    }
+                                                    @if (showValidation && item.BoxQuantity < 0 && IsRequired(item) && IsLastUnsavedItem(item))
+                                                    {
+                                                        <small class="text-danger">Invalid Qty!</small>
                                                     }
                                                 }
                                             </td>
-
-                                            <td>
-                                                <div class="d-flex gap-1">
+                                            <td class="col-3">
+                                                <div class="d-flex gap-1 justify-content-start">
                                                     <button type="button"
                                                             class="btn btn-primary btn-sm"
                                                             @onclick="@(() => HandleSaveItem(item))"
-                                                            disabled="@(item.HasOutOfStockBarcodes || (isSaving && currentSavingItem != null && currentSavingItem != item))"
-                                                            title="@(item.HasOutOfStockBarcodes ? "Cannot edit this item" : "")">
-                                                        @if (isSaving && currentSavingItem == item)
-                                                        {
-                                                            <span class="spinner-border spinner-border-sm me-1"></span>
-                                                        }
+                                                            disabled="@item.HasOutOfStockBarcodes">
                                                         Save
                                                     </button>
                                                     @if (item.Id > 0)
                                                     {
                                                         <button type="button"
                                                                 class="btn btn-danger btn-sm"
-                                                                @onclick="@(() => HandleDeleteItem(item.Id))"
-                                                                disabled="@item.HasOutOfStockBarcodes"
-                                                                title="@(item.HasOutOfStockBarcodes ? "Cannot delete this item" : "")">
+                                                                @onclick="@(() => HandleDeleteItem(item.Id))">
                                                             Delete
                                                         </button>
 
-                                                        <button type="button" class="btn btn-dark btn-sm opacity-10"
-                                                                title="Download Barcodes"
+                                                        <button type="button"
+                                                                class="btn btn-dark btn-sm"
                                                                 @onclick="@(() => OnDownloadPdf.InvokeAsync(item))">
-                                                            <Icon Name="IconName.UpcScan" /> PDF
+                                                            <Icon Name="IconName.UpcScan" />PDF
                                                         </button>
                                                     }
                                                     else
                                                     {
                                                         <button type="button"
                                                                 class="btn btn-outline-secondary btn-sm"
-                                                                @onclick="@(() => RemoveUnsavedItem(item))"
-                                                                disabled="@isSaving">
+                                                                @onclick="@(() => RemoveUnsavedItem(item))">
                                                             Cancel
                                                         </button>
                                                     }
@@ -155,10 +146,7 @@
                                 </tbody>
                             </table>
                             <div class="text-end mt-2">
-                                <button type="button"
-                                        class="btn btn-success btn-sm"
-                                        @onclick="HandleAddItem"
-                                        disabled="@isSaving">
+                                <button type="button" class="btn btn-success btn-sm" @onclick="HandleAddItem">
                                     <i class="bi bi-plus-circle me-1"></i>Add New Item
                                 </button>
                             </div>
