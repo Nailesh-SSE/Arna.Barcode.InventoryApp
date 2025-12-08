@@ -17,6 +17,8 @@ public class Outward : Common
     [Required]
     public int BillToCompanyId { get; set; }
 
+    [Required]
+    public int PlatformId { get; set; }
 
     [StringLength(500)]
     public string? Remarks { get; set; }

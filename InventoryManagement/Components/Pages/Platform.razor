@@ -1,0 +1,255 @@
+﻿@page "/platforms"
+@inject IJSRuntime JS
+@inject IPlatformService PlatformService
+@using InventoryManagement.Components.Auth
+@inherits AuthComponentBase
+
+<PageTitle>Platform</PageTitle>
+
+
+@if (isLoading)
+{
+    <div class="text-center">
+        <Spinner Type="SpinnerType.Border" />
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col">
+                <h3><Icon Name="IconName.Stack" /> Platform</h3>
+            </div>
+            <div class="col-auto">
+                <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                    <Icon Name="IconName.Plus" /> Add New
+                </Button>
+            </div>
+        </div>
+
+        <Grid TItem="PlatformModel"
+              @ref="platformGrid"
+              Class="table table-hover table-bordered table-striped"
+              Data="platformList"
+              AllowPaging="true"
+              PageSize="10"
+              Responsive="true">
+
+
+            <GridColumn TItem="PlatformModel" HeaderText="No">
+                @(platformList.IndexOf(context) + 1)
+            </GridColumn>
+
+            <GridColumn TItem="PlatformModel" HeaderText="Name" PropertyName="Name">
+                @context.Name
+            </GridColumn>
+
+            <GridColumn TItem="PlatformModel" HeaderText="Remark" PropertyName="Remark">
+                @context.Remark
+            </GridColumn>
+
+            <GridColumn TItem="PlatformModel" HeaderText="Status" PropertyName="IsActive">
+                @if (context.IsActive)
+                {
+                    <Badge Color="BadgeColor.Success">Active</Badge>
+                }
+                else
+                {
+                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                }
+            </GridColumn>
+
+            <GridColumn TItem="PlatformModel" HeaderText="Actions">
+                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                    <Icon Name="IconName.PencilSquare" /> Edit
+                </Button>
+                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeletePlatform(context.Id)">
+                    <Icon Name="IconName.Trash" /> Delete
+                </Button>
+            </GridColumn>
+        </Grid>
+    </div>
+}
+
+<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+    <BodyTemplate>
+        <EditForm EditContext="editContext" OnValidSubmit="SavePlatform">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label class="form-label">Name <span class="text-danger">*</span></label>
+                <InputText class="form-control" autocomplete="off" @bind-Value="platformModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
+                <ValidationMessage For="@(() => platformModel.Name)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Remark</label>
+                <InputTextArea class="form-control" rows="3" @bind-Value="platformModel.Remark" />
+            </div>
+
+            @if (platformModel.Id > 0)
+            {
+                <div class="mb-3">
+                    <InputCheckbox @bind-Value="platformModel.IsActive" /> Active
+                </div>
+            }
+
+            <div class="text-end">
+                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+
+@code {
+    private Modal modal = default!;
+    private bool isLoading = true;
+    private string modalTitle = "Add Platform";
+    private bool isEditMode = false;
+    private Grid<PlatformModel> platformGrid;
+    private PlatformModel platformModel = new();
+    private List<PlatformModel> platformList = new();
+    private EditContext editContext;
+    private ValidationMessageStore messageStore;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
+
+        await LoadPlatforms();
+    }
+
+    private async Task LoadPlatforms()
+    {
+        isLoading = true;
+        platformList = (await PlatformService.GetAllPlatformAsync()).ToList();
+        isLoading = false;
+    }
+    private void InitializeEditContext()
+    {
+        editContext = new EditContext(platformModel);
+        messageStore = new ValidationMessageStore(editContext);
+    }
+
+    private void ShowAddModal()
+    {
+        modalTitle = "Add Platform";
+        isEditMode = false;
+        platformModel = new PlatformModel
+        {
+            IsActive = true,
+            CreatedBy = Convert.ToInt32(CurrentUserId),
+            CreatedOn = DateTime.UtcNow
+        };
+        InitializeEditContext();
+        modal.ShowAsync();
+    }
+
+    private void ShowEditModal(PlatformModel editPlatform)
+    {
+        modalTitle = "Edit Platform";
+        isEditMode = true;
+        platformModel = new PlatformModel
+        {
+            Id = editPlatform.Id,
+            Name = editPlatform.Name,
+            Remark = editPlatform.Remark,
+            IsActive = editPlatform.IsActive,
+            UpdatedBy = Convert.ToInt32(CurrentUserId),
+            UpdatedOn = DateTime.UtcNow
+        };
+        InitializeEditContext();
+        modal?.ShowAsync();
+    }
+
+    private async Task SavePlatform()
+    {
+        try
+        {
+            if (!editContext.Validate()) return;
+            await ValidateNameAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
+
+            await ValidateDuplicateNameAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
+            if (isEditMode)
+            {
+                await PlatformService.UpdatePlatformAsync(platformModel);
+            }
+            else
+            {
+                await PlatformService.CreatePlatformAsync(platformModel);
+            }
+
+            await HideModal();
+            await LoadPlatforms();
+            await platformGrid.RefreshDataAsync();
+        }
+        catch (Exception ex)
+        {
+        }
+    }
+
+    private async Task DeletePlatform(int id)
+    {
+        try
+        {
+            bool confirmed = await JS.InvokeAsync<bool>("confirm", "Do you want to delete this platform?");
+            if (!confirmed)
+                return;
+            var updatedbyuser = Convert.ToInt32(CurrentUserId);
+            await PlatformService.DeletePlatformAsync(id, updatedbyuser);
+            await LoadPlatforms();
+            await platformGrid.RefreshDataAsync();
+        }
+        catch (Exception ex)
+        {
+        }
+    }
+
+    private async Task HideModal()
+    {
+        await modal.HideAsync();
+    }
+    private async Task ValidateDuplicateNameAsync()
+    {
+        messageStore.Clear();
+        bool isNameUnique = await PlatformService.IsPlatformNameUniqueAsync(platformModel.Name, platformModel.Id);
+        if (!isNameUnique)
+        {
+            messageStore.Add(() => platformModel.Name, "Platform name already exists.");
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+    private async Task ValidateNameAsync()
+    {
+        messageStore.Clear();
+        if (string.IsNullOrWhiteSpace(platformModel.Name))
+        {
+            messageStore.Add(() => platformModel.Name, "Name is required.");
+            editContext.NotifyValidationStateChanged();
+        }
+
+    }
+    private async Task HandleNameChangeAsync(string newValue)
+    {
+        platformModel.Name = newValue;
+        try
+        {
+            await ValidateNameAsync();
+        }
+        catch (Exception ex)
+        {
+        }
+    }
+}

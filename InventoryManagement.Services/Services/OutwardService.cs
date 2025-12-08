@@ -52,7 +52,8 @@ public class OutwardService : IOutwardService
                 OutwardNo = model.OutwardNo,
                 OutwardDate = model.OutwardDate,
                 BillToCompanyId = model.BillToCompanyId,
-                Remarks = model.Remarks,
+                PlatformId = model.PlatformId,
+                Remarks = model.Remarks,    
                 IsActive = true,
                 IsDeleted = false,
                 IsFinished =false,
@@ -85,6 +86,7 @@ public class OutwardService : IOutwardService
 
             existing.OutwardDate = model.OutwardDate;
             existing.BillToCompanyId = model.BillToCompanyId;
+            existing.PlatformId = model.PlatformId;
             existing.Remarks = model.Remarks;
             existing.IsActive = model.IsActive;
             existing.UpdatedBy = model.UpdatedBy;
@@ -353,6 +355,7 @@ public class OutwardService : IOutwardService
             OutwardNo = entity.OutwardNo,
             OutwardDate = entity.OutwardDate,
             BillToCompanyId = entity.BillToCompanyId,
+            PlatformId = entity.PlatformId,
             Remarks = entity.Remarks,
             IsActive = entity.IsActive,
             IsFinished=entity.IsFinished
