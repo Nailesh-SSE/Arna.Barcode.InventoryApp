@@ -308,80 +308,55 @@ public class InwardService : IInwardService
     public async Task<byte[]> GenerateItemBarcodePdfAsync(int inwardItemId)
     {
         var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
-        var barcodeItems = await barcodeRepo.FindAsync(b => b.InwardItemId == inwardItemId && !b.IsDeleted && b.IsActive);
+        var barcodeItems = (await barcodeRepo.FindAsync(
+                b => b.InwardItemId == inwardItemId && !b.IsDeleted && b.IsActive))
+            .OrderBy(b => b.BarcodeNo)           // ensure consistent order (1,2,3,4,…)
+            .ToList();
 
         if (!barcodeItems.Any()) return null;
 
-        // ==========================================
-        // 1. SET YOUR SIZE HERE (IN CM)
-        // ==========================================
-        float widthInCm = 3.0f;   // Example: 3.5 cm width (Approx 1.4 inches)
-        float heightInCm = 1.5f;  // Example: 2.0 cm height (Approx 0.8 inches)
+        // ==========================================================
+        // LABEL SIZE : 50 mm x 25 mm  (5.0 cm x 2.5 cm)
+        // ==========================================================
+        float widthInCm = 5.0f;   // 50 mm
+        float heightInCm = 2.5f;  // 25 mm
 
-        // Convert CM to Points (Do not change this math)
-        float widthPoints = widthInCm * 28.35f;
+        float widthPoints = widthInCm * 28.35f;   // cm -> points
         float heightPoints = heightInCm * 28.35f;
 
         var pageSize = new Rectangle(widthPoints, heightPoints);
 
-        // Margins (Left, Right, Top, Bottom) - keeping them small (2 points) for small stickers
         using var fs = new MemoryStream();
-        Document doc = new Document(pageSize, 2f, 2f, 3f, 2f);
+        Document doc = new Document(pageSize, 2f, 2f, 2f, 2f);  // small margins
 
         try
         {
             PdfWriter writer = PdfWriter.GetInstance(doc, fs);
             doc.Open();
+
             PdfContentByte cb = writer.DirectContent;
             BaseFont bf = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
 
-            foreach (var item in barcodeItems)
+            // width of each column (left/right)
+            float cellWidth = doc.PageSize.Width / 2f;
+
+            // ==========================================================
+            // LOOP: 2 barcodes per page -> (1,2), (3,4), (5,6), ...
+            // ==========================================================
+            for (int i = 0; i < barcodeItems.Count; i += 2)
             {
                 doc.NewPage();
 
-                Barcode128 bc = new Barcode128();
-                bc.Code = item.BarcodeNo;
-                bc.CodeType = Barcode128.CODE128;
-                bc.StartStopText = false;
-                bc.Font = null;
+                // LEFT BARCODE
+                AddBarcodeToCell(doc, cb, bf, barcodeItems[i],
+                                 cellIndex: 0, cellWidth: cellWidth);
 
-                // ==========================================
-                // 2. ADJUST BARCODE APPEARANCE
-                // ==========================================
-                bc.BarHeight = 22f; // Make bars shorter to fit small height (Try 15f to 25f)
-                bc.X = 0.6f;        // Bar thickness (lower = thinner). Try 0.8f if barcode is too wide.
-
-                Image img = bc.CreateImageWithBarcode(cb, BaseColor.BLACK, BaseColor.BLACK);
-
-                // ==========================================
-                // 3. DYNAMIC POSITIONING (Calculates center automatically)
-                // ==========================================
-
-                // Center Horizontally
-                float imgX = (doc.PageSize.Width - img.ScaledWidth) / 2;
-
-                // Center Vertically: Push it up slightly to make room for text below
-                // "doc.PageSize.Height / 2" is the middle line.
-                float imgY = (doc.PageSize.Height / 2) - 6f;
-
-                img.SetAbsolutePosition(imgX, imgY);
-                doc.Add(img);
-
-                // ==========================================
-                // 4. TEXT SETTINGS
-                // ==========================================
-                cb.BeginText();
-                cb.SetFontAndSize(bf, 8f); // Smaller font (8f) for small sticker
-
-                float textWidth = bf.GetWidthPoint(item.BarcodeNo, 8f);
-                float textX = (doc.PageSize.Width - textWidth) / 2;
-
-                // Position text just below the barcode image
-                float textY = imgY - 9f;
-
-                cb.SetTextMatrix(textX, textY);
-                cb.ShowText(item.BarcodeNo);
-                cb.EndText();
+                // RIGHT BARCODE (if exists)
+                if (i + 1 < barcodeItems.Count)
+                {
+                    AddBarcodeToCell(doc, cb, bf, barcodeItems[i + 1],
+                                     cellIndex: 1, cellWidth: cellWidth);
+                }
             }
         }
         finally
@@ -390,6 +365,51 @@ public class InwardService : IInwardService
         }
 
         return fs.ToArray();
+    }
+
+    // Helper method: puts one barcode into left (0) or right (1) cell.
+    private void AddBarcodeToCell(Document doc, PdfContentByte cb, BaseFont bf,
+                                  InwardBarcodeItem item, int cellIndex, float cellWidth)
+    {
+        Barcode128 bc = new Barcode128
+        {
+            Code = item.BarcodeNo,
+            CodeType = Barcode128.CODE128,
+            StartStopText = false,
+            Font = null,
+            BarHeight = 18f,   // adjust if you need shorter/taller bars
+            X = 0.6f           // bar thickness
+        };
+
+        Image img = bc.CreateImageWithBarcode(cb, BaseColor.BLACK, BaseColor.BLACK);
+
+        // Make sure barcode fits in its half of the label
+        float maxImgWidth = cellWidth - 4f;                // small padding
+        float maxImgHeight = doc.PageSize.Height - 10f;    // leave room for text
+        img.ScaleToFit(maxImgWidth, maxImgHeight);
+
+        // X: center inside the cell (0 = left cell, 1 = right cell)
+        float cellLeft = cellIndex * cellWidth;
+        float imgX = cellLeft + (cellWidth - img.ScaledWidth) / 2f;
+
+        // Y: center vertically a bit higher so text can be below
+        float imgY = (doc.PageSize.Height - img.ScaledHeight) / 2f + 3f;
+
+        img.SetAbsolutePosition(imgX, imgY);
+        doc.Add(img);
+
+        // ========== Text under barcode ==========
+        cb.BeginText();
+        float fontSize = 7f;
+        cb.SetFontAndSize(bf, fontSize);
+
+        float textWidth = bf.GetWidthPoint(item.BarcodeNo, fontSize);
+        float textX = cellLeft + (cellWidth - textWidth) / 2f;
+        float textY = imgY - 8f; // below the barcode
+
+        cb.SetTextMatrix(textX, textY);
+        cb.ShowText(item.BarcodeNo);
+        cb.EndText();
     }
     #endregion
 
