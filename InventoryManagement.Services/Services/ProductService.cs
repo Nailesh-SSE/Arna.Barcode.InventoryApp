@@ -131,7 +131,7 @@ public class ProductService : IProductService
             if (!await IsSkuUniqueAsync(productModel.SKU, productModel.Id))
                 return false;
 
-            if (!await IsProductNameUniqueAsync(productModel.Name, productModel.MakeCompanyId,productModel.ColourId))
+            if (!await IsProductNameUniqueAsync(productModel.Name, productModel.MakeCompanyId,productModel.ColourId,productModel.Id))
                 return false;
 
             var categoryRepository = _unitOfWork.GetRepository<Category>();
