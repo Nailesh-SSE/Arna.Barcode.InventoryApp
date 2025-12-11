@@ -1,12 +1,293 @@
-@page "/sale-returns"
+ @page "/sale-returns"
 @inject ISaleReturnService SaleReturnService
 @inject ICompanyService CompanyService
 @inject IProductService ProductService
+@inject ICategoryService CategoryService
+@inject IOutwardService OutwardService
+
 @inject IJSRuntime JSRuntime
 
 @inherits InventoryManagement.Components.Auth.AuthComponentBase
 <PageTitle>Sale Return Management</PageTitle>
 
+<div>
+
+    <div class="row mb-3">
+        <div class="col">
+            <h3>Sale Return Management</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowAddModal">
+                <Icon Name="IconName.Plus" />  Add New Sale Return
+            </button>
+        </div>
+    </div>
+</div>
+
+@if(isLoading)
+{
+    <div>
+        <div class="spinner-border text-light" role="status"></div>
+    </div>
+}
+else
+{
+    <SaleReturnTable SaleReturns="saleReturnList"
+                     BillToCompanies="BillToCompanyList"
+                     OnEditSaleReturn="ShowEditModal"
+                     OnAddItems="OpenItemModel" />
+    
+}
+
+  <SaleReturnFormModal @ref="saleReturnFormModal"
+                     Title="@modalTitle"
+                     SaleReturnModel="saleReturn"
+                     BillToCompanyList="BillToCompanyList"
+                     OnSave="SaveSaleReturn" 
+                     OnCancel="HideModal"/>
+
+<SaleReturnItemsFormModal @ref="saleReturnItemsFormModal"
+                          Title="@itemTitle"
+                          SelectedSaleReturn="selectedSaleReturn"
+                          ItemsList="SaleReturnItems"
+                          ItemsModel="itemsModel"
+                          ProductList="ProductList"
+                          CompanyList="ShipToCompanyList"
+                          OutwardList="OutwardList"
+                          OnBarcodeVal="ValidateBarcode"
+                          OnClose="HideItemModal"
+                          OnDelete="DeleteSaleReturnItem"
+                          OnSave="SaveSaleReturnItem"
+                          AddItemRow="AddNewItemRow"
+                          />
+
+@code
+{
+    private bool isLoading = true;
+    private bool isEditMode = false;
+    private string modalTitle = "Add Sale Return";
+    private string itemTitle = "Sale Return Items";
+
+    private SaleReturnModel saleReturn = new();
+    private SaleReturnModel? selectedSaleReturn;
+    private SaleReturnItemsModel itemsModel { get; set; } = new();
+    private List<SaleReturnModel> saleReturnList = new();
+    private List<SaleReturnItemsModel>? SaleReturnItems { get; set; } = new();
+
+    private List<CompanyModel> BillToCompanyList = new();
+    private List<CompanyModel> ShipToCompanyList = new();
+    private List<ProductModel> ProductList = new();
+    private List<ProductModel> FilteredProducts { get; set; } = new();
+    private List<OutwardModel> OutwardList { get; set; } = new();
+
+    private SaleReturnFormModal? saleReturnFormModal;
+    private SaleReturnItemsFormModal? saleReturnItemsFormModal;
+    private List<UnitModel> Units => CommonUtils.UnitList;
+
+    private string validationMessage = string.Empty;
+    private bool validationIsValid = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+            saleReturnList = (await SaleReturnService.GetAllSaleReturnsAsync()).ToList();
+            BillToCompanyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
+            ShipToCompanyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
+            ProductList = (await ProductService.GetAllProductsAsync()).ToList();
+            OutwardList = (await OutwardService.GetAllOutwardsAsync()).ToList();
+            FilteredProducts = ProductList;
+        }
+        catch
+        {
+            //   ShowError("Connectivity issue happened, operation failed");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    #region FormModal
+    private void ShowAddModal()
+    {
+        modalTitle = "Add New Sale Return";
+        isEditMode = false;
+        saleReturn = new SaleReturnModel
+        {
+            SaleReturnDate = DateTime.Now,
+            IsActive = true,
+            CreatedBy = Convert.ToInt32(CurrentUserId),
+            CreatedOn = DateTime.UtcNow,
+        };
+        saleReturnFormModal?.Show();
+
+    }
+
+    private void ShowEditModal(SaleReturnModel editSaleReturn)
+    {
+        modalTitle = $"Edit Sale Return - {editSaleReturn.SaleReturnNo}";
+        isEditMode = true;
+        saleReturn = new SaleReturnModel
+        {
+            Id = editSaleReturn.Id,
+            SaleReturnDate = editSaleReturn.SaleReturnDate,
+            BillToCompanyId = editSaleReturn.BillToCompanyId,
+            IsActive = editSaleReturn.IsActive,
+            UpdatedBy = Convert.ToInt32(CurrentUserId),
+            UpdatedOn = DateTime.UtcNow
+        };
+        saleReturnFormModal?.Show();
+    }
+
+    private async Task SaveSaleReturn()
+    {
+        isLoading = true;
+
+        if (isEditMode)
+        {
+            saleReturn.UpdatedBy = Convert.ToInt32(CurrentUserId);
+            saleReturn.UpdatedOn = DateTime.UtcNow;
+            await SaleReturnService.UpdateSaleReturnAsync(saleReturn);
+            await HideModal();
+            await LoadData();
+        }
+        else
+        {
+            saleReturn.CreatedBy = Convert.ToInt32(CurrentUserId);
+            saleReturn.CreatedOn = DateTime.UtcNow;
+            var SaleReturnId = await SaleReturnService.CreateSaleReturnAsync(saleReturn);
+
+            await HideModal();
+            await LoadData();
+
+            if (SaleReturnId != 0)
+            {
+                saleReturn.Id = SaleReturnId;
+                //   await OpenAddItemModal(saleReturn);
+            }
+        }
+        isLoading = false;
+
+    }
+    private async Task HideModal()
+    {
+        await saleReturnFormModal.Hide();
+    }
+    #endregion
+    #region ItemModal
+    private async Task OpenItemModel(SaleReturnModel data)
+    {
+
+        selectedSaleReturn = saleReturnList.FirstOrDefault(s => s.Id == data.Id);
+        if (selectedSaleReturn == null) return;
+        itemTitle = $"Manage SaleReturn Items | SaleReturn No: {data?.SaleReturnNo}";
+        modalTitle = "Sale Return  No:" + data.SaleReturnNo;
+        var items = await SaleReturnService.GetSaleReturnItemsByReturnId(data.Id);
+
+        SaleReturnItems = items;
+        saleReturnItemsFormModal.ItemsList = items;
+        saleReturnItemsFormModal.SelectedSaleReturn = selectedSaleReturn;
+
+        StateHasChanged();
+        await saleReturnItemsFormModal.Show();
+
+    }
+    private async Task SaveSaleReturnItem(SaleReturnItemsModel item)
+    {
+        item.SaleReturnId = selectedSaleReturn.Id;
+        if(item.SaleReturnId!=0)
+        {
+            var success= await SaleReturnService.CreateSaleReturnItem(item);
+            if (success)
+            {
+                SaleReturnItems = await SaleReturnService.GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
+
+            }
+        }
+        
+        StateHasChanged();
+
+    }
+
+    private async Task DeleteSaleReturnItem(int itemId)
+    {
+        await SaleReturnService.DeleteSaleReturnItem(itemId);
+        SaleReturnItems = await SaleReturnService.GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
+        StateHasChanged();  
+    }
+    private async Task AddNewItemRow()
+    {
+        var hasBlankRow = SaleReturnItems.Any(item => item.Id == 0 && (item.ProductId == 0 || item.ReturnQuantity == 0));
+
+        if (hasBlankRow)
+        {
+            return;
+        }
+        SaleReturnItems.Add(new());
+        StateHasChanged();
+
+    }
+    private async Task HideItemModal()
+    {
+        await saleReturnItemsFormModal.Hide();
+
+    }
+  
+  #endregion
+    
+    private async Task ValidateBarcode()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(itemsModel.BarCodeNo))
+            {
+                 validationMessage = "Please enter a barcode first.";
+                 validationIsValid = false;
+                return;
+            }
+
+            if (selectedSaleReturn?.BillToCompanyId == 0)
+            {
+                 validationMessage = "Please select a company first.";
+                 validationIsValid = false;
+                return;
+            }
+
+            var validationResult = await SaleReturnService.ValidateBarcodeForSaleReturnAsync(
+                itemsModel.BarCodeNo,
+                selectedSaleReturn.BillToCompanyId
+            );
+
+             validationIsValid = validationResult.IsValid;
+             validationMessage = validationResult.IsValid
+                ? $"Valid barcode. Product: {validationResult.ProductName}"
+                : validationResult.ErrorMessage;
+
+            StateHasChanged();
+        }
+        catch
+        {
+            // validationMessage = "Connectivity issue happened, validation failed";
+            // validationIsValid = false;
+            StateHasChanged();
+        }
+    }
+
+
+}
+@*
 <div class="container-fluid">
     @if (showErrorMessage)
     {
@@ -94,7 +375,7 @@
                     <Badge Color="BadgeColor.Danger">Inactive</Badge>
                 }
             </GridColumn> *@
-
+@*
             <GridColumn TItem="SaleReturnModel" HeaderText="Actions">
                 <Button Color="ButtonColor.Warning" Size="ButtonSize.Small"
                         @onclick="() => ShowEditModal(context)">
@@ -280,16 +561,16 @@
             </div>
         </EditForm>
     </BodyTemplate>
-</Modal>
-
+</Modal> *@
+@* 
 @code {
     private Modal modal = default!;
 
-    private List<SaleReturnModel> saleReturns = new();
+    private List<SaleReturnModel2> saleReturns = new();
     private List<CompanyModel> billCompanies = new();
     public List<ProductModel> FilteredProducts { get; set; } = new();
 
-    private SaleReturnModel saleReturn = new();
+    private SaleReturnModel2 saleReturn = new();
 
     private EditContext editContext = default!;
     private ValidationMessageStore messageStore = default!;
@@ -351,7 +632,7 @@
     {
         modalTitle = "Add New Sale Return";
         isEditMode = false;
-        saleReturn = new SaleReturnModel
+        saleReturn = new SaleReturnModel2
         {
             ReturnDate = DateTime.Now,
             ReturnType = null,
@@ -367,11 +648,11 @@
         modal.ShowAsync();
     }
 
-    private async Task ShowEditModal(SaleReturnModel editSaleReturn)
+    private async Task ShowEditModal(SaleReturnModel2 editSaleReturn)
     {
         modalTitle = $"Edit Sale Return - {editSaleReturn.ReturnNo}";
         isEditMode = true;
-        saleReturn = new SaleReturnModel
+        saleReturn = new SaleReturnModel2
         {
             Id = editSaleReturn.Id,
             ReturnNo = editSaleReturn.ReturnNo,
@@ -752,7 +1033,7 @@
         showValidation = false;
     }
 
-    private string GetValidationClass(SaleReturnModel model, string field)
+    private string GetValidationClass(SaleReturnModel2 model, string field)
     {
         if (!showValidation)
             return "";
@@ -766,5 +1047,5 @@
         };
     }
 
-    #endregion
-}
+    #endregion 
+}*@

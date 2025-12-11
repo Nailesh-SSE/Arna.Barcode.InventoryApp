@@ -22,6 +22,7 @@ public class InventoryDbContext : DbContext
     public DbSet<SaleReturn> SaleReturns { get; set; }
     public DbSet<Colour> Colour { get; set; }
     public DbSet<Platform> Platform { get; set; }
+    public DbSet<SaleReturnItems> SaleReturnItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -107,7 +108,7 @@ public class InventoryDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<OutwardDetail>();
-         
+      
         modelBuilder.Entity<SaleReturn>()
             .HasOne(sr => sr.BillToCompany)
             .WithMany()

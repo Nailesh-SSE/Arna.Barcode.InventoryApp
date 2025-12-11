@@ -1,205 +1,208 @@
 using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
-using InventoryManagement.Services.DTO;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace InventoryManagement.Services;
+
+namespace InventoryManagement.Services.Services;
 
 public class SaleReturnService : ISaleReturnService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IInwardService _inwardService;
-
-    public SaleReturnService(IUnitOfWork unitOfWork, IInwardService inwardService)
+    public SaleReturnService(IUnitOfWork unitOfWork)
     {
         _unitOfWork = unitOfWork;
-        _inwardService = inwardService;
     }
-
+    #region SaleReturns
     public async Task<List<SaleReturnModel>> GetAllSaleReturnsAsync()
     {
-        var saleReturnRepository = _unitOfWork.GetRepository<SaleReturn>();
-        var saleReturns = await saleReturnRepository.FindAsync(sr => !sr.IsDeleted);
+        var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
+        var saleReturns = await saleReturnRepo.GetQueryable()
+                         .Where(o => !o.IsDeleted)
+                         .OrderByDescending(o => o.SaleReturnDate)
+                         .ThenByDescending(o => o.Id)
+                         .ToListAsync();
 
         return saleReturns.Select(MapToModel).ToList();
     }
-
     public async Task<SaleReturnModel?> GetSaleReturnByIdAsync(int id)
     {
-        var saleReturnRepository = _unitOfWork.GetRepository<SaleReturn>();
-        var saleReturn = await saleReturnRepository.GetByIdAsync(id);
+        var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
+        var entity = await saleReturnRepo.GetByIdAsync(id);
+        if (entity == null) return null;
 
-        return saleReturn == null ? null : MapToModel(saleReturn);
+        var model = MapToModel(entity);
+        model.SaleReturnItemsList = await GetSaleReturnItemsByReturnId(id);
+        return model;
     }
-
-    public async Task<bool> CreateSaleReturnAsync(SaleReturnModel model)
+    public async Task<int> CreateSaleReturnAsync(SaleReturnModel model)
     {
         try
         {
-            await _unitOfWork.BeginTransactionAsync();
+            var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
+            model.SaleReturnNo = await GenerateSaleReturnNumberAsync(model.SaleReturnDate);
 
-            var saleReturnRepository = _unitOfWork.GetRepository<SaleReturn>();
-            await GenerateReturnNumberAsync(model);
+            var newSaleReturn = await CreateSaleReturnEntityAsync(model);
 
-            var newSaleReturn = new SaleReturn
-            {
-                ReturnNo = model.ReturnNo,
-                ReturnDate = model.ReturnDate,
-                BillingDate = model.BillingDate ?? DateTime.Now,
-                BillToCompanyId = model.BillToCompanyId,
-                ProductId = model.ProductId,
-                ReturnType = model.ReturnType.GetValueOrDefault(),
-                BarcodeNo = model.BarcodeNo,
-                Quantity = model.Quantity,
-                BoxQuantity = model.BoxQuantity,
-                UnitId = model.UnitId,
-                Reason = model.Reason,
-                Remarks = model.Remarks,
-                IsTakeInStock = model.IsTakeInStock,
-                IsActive = true,
-                IsDeleted = false,
-                CreatedBy = model.CreatedBy,
-                CreatedOn = model.CreatedOn
-            };
-
-            await saleReturnRepository.AddAsync(newSaleReturn);
+            await saleReturnRepo.AddAsync(newSaleReturn);
             await _unitOfWork.SaveChangesAsync();
 
-            if (model.IsTakeInStock)
-            {
-                var inwardId = await FindInwardIdForSaleReturnAsync(model);
-
-                var parameter = new ReturnItemDto()
-                {
-                    InwardId = inwardId.Value,
-                    ProductId = model.ProductId,
-                    ItemQuantity = model.Quantity,
-                    BoxQuantity = model.BoxQuantity,
-                    UnitId = model.UnitId,
-                    UnitName = model.UnitName,
-                    CreatedBy = model.CreatedBy
-                };
-                if (inwardId.HasValue)
-                {
-                    var inwardItemId = await _inwardService.AddReturnedItemToExistingInwardAsync(parameter);
-
-                    newSaleReturn.ReturnInwardItemId = inwardItemId;
-                    saleReturnRepository.Update(newSaleReturn);
-                    await _unitOfWork.SaveChangesAsync();
-                }
-            }
-
-            await _unitOfWork.CommitTransactionAsync();
-            return true;
+            return newSaleReturn.Id;
         }
-        catch
+        catch (Exception ex)
         {
-            await _unitOfWork.RollbackTransactionAsync();
-            return false;
+            Console.WriteLine($"Error creating inward: {ex.Message}");
+            return 0;
         }
+
     }
 
     public async Task<bool> UpdateSaleReturnAsync(SaleReturnModel model)
     {
-        await _unitOfWork.BeginTransactionAsync();
-        try
-        {
-            var saleReturnRepository = _unitOfWork.GetRepository<SaleReturn>();
-            var existing = await saleReturnRepository.GetByIdAsync(model.Id);
+        var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
+        var entity = await saleReturnRepo.GetByIdAsync(model.Id);
+        if (entity == null) return false;
 
-            if (existing == null)
-            {
-                await _unitOfWork.RollbackTransactionAsync();
-                return false;
-            }
+        UpdateSaleReturnEntityAsync(model, entity);
 
-            var originalTakeInStock = existing.IsTakeInStock;
+        saleReturnRepo.Update(entity);
+        await _unitOfWork.SaveChangesAsync();
 
-            existing.ReturnDate = model.ReturnDate;
-            existing.BillingDate = model.BillingDate ?? DateTime.Now;
-            existing.BillToCompanyId = model.BillToCompanyId;
-            existing.ProductId = model.ProductId;
-            existing.ReturnType = model.ReturnType.GetValueOrDefault();
-            existing.BarcodeNo = model.BarcodeNo;
-            existing.Quantity = model.Quantity;
-            existing.UnitId = model.UnitId;
-
-            existing.Reason = model.Reason;
-            existing.Remarks = model.Remarks;
-            existing.IsActive = model.IsActive;
-            existing.UpdatedBy = model.UpdatedBy;
-            existing.UpdatedOn = DateTime.UtcNow;
-
-            if (!originalTakeInStock && model.IsTakeInStock)
-            {
-                var inwardId = await FindInwardIdForSaleReturnAsync(model);
-
-
-                var parameter = new ReturnItemDto()
-                {
-                    InwardId = inwardId.Value,
-                    ProductId = model.ProductId,
-                    ItemQuantity = model.Quantity,
-                    BoxQuantity = model.BoxQuantity,
-                    UnitId = model.UnitId,
-                    UnitName = model.UnitName,
-                    UpdatedBy = model.UpdatedBy
-                };
-
-                if (inwardId.HasValue)
-                {
-                    var inwardItemId = await _inwardService.AddReturnedItemToExistingInwardAsync(parameter);
-                    existing.ReturnInwardItemId = inwardItemId;
-                }
-
-                existing.IsTakeInStock = true;
-            }
-            else if (originalTakeInStock && !model.IsTakeInStock)
-            {
-                if (existing.ReturnInwardItemId.HasValue)
-                {
-                    await _inwardService.RemoveReturnedReturnedItemFromStockAsync(
-                        existing.ReturnInwardItemId.Value);
-                }
-
-                existing.ReturnInwardItemId = null;
-                existing.IsTakeInStock = false;
-            }
-            else
-            {
-                existing.IsTakeInStock = model.IsTakeInStock;
-            }
-
-            saleReturnRepository.Update(existing);
-            await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
-            return true;
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync();
-            throw;
-        }
+        return true;
     }
+    public async Task<SaleReturn> CreateSaleReturnEntityAsync(SaleReturnModel model)
+    {
+        var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
+        var newSaleReturn = new SaleReturn()
+        {
+            BillToCompanyId = model.BillToCompanyId,
+            SaleReturnDate = model.SaleReturnDate,
+            SaleReturnNo = model.SaleReturnNo,
+            CreatedBy = model.CreatedBy,
+            CreatedOn = model.CreatedOn
+        };
+        await saleReturnRepo.AddAsync(newSaleReturn);
+        await _unitOfWork.SaveChangesAsync();
+        return newSaleReturn;
+    }
+    public void UpdateSaleReturnEntityAsync(SaleReturnModel model, SaleReturn entity)
+    {
+        var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
 
-    public async Task<bool> DeleteSaleReturnAsync(int id, int userId)
+        entity.BillToCompanyId = model.BillToCompanyId;
+        entity.SaleReturnDate = model.SaleReturnDate;
+        entity.UpdatedBy = model.UpdatedBy;
+        entity.UpdatedOn = DateTime.UtcNow;
+    }
+    #endregion
+
+    #region ReturnItems
+    public async Task<List<SaleReturnItemsModel>> GetSaleReturnItemsByReturnId(int saleReturnId)
+    {
+        var saleReturnItemRepo = _unitOfWork.GetRepository<SaleReturnItems>();
+        var items = await saleReturnItemRepo.GetQueryable()
+                    .Where(i => !i.IsDeleted && i.SaleReturnId == saleReturnId)
+                    .OrderByDescending(i => i.Id)
+                    .ThenByDescending(i => i.ReturnDate)
+                    .ToListAsync();
+        return items.Select(i => new SaleReturnItemsModel
+        {
+            Id = i.Id,
+            SaleReturnId = i.SaleReturnId,
+            ProductId = i.ProductId,
+            ReturnDate = i.ReturnDate,
+            ReturnType = i.ReturnType,
+            ReasonToReturn = i.ReasonToReturn,
+            BarCodeNo = i.BarCodeNo,
+            OutwardId = i.OutwardId,
+            CategoryId = i.CategoryId,
+            UnitId = i.UnitId,
+            ReturnQuantity = i.ReturnQuantity,
+            SerialNo = i.SerialNo,
+            ShipToCompanyId = i.ShipToCompanyId,
+            IsTakeInStock = i.IsTakeInStock,
+            CreatedBy = i.CreatedBy,
+            CreatedOn = i.CreatedOn,
+            UpdatedBy = i.UpdatedBy,
+            UpdatedOn = i.UpdatedOn
+        }).ToList();
+    }
+    public async Task<bool> CreateSaleReturnItem(SaleReturnItemsModel model)
+    {
+        var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
+        var saleReturns = await saleReturnRepo.GetByIdAsync(model.SaleReturnId);
+
+        if (saleReturns == null) return false;
+        var items = await CreateSaleReturnItemEntity(model);
+
+        return true;
+
+    }
+    private async Task<SaleReturnItems> CreateSaleReturnItemEntity(SaleReturnItemsModel model)
+    {
+        var saleReturnItemRepo = _unitOfWork.GetRepository<SaleReturnItems>();
+        var serialNo = await saleReturnItemRepo.CountAsync() + 1;
+        var categoryId = await GetCategoryIdByProductId(model.ProductId);
+        var entity = new SaleReturnItems()
+        {
+            SaleReturnId = model.SaleReturnId,
+            ProductId = model.ProductId,
+            OutwardId = model.OutwardId,
+            CategoryId = categoryId,
+            ShipToCompanyId = model.ShipToCompanyId,
+            BarCodeNo = model.BarCodeNo,
+            SerialNo = serialNo,
+            ReturnType = model.ReturnType,
+            IsTakeInStock = model.IsTakeInStock,
+            ReturnDate = model.ReturnDate,
+            ReasonToReturn = model.ReasonToReturn,
+            UnitId = model.UnitId,
+            ReturnQuantity = model.ReturnQuantity,
+
+            CreatedBy = model.CreatedBy,
+            CreatedOn = model.CreatedOn
+        };
+        await saleReturnItemRepo.AddAsync(entity);
+        await _unitOfWork.SaveChangesAsync();
+        return entity;
+
+    }
+    public async Task<bool> UpdateSaleReturnItem(SaleReturnItemsModel model)
+    {
+        var saleReturnItemRepo = _unitOfWork.GetRepository<SaleReturnItems>();
+        var entity = await saleReturnItemRepo.GetByIdAsync(model.Id);
+        var categoryId = await GetCategoryIdByProductId(model.ProductId);
+
+        if (entity == null) return false;
+
+        entity.SaleReturnId = model.SaleReturnId;
+        entity.ProductId = model.ProductId;
+        entity.OutwardId = model.OutwardId;
+        entity.CategoryId = categoryId;
+        entity.ShipToCompanyId = model.ShipToCompanyId;
+        entity.BarCodeNo = model.BarCodeNo;
+        entity.SerialNo = model.SerialNo;
+        entity.ReturnDate = model.ReturnDate;
+        entity.ReturnType = model.ReturnType;
+        entity.ReasonToReturn = model.ReasonToReturn;
+        entity.IsTakeInStock = model.IsTakeInStock;
+        entity.UnitId = model.UnitId;
+        entity.ReturnQuantity = model.ReturnQuantity;
+
+        entity.UpdatedBy = model.UpdatedBy;
+        entity.UpdatedOn = DateTime.UtcNow;
+
+        saleReturnItemRepo.Update(entity);
+        await _unitOfWork.SaveChangesAsync();
+        return true;
+    }
+    public async Task<bool> DeleteSaleReturnItem(int id)
     {
         try
         {
-            var saleReturnRepository = _unitOfWork.GetRepository<SaleReturn>();
-            var saleReturn = await saleReturnRepository.GetByIdAsync(id);
-
-            if (saleReturn == null)
-                return false;
-
-            saleReturn.IsDeleted = true;
-            saleReturn.IsActive = false;
-            saleReturn.UpdatedOn = DateTime.UtcNow;
-            saleReturn.UpdatedBy = userId;
-            saleReturnRepository.Update(saleReturn);
-
+            var itemRepo = _unitOfWork.GetRepository<SaleReturnItems>();
+            await itemRepo.DeleteAsync(id);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -208,6 +211,31 @@ public class SaleReturnService : ISaleReturnService
             return false;
         }
     }
+    #endregion
+
+    #region Numbering
+    private async Task<string> GenerateSaleReturnNumberAsync(DateTime saleReturnDate)
+    {
+        var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
+        var count = await saleReturnRepo.CountAsync();
+        count++;
+        var newNumber = $"SRN-{saleReturnDate.Year % 100}/{count}";
+        return newNumber;
+    }
+
+    #endregion
+
+    #region Helper Method
+
+    private async Task<int> GetCategoryIdByProductId(int productId) 
+    {
+        var productrepo = _unitOfWork.GetRepository<Product>();
+        var product =await productrepo.GetByIdAsync(productId);
+        if (product == null) return 0;
+        return product.CategoryId;
+    }
+    #endregion
+    #region BarcodeOperation
     public async Task<SaleReturnValidationResult> ValidateBarcodeForSaleReturnAsync(string barcodeNo, int companyId)
     {
         if (string.IsNullOrWhiteSpace(barcodeNo))
@@ -272,7 +300,7 @@ public class SaleReturnService : ISaleReturnService
 
         var productRepository = _unitOfWork.GetRepository<Product>();
         var product = await productRepository.GetByIdAsync(outwardDetail.ProductId);
-        var productName = product != null ? product.Name : "Unknown Product";
+        var productName = product != null ? product.SKU : "Unknown Product";
 
         return new SaleReturnValidationResult
         {
@@ -281,118 +309,22 @@ public class SaleReturnService : ISaleReturnService
         };
     }
 
-    public async Task<IEnumerable<SaleReturnModel>> GetSaleReturnsByCompanyAsync(int companyId)
-    {
-        var saleReturnRepository = _unitOfWork.GetRepository<SaleReturn>();
-        var saleReturns = await saleReturnRepository.FindAsync(
-            sr => sr.BillToCompanyId == companyId && !sr.IsDeleted);
-
-        return saleReturns.Select(MapToModel);
-    }
-
-    // ================== KEY CHANGE: FIND INWARD ==================
-    /// <summary>
-    /// 1) If Barcode is provided -> get InwardId from InwardBarcodeItem.
-    /// 2) If no Barcode -> find an Outward using Company + Product + Date,
-    ///    then use its BarcodeNo to get InwardId from InwardBarcodeItem.
-    /// </summary>
-    private async Task<int?> FindInwardIdForSaleReturnAsync(SaleReturnModel model)
-    {
-        var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
-
-        // 1) Use barcode directly if we have it
-        if (!string.IsNullOrWhiteSpace(model.BarcodeNo))
-        {
-            var barcode = (await barcodeRepo.FindAsync(b =>
-                    b.BarcodeNo == model.BarcodeNo && !b.IsDeleted))
-                .FirstOrDefault();
-
-            if (barcode != null)
-                return barcode.InwardId;
-        }
-
-        var outwardRepo = _unitOfWork.GetRepository<Outward>();
-        var outwardDetailRepo = _unitOfWork.GetRepository<OutwardDetail>();
-
-        var targetDate = model.BillingDate ?? model.ReturnDate;
-
-        var outwardQuery =
-            from od in outwardDetailRepo.GetQueryable()
-            join o in outwardRepo.GetQueryable() on od.OutwardId equals o.Id
-            where !od.IsDeleted
-                  && !o.IsDeleted
-                  && od.ProductId == model.ProductId
-                  && o.BillToCompanyId == model.BillToCompanyId
-            select new { Outward = o, Detail = od };
-
-        if (targetDate != default)
-        {
-            outwardQuery = outwardQuery
-                .Where(x => x.Outward.OutwardDate.Date == targetDate.Date);
-        }
-
-        var outwardMatch = await outwardQuery
-            .OrderByDescending(x => x.Outward.OutwardDate)
-            .FirstOrDefaultAsync();
-
-        if (outwardMatch == null)
-            return null;
-
-        var anyBarcodeNo = outwardMatch.Detail.BarcodeNo;
-        if (string.IsNullOrWhiteSpace(anyBarcodeNo))
-            return null;
-
-        var inwardBarcode = (await barcodeRepo.FindAsync(b =>
-                b.BarcodeNo == anyBarcodeNo && !b.IsDeleted))
-            .FirstOrDefault();
-
-        return inwardBarcode?.InwardId;
-    }
-
-    private async Task GenerateReturnNumberAsync(SaleReturnModel model)
-    {
-        var repository = _unitOfWork.GetRepository<SaleReturn>();
-        var saleReturns = await repository.GetAllAsync();
-        var lastReturn = saleReturns
-            .Where(sr => sr.IsActive && !sr.IsDeleted)
-            .OrderByDescending(sr => sr.Id)
-            .FirstOrDefault();
-
-        if (lastReturn != null && int.TryParse(lastReturn.ReturnNo.Replace("SR", ""), out int lastNumber))
-        {
-            model.ReturnNo = $"SR{(lastNumber + 1).ToString("D6")}";
-        }
-        else
-        {
-            model.ReturnNo = "SR000001";
-        }
-    }
-
+    #endregion
     private SaleReturnModel MapToModel(SaleReturn entity)
     {
-        return new SaleReturnModel
+        return new SaleReturnModel()
         {
             Id = entity.Id,
-            ReturnNo = entity.ReturnNo,
-            ReturnDate = entity.ReturnDate,
-            BillingDate = entity.BillingDate,
+            SaleReturnDate = entity.SaleReturnDate,
+
             BillToCompanyId = entity.BillToCompanyId,
-            ProductId = entity.ProductId,
-            ReturnType = entity.ReturnType,
-            BarcodeNo = entity.BarcodeNo,
-            Quantity = entity.Quantity,
-            BoxQuantity = entity.BoxQuantity,
-            UnitId = entity.UnitId,
-            Reason = entity.Reason,
-            Remarks = entity.Remarks,
-            IsActive = entity.IsActive,
-            CompanyName = entity.BillToCompany?.Name ?? "N/A",
+            SaleReturnNo = entity.SaleReturnNo,
             CreatedBy = entity.CreatedBy,
             CreatedOn = entity.CreatedOn,
             UpdatedBy = entity.UpdatedBy,
             UpdatedOn = entity.UpdatedOn,
-            IsTakeInStock = entity.IsTakeInStock,
-            ReturnInwardItemId = entity.ReturnInwardItemId
         };
+
     }
 }
+

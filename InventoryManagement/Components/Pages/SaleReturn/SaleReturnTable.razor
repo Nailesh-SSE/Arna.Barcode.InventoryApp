@@ -1,0 +1,65 @@
+﻿
+<div class="table-responsive">
+    <Grid TItem="SaleReturnModel"
+          Class="table table-hover table-bordered table-striped"
+          Data="SaleReturns"
+          AllowPaging="true"
+          PageSize="10"
+          Responsive="true"
+          @ref="SaleReturnGrid">
+
+        <GridColumn TItem="SaleReturnModel" HeaderText="No">
+            @(SaleReturns.IndexOf(context) + 1)
+        </GridColumn>
+
+        <GridColumn TItem="SaleReturnModel" HeaderText="Inward No" PropertyName="InwardNo">
+            @context.SaleReturnNo
+        </GridColumn>
+
+        <GridColumn TItem="SaleReturnModel" HeaderText="Inward Date/Time">
+            @context.SaleReturnDate.ToString("dd/MM/yyyy hh:mm tt")
+        </GridColumn>
+
+        <GridColumn TItem="SaleReturnModel" HeaderText="Ship Company">
+            @(BillToCompanies.FirstOrDefault(c => c.Id == context.BillToCompanyId)?.Name.ToUpper() ?? "N/A")
+        </GridColumn>
+
+        <GridColumn TItem="SaleReturnModel" HeaderText="Status">
+            @if (context.IsActive)
+            {
+                <Badge Color="BadgeColor.Success">Active</Badge>
+            }
+            else
+            {
+                <Badge Color="BadgeColor.Danger">Inactive</Badge>
+            }
+        </GridColumn>
+
+        <GridColumn TItem="SaleReturnModel" HeaderText="Actions">
+            <div class="d-flex flex-wrap gap-1">
+                <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
+                    <Icon Name="IconName.Plus" /> Add Items
+                </Button>
+
+                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => OnEditSaleReturn.InvokeAsync(context)">
+                    <Icon Name="IconName.PencilSquare" /> Edit
+                </Button>
+
+                @* <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => OnDelete.InvokeAsync(context.Id)">
+                    <Icon Name="IconName.Trash" /> Delete
+                </Button> *@
+            </div>
+        </GridColumn>
+    </Grid>
+</div>
+
+
+@code {
+    private Grid<SaleReturnModel>? SaleReturnGrid;
+    [Parameter] public List<SaleReturnModel> SaleReturns { get; set; } = new();
+    [Parameter] public List<CompanyModel> BillToCompanies { get; set; } = new();
+    [Parameter] public EventCallback<SaleReturnModel> OnEditSaleReturn { get; set; }
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+    [Parameter] public EventCallback<SaleReturnModel?> OnAddItems { get; set; }
+    
+}

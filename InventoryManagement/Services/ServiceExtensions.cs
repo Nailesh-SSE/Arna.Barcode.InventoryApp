@@ -44,7 +44,7 @@ public static class ServiceExtensions
         // Register generators
         services.AddTransient<IInwardReportService, InwardReportGenerator>();
         services.AddTransient<IOutwardReportService, OutwardReportGenerator>();
-        services.AddTransient<ISaleReturnReportService, SaleReturnReportGenerator>();
+      //  services.AddTransient<ISaleReturnReportService, SaleReturnReportGenerator>();
 
         services.AddAuthorizationCore();
         services.AddScoped<ProtectedLocalStorage>();
