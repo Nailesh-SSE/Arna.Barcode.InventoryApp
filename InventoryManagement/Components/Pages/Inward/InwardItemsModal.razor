@@ -1,6 +1,5 @@
 ﻿@inject IJSRuntime JSRuntime
 @inject IInwardService inwardService
-@using InventoryManagement.Components.Pages.CommonComponents;
 <Modal @ref="modal" Title="@Title" Size="ModalSize.ExtraLarge">
     <BodyTemplate>
         @if (SelectedInward != null)
@@ -29,6 +28,7 @@
                             <table class="table table-bordered align-middle">
                                 <thead class="table-light">
                                     <tr>
+                                        <th class="col-12 col-md-5">Brand</th>
                                         <th class="col-12 col-md-5">Product</th>
                                         <th class="col-4 col-md-1 text-center">Units</th>
                                         <th class="col-4 col-md-1 text-center">Item Qty</th>
@@ -46,9 +46,25 @@
                                         var rowClasses = $"{(item.Id == 0 ? "table-warning" : "")} {(item.HasOutOfStockBarcodes ? "opacity-30 text-muted" : "")}";
 
                                         <tr class="@rowClasses">
+                                            <td class="col-2">
+                                                <select class="@productClass"
+                                                             Value="@item.InwardUnitId"
+                                                             @onchange="(e => onChangeBrand(item, int.Parse(e.Value.ToString())))"
+                                                             disabled="@item.HasOutOfStockBarcodes">
+                                                    <option value="0">-- Select --</option>
+                                                    @foreach (var brand in Brands)
+                                                    {
+                                                        <option value="@brand.Id">@brand.Name</option>
+                                                    }
+                                                </select>
+                                                @if (showValidation && item.InwardUnitId == 0 && IsLastUnsavedItem(item))
+                                                {
+                                                    <small class="text-danger">Brand required</small>
+                                                }
+                                            </td>
                                             <td class="col-5">
                                                 <SearchableDropdown TItem="ProductModel"
-                                                                    Items="@FilteredProducts"
+                                                                    Items="@Productsbybrands"
                                                                     ItemTextSelector="@(p => p.SKU)"
                                                                     SelectedText="@item.ProductSearchText"
                                                                     Placeholder="Search product..."
@@ -193,6 +209,7 @@
     [Parameter] public InwardModel? SelectedInward { get; set; }
     [Parameter] public List<InwardItemModel> InwardItems { get; set; } = new();
     [Parameter] public List<ProductModel> FilteredProducts { get; set; } = new();
+    [Parameter] public List<CompanyModel> Brands { get; set; } = new();
     [Parameter] public EventCallback OnSave { get; set; }
     [Parameter] public EventCallback<InwardItemModel> OnSaveItem { get; set; }
     [Parameter] public EventCallback<int> OnDeleteItem { get; set; }
@@ -202,11 +219,17 @@
     [Parameter] public EventCallback<InwardItemModel> OnDownloadPdf { get; set; }
 
     public List<UnitModel> Units => CommonUtils.UnitList;
+    public int brandId;
+    public List<ProductModel> Productsbybrands;
 
     public async Task Show()
     {
         ClearMessages();
         showValidation = false;
+        if (InwardItems == null || InwardItems.Count == 0)
+        {
+            await OnAddItem.InvokeAsync();
+        }
         await modal.ShowAsync();
     }
 
@@ -220,6 +243,13 @@
         ClearMessages();
         showValidation = true;
 
+        // //Validate Brand
+        // if (item.BrandId == 0)
+        // {
+        //     errorMessage = "Please select a brand before saving.";
+        //     StateHasChanged();
+        //     return;
+        // }
         // Validate Product
         if (item.ProductId == 0)
         {
@@ -375,6 +405,7 @@
 
         return field switch
         {
+            // "brand" => item.BrandId == 0 ? "is-invalid" : "is-valid",
             "product" => item.ProductId == 0 ? "is-invalid" : "is-valid",
             "itemQuantity" => item.ItemQuantity <= 0 ? "is-invalid" : "is-valid",
             "units" => item.InwardUnitId == 0 ? "is-invalid" : "is-valid",
@@ -407,5 +438,23 @@
 
         inwardItem.ProductId = product.Id;
         inwardItem.ProductSearchText = product.SKU;
+    }
+    private void onChangeBrand(InwardItemModel item, int selectedId)
+    {
+        ClearMessages();
+
+        // Save selected brand inside item
+        brandId = selectedId;
+
+        // Filter products for this item row
+        Productsbybrands = FilteredProducts
+            .Where(p => p.MakeCompanyId == selectedId)
+            .ToList();
+
+        // Clear product selection
+        item.ProductId = 0;
+        item.ProductSearchText = "";
+
+        StateHasChanged();
     }
 }

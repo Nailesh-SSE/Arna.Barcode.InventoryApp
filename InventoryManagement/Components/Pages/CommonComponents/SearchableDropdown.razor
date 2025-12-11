@@ -20,7 +20,9 @@
                        @bind:event="oninput" />
 
                 <div style="max-height:200px;overflow-y:auto;">
-                    @foreach (var item in FilteredItems)
+                @if(FilteredItems != null)
+                {            
+                @foreach (var item in FilteredItems)
                     {
                         <DropdownItem @onclick="@(() => SelectItem(item))">
                             @ItemTextSelector(item)
@@ -31,6 +33,7 @@
                     {
                         <div class="px-2 py-1 text-muted small">No match found</div>
                     }
+                }
                 </div>
             </DropdownMenu>
         </Dropdown>
