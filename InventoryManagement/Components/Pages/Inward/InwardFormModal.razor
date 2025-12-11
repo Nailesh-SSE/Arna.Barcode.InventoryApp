@@ -21,25 +21,25 @@
 
                         <div class="col-md-6">
                             <label class="form-label">Ship Company <span class="text-danger">*</span></label>
-                             <InputSelect class="form-select" @bind-Value="Inward.ShipMentCompanyId">
-                                <option value="0">-- Select Company --</option>
-                                @foreach (var company in ShipCompanies)
-                                {
-                                    <option value="@company.Id">@company.Name</option>
-                                }
-                            </InputSelect>
+                            <DropDown TItem="CompanyModel"
+                                      Items="@ShipCompanies"
+                                      SelectedId="@Inward.ShipMentCompanyId"
+                                      ValueSelector="x => x.Id"
+                                      TextSelector="x => x.Name"
+                                      Placeholder="-- Select Company --"
+                                      OnValueChanged="OnShipMentCompanySelected" />
                         <ValidationMessage For="@(() => Inward.ShipMentCompanyId)" />
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label">Category</label>
-                            <InputSelect class="form-select" @bind-Value="Inward.CategoryId">
-                                <option value="">-- All Categories --</option>
-                                @foreach (var cat in Categories)
-                                {
-                                    <option value="@cat.Id">@cat.Name</option>
-                                }
-                            </InputSelect>
+                            <DropDown TItem="CategoryModel"
+                                      Items="@Categories"
+                                      SelectedId="@Inward.CategoryId"
+                                      ValueSelector="x => x.Id"
+                                      TextSelector="x => x.Name"
+                                      Placeholder="-- All Categories --"
+                                      OnValueChanged="OnCategorySelected" />
                         </div>
                     </div>
 
@@ -130,4 +130,13 @@
         await OnCancel.InvokeAsync();
     }
 
+    private void OnShipMentCompanySelected((int? Id, string Name) selected)
+    {
+        Inward.ShipMentCompanyId = selected.Id ?? 0;
+    }
+
+    private void OnCategorySelected((int? Id, string Name) selected)
+    {
+        Inward.CategoryId = selected.Id ?? 0;
+    }
 }

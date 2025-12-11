@@ -458,6 +458,7 @@ public class InwardService : IInwardService
             items.Add(new InwardItem
             {
                 InwardId = inwardId,
+                //BrandId=itemModel.BrandId,
                 ProductId = itemModel.ProductId,
                 ItemQuantity = itemModel.ItemQuantity,
                 InwardUnitId = itemModel.InwardUnitId,
@@ -493,6 +494,7 @@ public class InwardService : IInwardService
             CreatedBy = model.CreatedBy,
             CreatedOn = model.CreatedOn,
             BoxQuantity = model.BoxQuantity
+            //BrandId= model.BrandId
         };
 
         await itemRepo.AddAsync(entity);
@@ -688,6 +690,7 @@ public class InwardService : IInwardService
         {
             Id = entity.Id,
             InwardId = entity.InwardId,
+            //BrandId = entity.BrandId,
             ProductId = entity.ProductId,
             ItemQuantity = entity.ItemQuantity,
             InwardUnitId = entity.InwardUnitId,

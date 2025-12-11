@@ -106,27 +106,25 @@
 
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
-                    <InputSelect class="form-select" @bind-Value="outward.BillToCompanyId"
-                                 @oninput="(e) => HandleBillToCompanyChange(Convert.ToInt32(e.Value))">
-                        <option value="0">-- Select Company --</option>
-                        @foreach (var company in billCompanies)
-                        {
-                            <option value="@company.Id">@company.Name</option>
-                        }
-                    </InputSelect>
+                    <DropDown TItem="CompanyModel"
+                                      Items="@billCompanies"
+                                      SelectedId="@outward.BillToCompanyId"
+                                      ValueSelector="x => x.Id"
+                                      TextSelector="x => x.Name"
+                                      Placeholder="-- Select Company --"
+                                     OnValueChanged="OnBillToCompanySelected" />
                     <ValidationMessage For="@(() => outward.BillToCompanyId)" />
                 </div>
             </div>
             <div class="col-md-12 mb-3">
                     <label class="form-label">Platform <span class="text-danger">*</span></label>
-                    <InputSelect class="form-select" @bind-Value="outward.PlatformId"
-                                 @oninput="(e) => HandlePlatformChange(Convert.ToInt32(e.Value))">
-                        <option value="0">-- Select Platform --</option>
-                        @foreach (var platform in platforms)
-                        {
-                            <option value="@platform.Id">@platform.Name</option>
-                        }
-                    </InputSelect>
+                    <DropDown TItem="PlatformModel"
+                              Items="@platforms"
+                              SelectedId="@outward.PlatformId"
+                              ValueSelector="x => x.Id"
+                              TextSelector="x => x.Name"
+                              Placeholder="-- Select Platform --"
+                              OnValueChanged="OnPlatformSelected" />
                     <ValidationMessage For="@(() => outward.PlatformId)" />
            </div>
 
@@ -616,6 +614,16 @@
         ValidatePlatform();
     }
 
+    private void OnBillToCompanySelected((int? Id, string Name) selected)
+    {
+        outward.BillToCompanyId = selected.Id ?? 0;
+        ValidateBillToCompany();
+    }
+    private void OnPlatformSelected((int? Id, string Name) selected)
+    {
+        outward.PlatformId = selected.Id ?? 0;
+        ValidatePlatform();
+    }
     #endregion
 
     #region Error Display

@@ -29,6 +29,7 @@ public class InwardItemModel
 {
     public int Id { get; set; }
     public int InwardId { get; set; }
+    //public int BrandId { get; set; }
     public int ProductId { get; set; }
     public decimal ItemQuantity { get; set; }
     public string? BatchNo { get; set; }

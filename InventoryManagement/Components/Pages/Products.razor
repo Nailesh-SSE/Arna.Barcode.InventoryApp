@@ -7,7 +7,6 @@
 @inject IColourService ColourService
 @using InventoryManagement.Components.Auth
 @using InventoryManagement.Services.Models;
-@using InventoryManagement.Components.Pages.CommonComponents;
 @inherits AuthComponentBase
 
 <PageTitle>Products</PageTitle>
@@ -98,40 +97,39 @@
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Brand <span class="text-danger">*</span></label>
-                    <InputSelect class="form-select" @bind-Value="productModel.MakeCompanyId" @oninput="HandleMakeCompanyChange">
-                        <option value="0">-- Select Brand-- </option>
-                        @foreach (var company in companies)
-                        {
-                            <option value="@company.Id">@company.Name</option>
-                        }
-                    </InputSelect>
+                    <DropDown TItem="CompanyModel"
+                              Items="@companies"
+                              SelectedId="@productModel.MakeCompanyId"
+                              ValueSelector="x => x.Id"
+                              TextSelector="x => x.Name"
+                              Placeholder="-- Select Brand--"
+                              OnValueChanged="OnBrandSelected" />
                     <ValidationMessage For="@(() => productModel.MakeCompanyId)" />
                 </div>
             </div>
 
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">Category <span class="text-danger">*</span></label>
-                    <InputSelect class="form-select" @bind-Value="productModel.CategoryId" @oninput="HandleCategoryChange">
-                        <option value="0">-- Select Category --</option>
-                        @foreach (var cat in categories)
-                        {
-                            <option value="@cat.Id">@cat.Name</option>
-                        }
-                    </InputSelect>
-                    <ValidationMessage For="@(() => productModel.CategoryId)" />
+                     <label class="form-label">Category <span class="text-danger">*</span></label>
+                        <DropDown TItem="CategoryModel"
+                        Items="@categories"
+                        SelectedId="@productModel.CategoryId"
+                        ValueSelector="x => x.Id"
+                        TextSelector="x => x.Name"
+                              Placeholder="-- Select Category --"
+                        OnValueChanged="OnCategorySelected"/>
+                    <ValidationMessage For="@(() => productModel.CategoryId)" /> 
                 </div>
 
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Unit <span class="text-danger">*</span></label>
-                    <InputSelect class="form-select"
-                                 @bind-Value="productModel.UnitId">
-                        <option value="0">-- Select Unit --</option>
-                        @foreach (var unit in Units)
-                        {
-                            <option value="@unit.Id">@unit.Name</option>
-                        }
-                    </InputSelect>
+                    <DropDown TItem="UnitModel"
+                              Items="@Units"
+                              SelectedId="@productModel.UnitId"
+                              ValueSelector="x => x.Id"
+                              TextSelector="x => x.Name"
+                              Placeholder="-- Select Unit --"
+                              OnValueChanged="OnUnitSelected" />
                     <ValidationMessage For="@(() => productModel.UnitId)" />
                 </div>
             </div>
@@ -447,5 +445,26 @@
         ValidateColour();
         StateHasChanged();
     }
+    private void OnCategorySelected((int? Id, string Name) selected)
+    {
+        productModel.CategoryId = selected.Id ?? 0;
+        productModel.CategoryName = selected.Name;
 
+        ValidateCategory();
+    }
+    private void OnBrandSelected((int? Id, string Name) selected)
+    {
+        productModel.MakeCompanyId = selected.Id ?? 0;
+        productModel.MakeCompany = selected.Name;
+
+        ValidateMakeCompany();
+    }
+    private void OnUnitSelected((int? Id, string Name) selected)
+    {
+        productModel.UnitId = selected.Id ?? 0;
+        productModel.Unit = selected.Name;
+
+        ValidateUnit();
+    }
+    
 }
