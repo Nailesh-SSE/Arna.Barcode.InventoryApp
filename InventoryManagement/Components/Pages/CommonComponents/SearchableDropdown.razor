@@ -63,17 +63,12 @@
         set
         {
             _searchText = value;
-            // automatically trigger filtering
             FilterItems(value);
         }
     }
 
     protected override void OnParametersSet()
     {
-        // if (!string.IsNullOrWhiteSpace(SelectedText))
-        // {
-        //     SearchText = SelectedText ?? "";
-        // }
         SearchText = SelectedText ?? "";
     }
 
@@ -86,7 +81,6 @@
 
     private void FilterItems(string value)
     {
-        // No need to set SearchText here because setter already does that
         StateHasChanged();
     }
 
