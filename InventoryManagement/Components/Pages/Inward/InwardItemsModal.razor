@@ -28,12 +28,12 @@
                             <table class="table table-bordered align-middle">
                                 <thead class="table-light">
                                     <tr>
-                                        <th class="col-12 col-md-5">Brand</th>
-                                        <th class="col-12 col-md-5">Product</th>
-                                        <th class="col-4 col-md-1 text-center">Units</th>
-                                        <th class="col-4 col-md-1 text-center">Item Qty</th>
-                                        <th class="col-4 col-md-1 text-center">Box Qty</th>
-                                        <th class="col-12 col-md-3 text-center">Actions</th>
+                                        <th class="col-1 col-md-1">Brand</th>
+                                        <th class="col-4 col-md-4">Product</th>
+                                        <th class="col-1 col-md-1 text-center">Units</th>
+                                        <th class="col-1 col-md-1 text-center">Item Qty</th>
+                                        <th class="col-1 col-md-1 text-center">Box Qty</th>
+                                        <th class="col-2 col-md-2 text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -47,7 +47,7 @@
                                         var rowClasses = $"{(item.Id == 0 ? "table-warning" : "")} {(item.HasOutOfStockBarcodes ? "opacity-30 text-muted" : "")}";
 
                                         <tr class="@rowClasses">
-                                            <td class="col-2">
+                                            <td>
                                                 <select class="@brandClass"
                                                              value="@item.BrandId"
                                                              @onchange="(e => onChangeBrand(item, int.Parse(e.Value.ToString())))"
@@ -63,7 +63,7 @@
                                                     <small class="text-danger">Brand required</small>
                                                 }
                                             </td>
-                                            <td class="col-5">
+                                            <td>
                                                 <SearchableDropdown TItem="ProductModel"
                                                                     Items="@item.ProductListForBrand"
                                                                     ItemTextSelector="@(p => p.SKU)"
@@ -78,7 +78,7 @@
                                                     <small class="text-danger">Product is required</small>
                                                 }
                                             </td>
-                                            <td class="col-1">
+                                            <td>
                                                 <InputSelect class="@unitsClass"
                                                              @bind-Value="item.InwardUnitId"
                                                              disabled="@item.HasOutOfStockBarcodes">
@@ -93,8 +93,9 @@
                                                     <small class="text-danger">Unit required</small>
                                                 }
                                             </td>
-                                            <td class="col-1">
-                                                <InputNumber class="@itemQuantityClass"
+                                            <td>
+                                                <InputNumber class="@itemQuantityClass" min="1"
+                                                             style="max-width: 80px;"
                                                              @bind-Value="item.ItemQuantity"
                                                              @onchange="@(() => ClearMessages())"
                                                              disabled="@item.HasOutOfStockBarcodes" />
@@ -108,10 +109,11 @@
                                                     <small class="text-danger">Invalid Qty!</small>
                                                 }
                                             </td>
-                                            <td class="col-1">
+                                            <td>
                                                 @if (IsRequired(item))
                                                 {
                                                     <InputNumber class="@boxQuantityClass"
+                                                                 style="max-width: 80px;"
                                                                  @bind-Value="item.BoxQuantity"
                                                                  @onchange="@(() => ClearMessages())"
                                                                  disabled="@item.HasOutOfStockBarcodes" />
@@ -126,26 +128,26 @@
                                                     }
                                                 }
                                             </td>
-                                            <td class="col-3">
+                                            <td>
                                                 <div class="d-flex gap-1 justify-content-start">
                                                     <button type="button"
                                                             class="btn btn-primary btn-sm"
                                                             @onclick="@(() => HandleSaveItem(item))"
                                                             disabled="@item.HasOutOfStockBarcodes">
-                                                        Save
+                                                        <Icon Name="IconName.SaveFill" />
                                                     </button>
                                                     @if (item.Id > 0)
                                                     {
                                                         <button type="button"
                                                                 class="btn btn-danger btn-sm"
                                                                 @onclick="@(() => HandleDeleteItem(item.Id))">
-                                                            Delete
+                                                            <Icon Name="IconName.Trash" />
                                                         </button>
 
                                                         <button type="button"
                                                                 class="btn btn-dark btn-sm"
                                                                 @onclick="@(() => OnDownloadPdf.InvokeAsync(item))">
-                                                            <Icon Name="IconName.UpcScan" />PDF
+                                                            <Icon Name="IconName.UpcScan" />
                                                         </button>
                                                     }
                                                     else
@@ -153,7 +155,7 @@
                                                         <button type="button"
                                                                 class="btn btn-outline-secondary btn-sm"
                                                                 @onclick="@(() => RemoveUnsavedItem(item))">
-                                                            Cancel
+                                                            <Icon Name="IconName.XCircle" Class="me-1" />
                                                         </button>
                                                     }
                                                 </div>

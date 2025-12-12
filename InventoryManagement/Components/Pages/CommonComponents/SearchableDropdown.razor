@@ -2,7 +2,7 @@
 
 <div class="mb-2">
         <Dropdown class="w-100" disabled="@IsDisabled">
-            <DropdownToggleButton class="form-control d-flex justify-content-between align-items-center border rounded w-100">
+        <DropdownToggleButton class="form-control d-flex justify-content-between align-items-center border rounded w-100 bg-white">
                 @if (!string.IsNullOrWhiteSpace(SearchText))
                 {
                     @SelectedText
@@ -70,10 +70,11 @@
 
     protected override void OnParametersSet()
     {
-        if (!string.IsNullOrWhiteSpace(SelectedText))
-        {
-            SearchText = SelectedText ?? "";
-        }
+        // if (!string.IsNullOrWhiteSpace(SelectedText))
+        // {
+        //     SearchText = SelectedText ?? "";
+        // }
+        SearchText = SelectedText ?? "";
     }
 
     private IEnumerable<TItem> FilteredItems =>
