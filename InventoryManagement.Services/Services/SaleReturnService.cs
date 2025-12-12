@@ -168,7 +168,17 @@ public class SaleReturnService : ISaleReturnService
         return entity;
 
     }
-    public async Task<bool> UpdateSaleReturnItem(SaleReturnItemsModel model)
+    public async Task<bool> UpdateSaleReturnItem(SaleReturnItemsModel model) 
+    {
+        var saleReturnItemRepo = _unitOfWork.GetRepository<SaleReturnItems>();
+        var entity = await saleReturnItemRepo.GetByIdAsync(model.Id);
+        if (entity == null ) 
+         return false;
+
+         await UpdateSaleReturnItemEntity(model);
+          return true;
+    }
+    private async Task<bool> UpdateSaleReturnItemEntity(SaleReturnItemsModel model)
     {
         var saleReturnItemRepo = _unitOfWork.GetRepository<SaleReturnItems>();
         var entity = await saleReturnItemRepo.GetByIdAsync(model.Id);

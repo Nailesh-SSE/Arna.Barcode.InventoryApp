@@ -10,8 +10,8 @@ public static class CommonUtils
 
     public static List<TakeToStockModel> TaskeToList = new()
     {
-        new TakeToStockModel{ Id=1,Name="TakeToStock"},
-        new TakeToStockModel{Id=2, Name="Other"}
+        new TakeToStockModel{Id=0, Name="Other"},
+        new TakeToStockModel{ Id=1,Name="TakeToStock"}
 
     };
 }

@@ -207,13 +207,15 @@ else
     private async Task SaveSaleReturnItem(SaleReturnItemsModel item)
     {
         item.SaleReturnId = selectedSaleReturn.Id;
-        if(item.SaleReturnId!=0)
+        if(item.SaleReturnId != 0)
         {
-            var success= await SaleReturnService.CreateSaleReturnItem(item);
+            bool success = item.Id == 0
+            ? await SaleReturnService.CreateSaleReturnItem(item)
+            : await SaleReturnService.UpdateSaleReturnItem(item);
+
             if (success)
             {
                 SaleReturnItems = await SaleReturnService.GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
-
             }
         }
         

@@ -1,145 +1,174 @@
 ﻿
-
 <Modal @ref="modal" Title="@Title" Size="ModalSize.ExtraLarge">
     <BodyTemplate>
-        <div>
+        <div class="p-2">
+
+            <!-- ALERT MESSAGES -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+                    <button type="button" class="btn-close" @onclick="@(() => errorMessage = "")"></button>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success alert-dismissible fade show">
+                    <i class="bi bi-check-circle-fill me-2"></i>@successMessage
+                    <button type="button" class="btn-close" @onclick="@(() => successMessage = "")"></button>
+                </div>
+            }
+
+            <!-- BARCODE SECTION -->
             <div class="d-flex gap-2 mb-3">
                 <InputText class="form-control"
                            placeholder="Enter Barcode"
                            @bind-Value="ItemsModel.BarCodeNo" />
-
                 <Button Class="btn btn-dark" @onclick="HandleBarcode">Validate</Button>
-                @* <Button Class="btn btn-primary" type="submit">Save</Button> *@
             </div>
-            <div class="table-responsive" style="height:450px;overflow-y:auto">
-                @if (ItemsList.Any())
-                {
-                    <div class="table-responsive" style="height:450px; overflow-y:auto;">
-                        <table class="table table-bordered table-sm align-middle">
-                            <thead class="table-light">
+
+            <!-- ITEMS TABLE -->
+            @if (ItemsList.Any())
+            {
+                <div class="table-responsive" style="max-height: 450px;">
+                    <table class="table table-bordered table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="col-3">Product <span class="text-danger">*</span></th>                                                              
+                                <th class="col-2">Ship To <span class="text-danger">*</span></th>
+                                <th class="col-1">Unit <span class="text-danger">*</span></th>
+                                <th class="col-1">Qty <span class="text-danger">*</span></th>
+                                <th class="col-2">Lot No</th>
+                                <th class="col-1">Type <span class="text-danger">*</span></th>
+                                <th class="col-1">o Stock</th>                                                                                      
+                                <th class="col-2">Reason</th>                                                                
+                                <th class="col-2 text-center">Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var item in ItemsList)
+                            {
                                 <tr>
-                                    <th class="col-3 col-md-2">Product</th>
-                                    <th class="col-2 col-md-1">Ship To</th>
-                                    <th class="col-1 col-md-1">Unit</th>
-                                    <th class="col-1 col-md-1">Qty</th>
-                                    <th class="col-2 col-md-1">Lot No</th>
-                                    <th class="col-2 col-md-1">Type</th>
-                                    <th class="col-2 col-md-1">To Stock</th>
-                                    <th class="col-3 col-md-2">Reason</th>
-                                    <th class="col-1 col-md-1">Action</th>
-                                </tr>
-                            </thead>
+                                    <!-- PRODUCT -->
+                                    <td>
+                                        <InputSelect class="form-select" @bind-Value="@item.ProductId">
+                                            <option value="0">Select</option>
+                                            @foreach (var product in ProductList)
+                                            {
+                                                <option value="@product.Id">@product.SKU</option>
+                                            }
+                                        </InputSelect>
+                                        @if (item.ProductId == 0)
+                                        {
+                                            <small class="text-danger">Required</small>
+                                        }
+                                    </td>
 
-                            <tbody>
-                                @foreach (var item in ItemsList)
-                                {
-                                    <tr>
+                                    <!-- SHIP TO -->
+                                    <td>
+                                        <InputSelect class="form-select" @bind-Value="@item.ShipToCompanyId">
+                                            <option value="0">Select</option>
+                                            @foreach (var ship in CompanyList)
+                                            {
+                                                <option value="@ship?.Id">@ship?.Name</option>
+                                            }
+                                        </InputSelect>
+                                        @if (item.ShipToCompanyId == 0)
+                                        {
+                                            <small class="text-danger">Required</small>
+                                        }
+                                    </td>
 
-                                        <!-- PRODUCT -->
-                                        <td>
-                                            <InputSelect class="form-select" @bind-Value="@item.ProductId">
-                                                <option value="0">Select</option>
-                                                @foreach (var product in ProductList)
-                                                {
-                                                    <option value="@product.Id">@product.SKU</option>
-                                                }
-                                            </InputSelect>
-                                        </td>
+                                    <!-- UNIT -->
+                                    <td>
+                                        <InputSelect class="form-select" @bind-Value="@item.UnitId">
+                                            <option value="0">Select</option>
+                                            @foreach (var unit in Units)
+                                            {
+                                                <option value="@unit.Id">@unit.Name</option>
+                                            }
+                                        </InputSelect>
+                                        @if (item.UnitId == 0)
+                                        {
+                                            <small class="text-danger">Required</small>
+                                        }
+                                    </td>
 
-                                        <!-- SHIP TO -->
-                                        <td>
-                                            <InputSelect class="form-select" @bind-Value="@item.ShipToCompanyId">
-                                                <option value="0">Select</option>
-                                                @foreach (var ship in CompanyList)
-                                                {
-                                                    <option value="@ship?.Id">@ship?.Name</option>
-                                                }
-                                            </InputSelect>
-                                        </td>
+                                    <!-- QTY (NARROW) -->
+                                    <td class="col-1">
+                                        <InputNumber class="form-control p-1" min="1" @bind-Value="@item.ReturnQuantity" />
+                                        @if (item.ReturnQuantity <= 0)
+                                        {
+                                            <small class="text-danger">Min 1</small>
+                                        }
+                                    </td>
 
-                                        <!-- UNIT -->
-                                        <td>
-                                            <InputSelect class="form-select" @bind-Value="@item.UnitId">
-                                                <option value="0">Select</option>
-                                                @foreach (var unit in Units)
-                                                {
-                                                    <option value="@unit.Id">@unit.Name</option>
-                                                }
-                                            </InputSelect>
-                                        </td>
+                                    <!-- OUTWARD (WIDER) -->
+                                    <td style="width:150px;">
+                                        <InputSelect class="form-select" @bind-Value="@item.OutwardId">
+                                            <option value="0">Select</option>
+                                            @foreach (var outward in OutwardList)
+                                            {
+                                                <option value="@outward?.Id">@outward?.OutwardNo</option>
+                                            }
+                                        </InputSelect>
+                                    </td>
 
-                                        <!-- QTY -->
-                                        <td>
-                                            <InputNumber class="form-control " min="1" @bind-Value="@item.ReturnQuantity" />
-                                        </td>
+                                    <!-- RETURN TYPE -->
+                                    <td>
+                                        <InputSelect class="form-select" @bind-Value="@item.ReturnType">
+                                            <option value="0">Select</option>
+                                            @foreach (var type in Enum.GetValues(typeof(ReturnType)))
+                                            {
+                                                <option value="@((int)type)">@type</option>
+                                            }
+                                        </InputSelect>
+                                        @if (item.ReturnType == 0)
+                                        {
+                                            <small class="text-danger">Required</small>
+                                        }
+                                    </td>
 
-                                        <!-- LOT NO -->
-                                        <td>
-                                            <InputSelect class="form-select" @bind-Value="@item.OutwardId">
-                                                <option value="0">Select</option>
-                                                @foreach (var outward in OutwardList)
-                                                {
-                                                    <option value="@outward?.Id">@outward?.OutwardNo</option>
-                                                }
-                                            </InputSelect>
-                                        </td>
+                                    <!-- TAKE TO STOCK -->
+                                    <td>
+                                        <InputSelect class="form-select" @bind-Value="@item.IsTakeInStock">
+                                            @foreach (var take in TakeToStock)
+                                            {
+                                                <option value="@take.Id">@take.Name</option>
+                                            }
+                                        </InputSelect>
+                                    </td>
 
-                                        <!-- RETURN TYPE -->
-                                        <td>
-                                            <InputSelect class="form-select" @bind-Value="item.ReturnType">
-                                                <option value="">Select</option>
-                                                @foreach (var type in Enum.GetValues(typeof(ReturnType)))
-                                                {
-                                                    <option value="@((int)type)">@type</option>
-                                                }
-                                            </InputSelect>
-                                        </td>
+                                    <!-- REASON -->
+                                    <td class="col-1">
+                                        <InputText class="form-control" @bind-Value="@item.ReasonToReturn" />
+                                    </td>
 
-                                        <!-- TAKE TO STOCK -->
-                                        <td>
-                                            <InputSelect class="form-select" @bind-Value="@item.IsTakeInStock">
-                                                @foreach (var take in TakeToStock)
-                                                {
-                                                    <option value="@take?.Id">@take?.Name</option>
-                                                }
-                                            </InputSelect>
-                                        </td>
-
-                                        <!-- REASON -->
-                                        <td>
-                                            <InputText class="form-control" @bind-Value="@item.ReasonToReturn" />
-                                        </td>
-
-                                        <!-- ACTIONS -->
-                                        <td>
-                                            <Button Class="p-1" title="Save" @onclick="(() => HandleSubmit(item))">
+                                    <!-- ACTION (ONE LINE, TIGHT) -->
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                            <Button Class="btn btn-success btn-sm p-1" title="Save"
+                                                    @onclick="(() => HandleSubmit(item))">
                                                 <Icon Name="IconName.Floppy" />
                                             </Button>
 
-                                            <!-- DELETE -->
-                                            <Button Class="p-1" title="Delete" @onclick="(() => HandleDelete(item.Id))">
+                                            <Button Class="btn btn-danger btn-sm p-1" title="Delete"
+                                                    @onclick="(() => HandleDelete(item.Id))">
                                                 <Icon Name="IconName.Trash" />
                                             </Button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
 
-                                            <!-- PDF -->
-                                            <Button Class="p-1" title="Generate PDF">
-                                                <Icon Name="IconName.FileEarmarkPdf" />
-                                            </Button>
-                                        </td>
-
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-
-
-
-                    </div>
-                
-                }
-            </div>
-            <!-- ADD NEW ITEM BUTTON -->
-            <div class="text-center mt-2">
+            <!-- ADD NEW ROW -->
+            <div class="text-center mt-3">
                 <button type="button"
                         class="btn btn-success btn-sm"
                         @onclick="HandleAddItem">
@@ -147,16 +176,15 @@
                 </button>
             </div>
         </div>
-
     </BodyTemplate>
 </Modal>
-
 
 @code {
     private Modal modal = new();
     [Parameter] public string Title { get; set; } = "Sale Return";
     private Grid<SaleReturnItemsModel> ItemsGrid { get; set; }
-
+    private string? errorMessage { get; set; }
+    private string? successMessage { get; set; }
     // private EditContext editContext;
     // private ValidationMessageStore? validationMessage;
 

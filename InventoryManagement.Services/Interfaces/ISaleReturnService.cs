@@ -9,6 +9,7 @@ public interface ISaleReturnService
     Task<bool> UpdateSaleReturnAsync(SaleReturnModel model);
     //Task<bool> DeleteSaleReturnAsync(int id, int userId);
     Task<bool> CreateSaleReturnItem(SaleReturnItemsModel model);
+    Task<bool> UpdateSaleReturnItem(SaleReturnItemsModel model);
     Task<SaleReturnValidationResult> ValidateBarcodeForSaleReturnAsync(string barcodeNo, int companyId);
     Task<bool> DeleteSaleReturnItem(int itemId);
     Task<List<SaleReturnItemsModel>> GetSaleReturnItemsByReturnId(int saleReturnId);
