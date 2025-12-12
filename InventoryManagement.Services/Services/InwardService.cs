@@ -174,6 +174,7 @@ public class InwardService : IInwardService
 
             // Update common fields
             entity.ProductId = model.ProductId;
+            entity.BrandId = model.BrandId;
             entity.UpdatedBy = model.UpdatedBy ?? 0;
             entity.UpdatedOn = model.UpdatedOn ?? DateTime.UtcNow;
             entity.InwardUnitId = model.InwardUnitId;
@@ -458,7 +459,7 @@ public class InwardService : IInwardService
             items.Add(new InwardItem
             {
                 InwardId = inwardId,
-                //BrandId=itemModel.BrandId,
+                BrandId=itemModel.BrandId,
                 ProductId = itemModel.ProductId,
                 ItemQuantity = itemModel.ItemQuantity,
                 InwardUnitId = itemModel.InwardUnitId,
@@ -493,8 +494,8 @@ public class InwardService : IInwardService
             IsDeleted = false,
             CreatedBy = model.CreatedBy,
             CreatedOn = model.CreatedOn,
-            BoxQuantity = model.BoxQuantity
-            //BrandId= model.BrandId
+            BoxQuantity = model.BoxQuantity,
+            BrandId= model.BrandId
         };
 
         await itemRepo.AddAsync(entity);
@@ -690,7 +691,7 @@ public class InwardService : IInwardService
         {
             Id = entity.Id,
             InwardId = entity.InwardId,
-            //BrandId = entity.BrandId,
+            BrandId = entity.BrandId,
             ProductId = entity.ProductId,
             ItemQuantity = entity.ItemQuantity,
             InwardUnitId = entity.InwardUnitId,

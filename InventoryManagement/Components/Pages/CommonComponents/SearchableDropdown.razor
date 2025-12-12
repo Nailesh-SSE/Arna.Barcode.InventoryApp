@@ -2,7 +2,7 @@
 
 <div class="mb-2">
         <Dropdown class="w-100" disabled="@IsDisabled">
-            <DropdownToggleButton class="form-control d-flex justify-content-between align-items-center border rounded w-100">
+        <DropdownToggleButton class="form-control d-flex justify-content-between align-items-center border rounded w-100 bg-white">
                 @if (!string.IsNullOrWhiteSpace(SearchText))
                 {
                     @SelectedText
@@ -63,17 +63,13 @@
         set
         {
             _searchText = value;
-            // automatically trigger filtering
             FilterItems(value);
         }
     }
 
     protected override void OnParametersSet()
     {
-        if (!string.IsNullOrWhiteSpace(SelectedText))
-        {
-            SearchText = SelectedText ?? "";
-        }
+        SearchText = SelectedText ?? "";
     }
 
     private IEnumerable<TItem> FilteredItems =>
@@ -85,7 +81,6 @@
 
     private void FilterItems(string value)
     {
-        // No need to set SearchText here because setter already does that
         StateHasChanged();
     }
 
