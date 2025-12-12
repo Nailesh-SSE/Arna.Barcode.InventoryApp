@@ -1,0 +1,94 @@
+﻿@typeparam TItem
+
+<div class="mb-2">
+        <Dropdown class="w-100" disabled="@IsDisabled">
+        <DropdownToggleButton class="form-control d-flex justify-content-between align-items-center border rounded w-100 bg-white">
+                @if (!string.IsNullOrWhiteSpace(SearchText))
+                {
+                    @SelectedText
+                }
+                else
+                {
+                    <span class="text-muted">@Placeholder</span>
+                }
+            </DropdownToggleButton>
+
+            <DropdownMenu class="p-2 w-100">
+                <input class="form-control mb-2"
+                       placeholder="Search..."
+                       @bind="SearchText"
+                       @bind:event="oninput" />
+
+                <div style="max-height:200px;overflow-y:auto;">
+                @if(FilteredItems != null)
+                {            
+                @foreach (var item in FilteredItems)
+                    {
+                        <DropdownItem @onclick="@(() => SelectItem(item))">
+                            @ItemTextSelector(item)
+                        </DropdownItem>
+                    }
+
+                    @if (!FilteredItems.Any())
+                    {
+                        <div class="px-2 py-1 text-muted small">No match found</div>
+                    }
+                }
+                </div>
+            </DropdownMenu>
+        </Dropdown>
+
+        @if (ShowValidationMessage && ValidationMessage != null)
+        {
+            <div class="text-danger small">@ValidationMessage</div>
+        }
+</div>
+@code {
+    [Parameter] public IEnumerable<TItem> Items { get; set; }
+    [Parameter] public Func<TItem, string> ItemTextSelector { get; set; }
+    [Parameter] public EventCallback<TItem> OnItemSelected { get; set; }
+
+    [Parameter] public string Placeholder { get; set; } = "Select ...";
+    [Parameter] public bool IsRequired { get; set; }
+    [Parameter] public bool ShowValidationMessage { get; set; }
+    [Parameter] public string ValidationMessage { get; set; }
+    [Parameter] public string SelectedText { get; set; }
+    [Parameter] public bool IsDisabled { get; set; } = false;
+
+    private bool IsDropdownOpen = false;
+    private string _searchText = "";
+    private string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            _searchText = value;
+            FilterItems(value);
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        SearchText = SelectedText ?? "";
+    }
+
+    private IEnumerable<TItem> FilteredItems =>
+        string.IsNullOrWhiteSpace(SearchText)
+        ? Items
+        : Items.Where(item =>
+            ItemTextSelector(item).Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+
+
+    private void FilterItems(string value)
+    {
+        StateHasChanged();
+    }
+
+    private async Task SelectItem(TItem item)
+    {
+        SelectedText = ItemTextSelector(item);
+        SearchText = SelectedText;
+        IsDropdownOpen = false;
+        await OnItemSelected.InvokeAsync(item);
+    }
+}

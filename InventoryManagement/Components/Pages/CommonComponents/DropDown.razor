@@ -1,0 +1,46 @@
+﻿@typeparam TItem
+
+<div class="mb-3">
+    <InputSelect class="form-select" @bind-Value="SelectedId" @oninput="OnInputHandler">
+        <option value="0">@Placeholder </option>
+        @foreach (var item in Items)
+        {
+            <option value="@ValueSelector(item)">
+                @TextSelector(item)
+            </option>
+        }
+    </InputSelect>
+</div>
+
+@code {
+    [Parameter] public IEnumerable<TItem> Items { get; set; }
+    [Parameter] public Func<TItem, int> ValueSelector { get; set; }
+    [Parameter] public Func<TItem, string> TextSelector { get; set; }
+    [Parameter] public int? SelectedId { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "-- Select --";
+    [Parameter] public EventCallback<(int? Id, string Name)> OnValueChanged { get; set; }
+    [Parameter] public string SelectedText { get; set; }
+    [Parameter] public string inputclass { get; set; } = "form-select";
+
+    protected override void OnParametersSet()
+    {
+        if (SelectedId.HasValue && Items != null)
+        {
+            var sel = Items.FirstOrDefault(x => ValueSelector(x) == SelectedId);
+            SelectedText = sel == null ? "" : TextSelector(sel);
+        }
+    }
+
+    private async Task OnInputHandler(ChangeEventArgs e)
+    {
+        SelectedId = string.IsNullOrEmpty(e.Value?.ToString())
+                     ? null
+                     : Convert.ToInt32(e.Value);
+
+        var selectedItem = Items.FirstOrDefault(x => ValueSelector(x) == SelectedId);
+
+        string name = selectedItem == null ? "" : TextSelector(selectedItem);
+
+        await OnValueChanged.InvokeAsync((SelectedId, name));
+    }
+}
