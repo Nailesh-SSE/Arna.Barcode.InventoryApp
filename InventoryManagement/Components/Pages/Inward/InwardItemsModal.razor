@@ -39,6 +39,7 @@
                                 <tbody>
                                     @foreach (var item in InwardItems)
                                     {
+                                        var brandClass = $"form-select form-select-sm {GetValidationClass(item, "brand")} w-auto";
                                         var productClass = $"form-select form-select-sm {GetValidationClass(item, "product")} w-100";
                                         var itemQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "itemQuantity")} w-auto";
                                         var unitsClass = $"form-control form-control-sm {GetValidationClass(item, "units")} w-auto";
@@ -47,8 +48,8 @@
 
                                         <tr class="@rowClasses">
                                             <td class="col-2">
-                                                <select class="@productClass"
-                                                             Value="@item.InwardUnitId"
+                                                <select class="@brandClass"
+                                                             value="@item.BrandId"
                                                              @onchange="(e => onChangeBrand(item, int.Parse(e.Value.ToString())))"
                                                              disabled="@item.HasOutOfStockBarcodes">
                                                     <option value="0">-- Select --</option>
@@ -57,14 +58,14 @@
                                                         <option value="@brand.Id">@brand.Name</option>
                                                     }
                                                 </select>
-                                                @if (showValidation && item.InwardUnitId == 0 && IsLastUnsavedItem(item))
+                                                @if (showValidation && item.BrandId == 0 && IsLastUnsavedItem(item))
                                                 {
                                                     <small class="text-danger">Brand required</small>
                                                 }
                                             </td>
                                             <td class="col-5">
                                                 <SearchableDropdown TItem="ProductModel"
-                                                                    Items="@Productsbybrands"
+                                                                    Items="@item.ProductListForBrand"
                                                                     ItemTextSelector="@(p => p.SKU)"
                                                                     SelectedText="@item.ProductSearchText"
                                                                     Placeholder="Search product..."
@@ -220,7 +221,6 @@
 
     public List<UnitModel> Units => CommonUtils.UnitList;
     public int brandId;
-    public List<ProductModel> Productsbybrands;
 
     public async Task Show()
     {
@@ -230,6 +230,21 @@
         {
             await OnAddItem.InvokeAsync();
         }
+        foreach (var item in InwardItems)
+        {
+            if (item.BrandId > 0)
+            {
+                item.ProductListForBrand = FilteredProducts
+                    .Where(p => p.MakeCompanyId == item.BrandId)
+                    .ToList();
+            }
+            else
+            {
+                // item.ProductListForBrand = new();
+                item.ProductSearchText = string.Empty;
+            }
+        }
+
         await modal.ShowAsync();
     }
 
@@ -243,13 +258,14 @@
         ClearMessages();
         showValidation = true;
 
-        // //Validate Brand
-        // if (item.BrandId == 0)
-        // {
-        //     errorMessage = "Please select a brand before saving.";
-        //     StateHasChanged();
-        //     return;
-        // }
+        //Validate Brand
+        if (item.BrandId == 0)
+        {
+            errorMessage = "Please select a brand before saving.";
+            StateHasChanged();
+            return;
+        }
+
         // Validate Product
         if (item.ProductId == 0)
         {
@@ -405,7 +421,7 @@
 
         return field switch
         {
-            // "brand" => item.BrandId == 0 ? "is-invalid" : "is-valid",
+            "brand" => item.BrandId == 0 ? "is-invalid" : "is-valid",
             "product" => item.ProductId == 0 ? "is-invalid" : "is-valid",
             "itemQuantity" => item.ItemQuantity <= 0 ? "is-invalid" : "is-valid",
             "units" => item.InwardUnitId == 0 ? "is-invalid" : "is-valid",
@@ -443,18 +459,16 @@
     {
         ClearMessages();
 
-        // Save selected brand inside item
-        brandId = selectedId;
+        item.BrandId = selectedId;
 
-        // Filter products for this item row
-        Productsbybrands = FilteredProducts
-            .Where(p => p.MakeCompanyId == selectedId)
-            .ToList();
-
-        // Clear product selection
         item.ProductId = 0;
         item.ProductSearchText = "";
 
+        // Filter only for this row
+        item.ProductListForBrand = FilteredProducts
+            .Where(p => p.MakeCompanyId == selectedId)
+            .ToList();
+        OnProductDropdownSelected(item, null);
         StateHasChanged();
     }
 }
