@@ -1,5 +1,7 @@
 @inherits LayoutComponentBase
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
+@implements IDisposable
 
 <div class="page">
     <div class="sidebar @(isCollapsed ? "collapsed" : "")">
@@ -30,21 +32,47 @@
 @code {
     private bool isCollapsed = false;
 
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            var isMobile = await JS.InvokeAsync<bool>("eval", "(window.innerWidth <= 640)");
-            if (isMobile)
+            if (await IsMobileAsync())
             {
-                isCollapsed = true; 
-                StateHasChanged();  
+                isCollapsed = true;
+                StateHasChanged();
             }
         }
+    }
+
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (await IsMobileAsync())
+        {
+            isCollapsed = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task<bool> IsMobileAsync()
+    {
+        return await JS.InvokeAsync<bool>(
+            "eval",
+            "window.innerWidth <= 640"
+        );
     }
 
     private void ToggleSidebar()
     {
         isCollapsed = !isCollapsed;
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }
