@@ -89,14 +89,14 @@ else
 
             <div class="mb-3">
                 <label class="form-label">Parent Category</label>
-                <InputSelect class="form-select" @bind-Value="categoryModel.ParentCategoryId">
-                    <option value="">-- Select Parent Category --</option>
-                    @foreach (var cat in parentCategoryList)
-                    {
-                        <option value="@cat.Id">@cat.Name</option>
-                    }
-                </InputSelect>
-            </div>
+                    <DropDown TItem="CategoryModel"
+                        Items="@parentCategoryList"
+                        SelectedId="@categoryModel.ParentCategoryId"
+                        ValueSelector="x => x.Id"
+                        TextSelector="x => x.Name"
+                          Placeholder="-- Select Parent Category --"
+                        OnValueChanged="OnCategorySelected"/>
+            </div> 
             @if (categoryModel.Id > 0)
             {
                 <div class="mb-3">
@@ -265,5 +265,10 @@ else
         catch (Exception ex)
         {
         }
+    }
+    private void OnCategorySelected((int? Id, string Name) selected)
+    {
+        categoryModel.ParentCategoryId = selected.Id;
+        categoryModel.ParentCategoryName = selected.Name;
     }
 }

@@ -9,7 +9,8 @@ public class InwardItem : Common
 
     [Required]
     public int InwardId { get; set; }
-
+    [Required]
+    public int BrandId { get; set; }
     [Required]
     public int ProductId { get; set; }
 

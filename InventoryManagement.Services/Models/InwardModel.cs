@@ -29,6 +29,7 @@ public class InwardItemModel
 {
     public int Id { get; set; }
     public int InwardId { get; set; }
+    public int BrandId { get; set; }
     public int ProductId { get; set; }
     public decimal ItemQuantity { get; set; }
     public string? BatchNo { get; set; }
@@ -41,4 +42,5 @@ public class InwardItemModel
     public decimal BoxQuantity { get; set; }
     public string ProductSearchText { get; set; } = string.Empty;
     public bool HasOutOfStockBarcodes { get; set; } = false;
+    public List<ProductModel> ProductListForBrand { get; set; } = new();
 }
