@@ -1,4 +1,5 @@
 @page "/outward"
+@implements IAsyncDisposable
 @inject IOutwardService OutwardService
 @inject ICompanyService CompanyService
 @inject IPlatformService PlatformService
@@ -73,25 +74,22 @@
                     {
                         <Icon Name="IconName.Eye" />
                         @: &nbsp;View Item
-                    }              
+                    }
                     else
                     {
                         <Icon Name="IconName.PlusCircle" />
-                      @:  &nbsp;Add Item
+                        @: &nbsp;Add Item
                     }
-                                
                 </Button>
                 <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                     <Icon Name="IconName.PencilSquare" /> Edit
                 </Button>
-                @* <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteOutward(context.Id)">
-                    <Icon Name="IconName.Trash" /> Delete
-                </Button> *@
             </GridColumn>
         </Grid>
     }
 </div>
 
+@* --- Add/Edit Outward Modal --- *@
 <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
     <BodyTemplate>
         <EditForm EditContext="@editContext" OnValidSubmit="SaveOutward">
@@ -107,26 +105,26 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
                     <DropDown TItem="CompanyModel"
-                                      Items="@billCompanies"
-                                      SelectedId="@outward.BillToCompanyId"
-                                      ValueSelector="x => x.Id"
-                                      TextSelector="x => x.Name"
-                                      Placeholder="-- Select Company --"
-                                     OnValueChanged="OnBillToCompanySelected" />
+                              Items="@billCompanies"
+                              SelectedId="@outward.BillToCompanyId"
+                              ValueSelector="x => x.Id"
+                              TextSelector="x => x.Name"
+                              Placeholder="-- Select Company --"
+                              OnValueChanged="OnBillToCompanySelected" />
                     <ValidationMessage For="@(() => outward.BillToCompanyId)" />
                 </div>
             </div>
             <div class="col-md-12 mb-3">
-                    <label class="form-label">Platform <span class="text-danger">*</span></label>
-                    <DropDown TItem="PlatformModel"
-                              Items="@platforms"
-                              SelectedId="@outward.PlatformId"
-                              ValueSelector="x => x.Id"
-                              TextSelector="x => x.Name"
-                              Placeholder="-- Select Platform --"
-                              OnValueChanged="OnPlatformSelected" />
-                    <ValidationMessage For="@(() => outward.PlatformId)" />
-           </div>
+                <label class="form-label">Platform <span class="text-danger">*</span></label>
+                <DropDown TItem="PlatformModel"
+                          Items="@platforms"
+                          SelectedId="@outward.PlatformId"
+                          ValueSelector="x => x.Id"
+                          TextSelector="x => x.Name"
+                          Placeholder="-- Select Platform --"
+                          OnValueChanged="OnPlatformSelected" />
+                <ValidationMessage For="@(() => outward.PlatformId)" />
+            </div>
 
             <div class="mb-3">
                 <label class="form-label">Remarks</label>
@@ -152,35 +150,43 @@
 
 <Modal @ref="itemModal" Title="@($"Manage Items - {selectedOutward?.OutwardNo}")" Size="ModalSize.Regular">
     <BodyTemplate>
-@if (selectedOutward != null)
-{
-            <div class="card">
+        @if (selectedOutward != null)
+        {
+            <div class="card mb-3">
                 <div class="card-body">
                     <EditForm EditContext="@itemEditContext" OnValidSubmit="AddItemToList">
                         <DataAnnotationsValidator />
                         @if (!selectedOutward.IsFinished)
                         {
                             <div class="row">
+                                <div class="col-12 mb-2">
+                                    <div id="reader" style="width: 100%;"></div>
+                                </div>
+
                                 <div class="col-sm-10">
                                     <label class="form-label">Barcode <span class="text-danger">*</span></label>
-                                    <InputText class="form-control" @bind-Value="newItem.BarcodeNo"
-                                               placeholder="Scan or enter barcode" @ref="barcodeInput" />
+                                    <div class="input-group">
+                                        <InputText class="form-control" @bind-Value="newItem.BarcodeNo"
+                                                   placeholder="Scan or enter barcode" @ref="barcodeInput" />
+
+                                        <button type="button" class="btn btn-secondary" @onclick="StartCameraScan" disabled="@isScanning">
+                                            <Icon Name="IconName.Camera" /> Scan
+                                        </button>
+                                    </div>
                                     <ValidationMessage For="@(() => newItem.BarcodeNo)" />
                                 </div>
+
                                 <div class="col-md-2 d-flex align-items-end ms-auto">
                                     <Button Color="ButtonColor.Primary" Type="ButtonType.Submit" class="w-100">
                                         <Icon Name="IconName.Plus" />
                                     </Button>
                                 </div>
+
                                 @if (!string.IsNullOrEmpty(barcodeErrorMessage))
                                 {
                                     <div class="text-danger mt-1">@barcodeErrorMessage</div>
                                 }
                             </div>
-                        }
-                        else
-                        {
-                          <div> </div>
                         }
                     </EditForm>
                 </div>
@@ -197,13 +203,12 @@
                                 <tr>
                                     <th style="width: 5%">#</th>
                                     <th style="width: 15%">Barcode</th>
-                                    <th style="width: 45%">Product Name</th>                               
+                                    <th style="width: 45%">Product Name</th>
                                     <th style="width: 10%">Unit</th>
-
-                                     @if (!selectedOutward.IsFinished)
+                                    @if (!selectedOutward.IsFinished)
                                     {
                                         <th style="width: 10%">Action</th>
-                                    }                             
+                                    }
                                 </tr>
                             </thead>
                             <tbody>
@@ -216,21 +221,21 @@
                                         <tr>
                                             <td>@(index + 1)</td>
                                             <td>@item.BarcodeNo</td>
-                                            <td>@item.ProductName</td>  
+                                            <td>@item.ProductName</td>
                                             <td>@item.Unit</td>
                                             @if (!selectedOutward.IsFinished)
                                             {
                                                 <td>
                                                     <Button Color="ButtonColor.Danger"
-                                                    Size="ButtonSize.Small"
-                                                    @onclick="() => RemoveItem(item)">
+                                                            Size="ButtonSize.Small"
+                                                            @onclick="() => RemoveItem(item)">
                                                         <Icon Name="IconName.Trash" />
                                                     </Button>
                                                 </td>
                                             }
                                             else
                                             {
-                                                <td></td>                                           
+                                                <td></td>
                                             }
                                         </tr>
                                     }
@@ -257,11 +262,11 @@
                 else
                 {
                     <Button Color="ButtonColor.Success" data-bs-toggle="tooltip" title="This outward is already finished">Finished</Button>
-                }            
-                    <Button Color="ButtonColor.Secondary" @onclick="HideItemModal">Close</Button>
+                }
+                <Button Color="ButtonColor.Secondary" @onclick="HideItemModal">Close</Button>
             </div>
-    }
-</BodyTemplate>
+        }
+    </BodyTemplate>
 </Modal>
 
 @code {
@@ -286,10 +291,14 @@
     private bool isLoading = true;
     private string modalTitle = "Add Outward";
     private bool isEditMode = false;
+    private bool isScanning = false;
 
     private bool showErrorMessage = false;
     private string errorMessage = string.Empty;
     private System.Threading.Timer? errorTimer;
+
+    // Reference for JS Interop
+    private DotNetObjectReference<Outward>? dotNetHelper;
 
     protected override async Task OnInitializedAsync()
     {
@@ -323,7 +332,7 @@
             platforms = (await PlatformService.GetAllPlatformAsync()).ToList();
             InitializeEditContext();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             ShowError("Connectivity issue happened, operation failed");
         }
@@ -334,18 +343,17 @@
     }
 
     #region Outward CRUD Operations
-
     private void ShowAddModal()
     {
         modalTitle = "Add New Outward";
         isEditMode = false;
         outward = new OutwardModel
-        {
-            OutwardDate = DateTime.Now,
-            IsActive = true,
-            CreatedBy=Convert.ToInt32(CurrentUserId),
-            CreatedOn=DateTime.UtcNow
-        };
+            {
+                OutwardDate = DateTime.Now,
+                IsActive = true,
+                CreatedBy = Convert.ToInt32(CurrentUserId),
+                CreatedOn = DateTime.UtcNow
+            };
         InitializeEditContext();
         modal.ShowAsync();
     }
@@ -355,17 +363,17 @@
         modalTitle = "Edit Outward";
         isEditMode = true;
         outward = new OutwardModel
-        {
-            Id = editOutward.Id,
-            OutwardNo = editOutward.OutwardNo,
-            OutwardDate = editOutward.OutwardDate,
-            BillToCompanyId = editOutward.BillToCompanyId,
-            PlatformId = editOutward.PlatformId,
-            Remarks = editOutward.Remarks,
-            IsActive = editOutward.IsActive,
-            UpdatedBy=Convert.ToInt32(CurrentUserId),
-            UpdatedOn=DateTime.UtcNow
-        };
+            {
+                Id = editOutward.Id,
+                OutwardNo = editOutward.OutwardNo,
+                OutwardDate = editOutward.OutwardDate,
+                BillToCompanyId = editOutward.BillToCompanyId,
+                PlatformId = editOutward.PlatformId,
+                Remarks = editOutward.Remarks,
+                IsActive = editOutward.IsActive,
+                UpdatedBy = Convert.ToInt32(CurrentUserId),
+                UpdatedOn = DateTime.UtcNow
+            };
         InitializeEditContext();
         await modal.ShowAsync();
     }
@@ -375,11 +383,9 @@
         try
         {
             if (!editContext.Validate()) return;
-
             ValidateBillToCompany();
             ValidatePlatform();
-            if (editContext.GetValidationMessages().Any())
-                return;
+            if (editContext.GetValidationMessages().Any()) return;
 
             bool result;
             if (isEditMode)
@@ -399,8 +405,7 @@
             else
             {
                 var outwardId = await OutwardService.CreateOutwardAsync(outward);
-
-                if(outwardId!=0)
+                if (outwardId != 0)
                 {
                     await HideModal();
                     await LoadData();
@@ -414,7 +419,7 @@
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             await HideModal();
             ShowError("Connectivity issue happened, operation failed");
@@ -429,48 +434,45 @@
             if (!confirmed) return;
 
             var userid = Convert.ToInt32(CurrentUserId);
-            var result = await OutwardService.DeleteOutwardAsync(id,userid);
+            var result = await OutwardService.DeleteOutwardAsync(id, userid);
             if (result)
             {
                 await LoadData();
             }
             else
             {
-                await HideModal();
                 ShowError("Connectivity issue happened, operation failed");
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            await HideModal();
             ShowError("Connectivity issue happened, operation failed");
         }
     }
+
     private async Task FinalizeOutward(OutwardModel model)
     {
         try
         {
-            bool isConfirm = await JSRuntime.InvokeAsync<bool>("confirm", "After This You Can't Scan/Edit Bracode/Item");
+            bool isConfirm = await JSRuntime.InvokeAsync<bool>("confirm", "After This You Can't Scan/Edit Barcode/Item");
             if (isConfirm)
             {
                 model.IsFinished = true;
                 await OutwardService.UpdateOutwardAsync(model);
                 await HideItemModal();
+                await LoadData();
             }
         }
-        catch (Exception ex)
-        {
-        }
+        catch (Exception) { }
     }
+
     private async Task HideModal()
     {
         await modal.HideAsync();
     }
-
     #endregion
 
     #region Item Management
-
     private async Task ShowItemModal(OutwardModel outward)
     {
         try
@@ -479,13 +481,20 @@
             itemList = await OutwardService.GetOutwardDetailsByOutwardIdAsync(outward.Id);
             newItem = new OutWardItemModel();
             barcodeErrorMessage = string.Empty;
+            isScanning = false;
             InitializeItemEditContext();
+
             await itemModal.ShowAsync();
 
-            // Focus on barcode input
-            StateHasChanged();
+            // Give the modal time to render before focusing
+            await Task.Delay(150);
+
+            if (barcodeInput.Element.HasValue)
+            {
+                await barcodeInput.Element.Value.FocusAsync();
+            }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             ShowError("Connectivity issue happened, operation failed");
         }
@@ -509,39 +518,39 @@
                 return;
             }
 
-            // Validate barcode
-            var validationResult = await OutwardService.ValidateBarcodeForOutwardAsync(
-                newItem.BarcodeNo,
-                selectedOutward.Id
-            );
+            var validationResult = await OutwardService.ValidateBarcodeForOutwardAsync(newItem.BarcodeNo, selectedOutward.Id);
 
             if (!validationResult.IsValid)
             {
                 barcodeErrorMessage = validationResult.ErrorMessage;
                 return;
             }
+
             var userid = Convert.ToInt32(CurrentUserId);
-            // Add item
-            var item = await OutwardService.AddOutwardItemAsync(selectedOutward.Id, newItem.BarcodeNo,userid);
+            var item = await OutwardService.AddOutwardItemAsync(selectedOutward.Id, newItem.BarcodeNo, userid);
 
             if (item != null)
             {
                 itemList.Add(item);
-
-                // Reset form
                 newItem = new OutWardItemModel();
                 InitializeItemEditContext();
+
+                isScanning = false;
                 StateHasChanged();
+
+                if (barcodeInput.Element.HasValue)
+                {
+                    await barcodeInput.Element.Value.FocusAsync();
+                }
             }
             else
             {
                 ShowError("Connectivity issue happened, operation failed");
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             barcodeErrorMessage = "Connectivity issue happened, operation failed";
-            ShowError("Connectivity issue happened, operation failed");
         }
     }
 
@@ -549,12 +558,11 @@
     {
         try
         {
-            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
-                $"Are you sure you want to remove item with barcode {item.BarcodeNo}?");
-
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to remove item with barcode {item.BarcodeNo}?");
             if (!confirmed) return;
+
             var userid = Convert.ToInt32(CurrentUserId);
-            var result = await OutwardService.DeleteOutwardItemAsync(item.Id, item.BarcodeNo,userid);
+            var result = await OutwardService.DeleteOutwardItemAsync(item.Id, item.BarcodeNo, userid);
 
             if (result)
             {
@@ -563,28 +571,79 @@
             }
             else
             {
-                await HideItemModal();
                 ShowError("Connectivity issue happened, operation failed");
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            await HideItemModal();
             ShowError("Connectivity issue happened, operation failed");
         }
     }
 
     private async Task HideItemModal()
     {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("manageScanner.stop");
+        }
+        catch { }
+
+        if (dotNetHelper != null)
+        {
+            dotNetHelper.Dispose();
+            dotNetHelper = null;
+        }
+
+        isScanning = false;
         await itemModal.HideAsync();
         selectedOutward = null;
         itemList.Clear();
     }
+    #endregion
+
+    #region Camera Logic
+
+    private async Task StartCameraScan()
+    {
+        if (isScanning) return;
+
+        try
+        {
+            isScanning = true;
+            dotNetHelper?.Dispose();
+            dotNetHelper = DotNetObjectReference.Create(this);
+
+            await JSRuntime.InvokeVoidAsync("manageScanner.start", dotNetHelper);
+        }
+        catch (Exception)
+        {
+            isScanning = false;
+            ShowError("Could not start camera");
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnBarcodeScanned(string scannedBarcode)
+    {
+        barcodeErrorMessage = string.Empty;
+        if (dotNetHelper == null) return;
+
+        if (string.IsNullOrWhiteSpace(scannedBarcode))
+            return;
+
+        newItem.BarcodeNo = scannedBarcode;
+        
+        isScanning = false;
+        
+        StateHasChanged();
+
+        await AddItemToList();
+        StateHasChanged();
+    }
 
     #endregion
 
-    #region Validation
-
+    #region Validation & Helpers
     private void ValidateBillToCompany()
     {
         messageStore.Clear(() => outward.BillToCompanyId);
@@ -594,10 +653,9 @@
         }
         editContext.NotifyValidationStateChanged();
     }
-
-    private void HandleBillToCompanyChange(int id)
+    private void OnBillToCompanySelected((int? Id, string Name) selected)
     {
-        outward.BillToCompanyId = id;
+        outward.BillToCompanyId = selected.Id ?? 0;
         ValidateBillToCompany();
     }
     private void ValidatePlatform()
@@ -609,25 +667,11 @@
         }
         editContext.NotifyValidationStateChanged();
     }
-    private void HandlePlatformChange(int id)
-    {
-        outward.PlatformId = id;
-        ValidatePlatform();
-    }
-
-    private void OnBillToCompanySelected((int? Id, string Name) selected)
-    {
-        outward.BillToCompanyId = selected.Id ?? 0;
-        ValidateBillToCompany();
-    }
     private void OnPlatformSelected((int? Id, string Name) selected)
     {
         outward.PlatformId = selected.Id ?? 0;
         ValidatePlatform();
     }
-    #endregion
-
-    #region Error Display
 
     private void ShowError(string message)
     {
@@ -644,10 +688,75 @@
         }, null, 4000, System.Threading.Timeout.Infinite);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         errorTimer?.Dispose();
-    }
 
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("manageScanner.stop");
+        }
+        catch { }
+
+        if (dotNetHelper != null)
+        {
+            dotNetHelper.Dispose();
+            dotNetHelper = null;
+        }
+    }
     #endregion
 }
+
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<script>
+    let html5QrcodeScanner;
+
+    window.manageScanner = {
+        start: (dotNetHelper) => {
+            if (html5QrcodeScanner) { return; }
+
+            html5QrcodeScanner = new Html5Qrcode("reader");
+
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            html5QrcodeScanner.start({ facingMode: "environment" }, config,
+                (decodedText, decodedResult) => {
+                    // SUCCESS:
+                    // 1. Stop the camera immediately so it doesn't scan twice
+                    // 2. Clear the variable and DOM
+                    // 3. Send result to C#
+                    window.manageScanner.stop().then(() => {
+                        dotNetHelper.invokeMethodAsync('OnBarcodeScanned', decodedText)
+                            .catch(err => console.log("Blazor component disposed", err));
+                    });
+                },
+                (errorMessage) => {
+                    // ignore errors
+                })
+            .catch(err => {
+                console.error("Error starting scanner", err);
+                alert("Could not start camera. Permissions?");
+            });
+        },
+        
+        stop: () => {
+            return new Promise((resolve, reject) => {
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.stop().then(() => {
+                        html5QrcodeScanner.clear();
+                        html5QrcodeScanner = null;
+                        document.getElementById("reader").innerHTML = "";
+                        resolve();
+                    }).catch(err => {
+                        console.log("Error stopping scanner", err);
+                        html5QrcodeScanner = null;
+                        resolve(); 
+                    });
+                } else {
+                    resolve();
+                }
+            });
+        }
+    };
+</script>

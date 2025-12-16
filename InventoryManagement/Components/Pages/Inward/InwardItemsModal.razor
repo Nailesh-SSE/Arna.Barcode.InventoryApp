@@ -134,18 +134,18 @@
                                                             class="btn btn-primary btn-sm"
                                                             @onclick="@(() => HandleSaveItem(item))"
                                                             disabled="@item.HasOutOfStockBarcodes">
-                                                        <Icon Name="IconName.SaveFill" />
+                                                            Save
                                                     </button>
                                                     @if (item.Id > 0)
-                                                    {
+                                                    {   
                                                         <button type="button"
                                                                 class="btn btn-danger btn-sm"
                                                                 @onclick="@(() => HandleDeleteItem(item.Id))">
-                                                            <Icon Name="IconName.Trash" />
+                                                                Delete
                                                         </button>
 
                                                         <button type="button"
-                                                                class="btn btn-dark btn-sm"
+                                                                class="btn btn-dark btn-md"
                                                                 @onclick="@(() => OnDownloadPdf.InvokeAsync(item))">
                                                             <Icon Name="IconName.UpcScan" />
                                                         </button>
@@ -153,9 +153,9 @@
                                                     else
                                                     {
                                                         <button type="button"
-                                                                class="btn btn-outline-secondary btn-sm"
+                                                                class="btn btn-secondary btn-md"
                                                                 @onclick="@(() => RemoveUnsavedItem(item))">
-                                                            <Icon Name="IconName.XCircle" Class="me-1" />
+                                                            <Icon Name="IconName.XCircle" />
                                                         </button>
                                                     }
                                                 </div>
