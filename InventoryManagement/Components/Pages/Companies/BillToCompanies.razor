@@ -5,7 +5,7 @@
 @inject IJSRuntime JS
 
 <PageTitle>Bill To Companies</PageTitle>
-@if (!CanView("/companies/bill-to"))
+@if (!CanView(Route))
 {
     <AccessDenied />
 }
@@ -17,9 +17,12 @@ else
                 <h3><Icon Name="IconName.Receipt" /> Bill To Companies</h3>
             </div>
             <div class="col-auto">
-                <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
-                    <Icon Name="IconName.Plus" /> Add New
-                </Button>
+                @if (CanCreate(Route))
+                {
+                    <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                        <Icon Name="IconName.Plus" /> Add New
+                    </Button>
+                }
             </div>
         </div>
 
@@ -62,12 +65,18 @@ else
                 </GridColumn>
 
                 <GridColumn TItem="CompanyModel" HeaderText="Actions">
-                    <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                        <Icon Name="IconName.PencilSquare" /> Edit
-                    </Button>
-                    <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCompany(context.Id)">
-                        <Icon Name="IconName.Trash" /> Delete
-                    </Button>
+                    @if (CanEdit(Route))
+                    {
+                        <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                            <Icon Name="IconName.PencilSquare" /> Edit
+                        </Button>
+                    }
+                    @if (CanDelete(Route))
+                    {
+                        <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCompany(context.Id)">
+                            <Icon Name="IconName.Trash" /> Delete
+                        </Button>
+                    }
                 </GridColumn>
             </Grid>
         }
@@ -113,6 +122,7 @@ else
     private List<CompanyModel> companyList = new();
     private EditContext editContext;
     private ValidationMessageStore validationMessage;
+    private string Route = "/companies/bill-to";
 
     protected override async Task OnInitializedAsync()
     {

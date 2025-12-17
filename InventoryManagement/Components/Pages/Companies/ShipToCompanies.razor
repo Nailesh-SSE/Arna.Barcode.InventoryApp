@@ -5,105 +5,114 @@
 @inject IJSRuntime JS
 
 <PageTitle>Ship To Companies</PageTitle>
-@if (!CanView("/companies/ship-to"))
+@if (!CanView(Route))
 {
     <AccessDenied />
 }
 else
 {
-<div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col">
-            <h3><Icon Name="IconName.Truck" /> Ship To Companies</h3>
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col">
+                <h3><Icon Name="IconName.Truck" /> Ship To Companies</h3>
+            </div>
+            <div class="col-auto">
+                @if (CanCreate(Route))
+                {
+                    <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                        <Icon Name="IconName.Plus" /> Add New
+                    </Button>
+                }
+            </div>
         </div>
-        <div class="col-auto">
-            <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
-                <Icon Name="IconName.Plus" /> Add New
-            </Button>
-        </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center">
+                <Spinner Type="SpinnerType.Border" />
+            </div>
+        }
+        else
+        {
+            <Grid TItem="CompanyModel"
+                  Class="table table-hover table-bordered table-striped"
+                  Data="companyList"
+                  AllowPaging="true"
+                  PageSize="10"
+                  Responsive="true"
+                  @ref=shipToCompanyGrid>
+
+                <GridColumn TItem="CompanyModel" HeaderText="No">
+                    @(companyList?.IndexOf(context) + 1)
+                </GridColumn>
+
+                <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name">
+                    @context.Name
+                </GridColumn>
+
+                <GridColumn TItem="CompanyModel" HeaderText="Remark" PropertyName="Remark">
+                    @context.Remark
+                </GridColumn>
+
+                <GridColumn TItem="CompanyModel" HeaderText="Status" PropertyName="IsActive">
+                    @if (context.IsActive)
+                    {
+                        <Badge Color="BadgeColor.Success">Active</Badge>
+                    }
+                    else
+                    {
+                        <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                    }
+                </GridColumn>
+
+                <GridColumn TItem="CompanyModel" HeaderText="Actions">
+                    @if (CanEdit(Route))
+                    {
+                        <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                            <Icon Name="IconName.PencilSquare" /> Edit
+                        </Button>
+                    }
+                    @if (CanDelete(Route))
+                    {
+                        <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCompany(context.Id)">
+                            <Icon Name="IconName.Trash" /> Delete
+                        </Button>
+                    }
+                </GridColumn>
+            </Grid>
+        }
     </div>
 
-    @if (isLoading)
-    {
-        <div class="text-center">
-            <Spinner Type="SpinnerType.Border" />
-        </div>
-    }
-    else
-    {
-        <Grid TItem="CompanyModel"
-              Class="table table-hover table-bordered table-striped"
-              Data="companyList"
-              AllowPaging="true"
-              PageSize="10"
-              Responsive="true"
-              @ref=shipToCompanyGrid>
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+        <BodyTemplate>
+            <EditForm EditContext="@editContext" OnValidSubmit="SaveCompany">
+                <DataAnnotationsValidator />
 
-            <GridColumn TItem="CompanyModel" HeaderText="No">
-                @(companyList?.IndexOf(context) + 1)
-            </GridColumn>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="companyModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
+                        <ValidationMessage For="@(() => companyModel.Name)" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Remark </label>
+                        <InputText class="form-control" @bind-Value="companyModel.Remark" />
+                    </div>
+                </div>
 
-            <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name">
-                @context.Name
-            </GridColumn>
-
-            <GridColumn TItem="CompanyModel" HeaderText="Remark" PropertyName="Remark">
-                @context.Remark
-            </GridColumn>
-
-            <GridColumn TItem="CompanyModel" HeaderText="Status" PropertyName="IsActive">
-                @if (context.IsActive)
+                @if (companyModel.Id > 0)
                 {
-                    <Badge Color="BadgeColor.Success">Active</Badge>
+                    <div class="mb-3">
+                        <InputCheckbox @bind-Value="companyModel.IsActive" /> Active
+                    </div>
                 }
-                else
-                {
-                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
-                }
-            </GridColumn>
-
-            <GridColumn TItem="CompanyModel" HeaderText="Actions">
-                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                    <Icon Name="IconName.PencilSquare" /> Edit
-                </Button>
-                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCompany(context.Id)">
-                    <Icon Name="IconName.Trash" /> Delete
-                </Button>
-            </GridColumn>
-        </Grid>
-    }
-</div>
-
-<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
-    <BodyTemplate>
-        <EditForm EditContext="@editContext" OnValidSubmit="SaveCompany">
-            <DataAnnotationsValidator />
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="companyModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
-                    <ValidationMessage For="@(() => companyModel.Name)" />
+                <div class="text-end">
+                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Remark </label>
-                    <InputText class="form-control" @bind-Value="companyModel.Remark" />
-                </div>
-            </div>
-
-            @if (companyModel.Id > 0)
-            {
-                <div class="mb-3">
-                    <InputCheckbox @bind-Value="companyModel.IsActive" /> Active
-                </div>
-            }
-            <div class="text-end">
-                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
-            </div>
-        </EditForm>
-    </BodyTemplate>
-</Modal>
+            </EditForm>
+        </BodyTemplate>
+    </Modal>
 }
 
 @code {
@@ -116,14 +125,14 @@ else
     private List<CompanyModel> companyList = new List<CompanyModel>();
     private EditContext editContext;
     private ValidationMessageStore validationMessage;
-
+    private string Route = "/companies/ship-to";
 
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
 
         await base.OnInitializedAsync(); // This will call the base authentication check
-       
+
         await LoadCompanies();
 
         if (!IsAuthenticated)
@@ -150,14 +159,15 @@ else
     {
         modalTitle = "Add Ship To Company";
         isEditMode = false;
-        companyModel = new CompanyModel 
+        companyModel = new CompanyModel
         {
-            CompanyType = CompanyType.ShipTo, IsActive = true ,
+            CompanyType = CompanyType.ShipTo,
+            IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
 
-        };        
-            InitializeEditContext();
-            modal?.ShowAsync();
+        };
+        InitializeEditContext();
+        modal?.ShowAsync();
     }
 
     private void ShowEditModal(CompanyModel editCompany)

@@ -10,7 +10,7 @@
 @inherits AuthComponentBase
 
 <PageTitle>Products</PageTitle>
-@if (!CanView("/outward"))
+@if (!CanView(Route))
 {
     <AccessDenied />
 }
@@ -21,11 +21,14 @@ else
             <div class="col">
                 <h3><Icon Name="IconName.Box" /> Products</h3>
             </div>
-            <div class="col-auto">
-                <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
-                    <Icon Name="IconName.Plus" /> Add New
-                </Button>
-            </div>
+            @if (CanCreate(Route))
+            {
+                <div class="col-auto">
+                    <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                        <Icon Name="IconName.Plus" /> Add New
+                    </Button>
+                </div>
+            }
         </div>
 
         @if (isLoading)
@@ -79,12 +82,18 @@ else
                 </GridColumn>
 
                 <GridColumn TItem="ProductModel" HeaderText="Actions">
-                    <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                        <Icon Name="IconName.PencilSquare" /> Edit
-                    </Button>
-                    <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteProduct(context.Id)">
-                        <Icon Name="IconName.Trash" /> Delete
-                    </Button>
+                    @if (CanEdit(Route))
+                    {
+                        <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                            <Icon Name="IconName.PencilSquare" /> Edit
+                        </Button>
+                    }
+                    @if (CanDelete(Route))
+                    {
+                        <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteProduct(context.Id)">
+                            <Icon Name="IconName.Trash" /> Delete
+                        </Button>
+                    }
                 </GridColumn>
             </Grid>
         }
@@ -189,6 +198,7 @@ else
     private EditContext editContext;
     private ValidationMessageStore messageStore;
     private List<UnitModel> Units => CommonUtils.UnitList;
+    private string Route = "/products";
 
 
 

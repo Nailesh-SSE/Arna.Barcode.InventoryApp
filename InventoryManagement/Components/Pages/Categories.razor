@@ -25,7 +25,7 @@ else
                 <div class="col">
                     <h3><Icon Name="IconName.Tags" /> Categories</h3>
                 </div>
-                @if (CanCreate("/categories"))
+                @if (CanCreate(Route))
                 {
                     <div class="col-auto">
                         <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
