@@ -319,7 +319,7 @@ public class InwardService : IInwardService
         // ==========================================================
         // LABEL SIZE : 50 mm x 25 mm  (5.0 cm x 2.5 cm)
         // ==========================================================
-        float widthInCm = 5.0f;   // 50 mm
+        float widthInCm = 8.0f;   // 50 mm
         float heightInCm = 2.5f;  // 25 mm
 
         float widthPoints = widthInCm * 28.35f;   // cm -> points
@@ -378,7 +378,7 @@ public class InwardService : IInwardService
             CodeType = Barcode128.CODE128,
             StartStopText = false,
             Font = null,
-            BarHeight = 18f,   // adjust if you need shorter/taller bars
+            BarHeight = 15f,   // adjust if you need shorter/taller bars
             X = 0.6f           // bar thickness
         };
 
@@ -406,11 +406,30 @@ public class InwardService : IInwardService
 
         float textWidth = bf.GetWidthPoint(item.BarcodeNo, fontSize);
         float textX = cellLeft + (cellWidth - textWidth) / 2f;
-        float textY = imgY - 8f; // below the barcode
+        float textY = imgY - 8f; // below the barcode   
 
         cb.SetTextMatrix(textX, textY);
         cb.ShowText(item.BarcodeNo);
         cb.EndText();
+
+        // Product Name + Color (ADDED – below barcode no)
+        string productName = $"{item.InwardItem?.Product?.SKU}".Trim();
+
+        if (!string.IsNullOrWhiteSpace(productName))
+        {
+            float nameFontSize = 6f;
+
+            cb.BeginText();
+            cb.SetFontAndSize(bf, nameFontSize);
+
+            float nameWidth = bf.GetWidthPoint(productName, nameFontSize);
+            float nameX = cellLeft + (cellWidth - nameWidth) / 2f;
+            float nameY = textY - 7f;
+
+            cb.SetTextMatrix(nameX, nameY);
+            cb.ShowText(productName);
+            cb.EndText();
+        }
     }
     #endregion
 
