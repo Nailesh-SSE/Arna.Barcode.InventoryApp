@@ -73,5 +73,11 @@ namespace InventoryManagement.Services.Models
         public bool IsValid { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
         public string ProductName { get; set; } = string.Empty;
+        public int? ProductId { get; set; }
+        public int? ShipToId { get; set; }
+        public int? UnitId { get; set; }
+        public int? OutwardId { get; set;}
+        public string? BarcodeNo { get;set; }
+        
     }
 }

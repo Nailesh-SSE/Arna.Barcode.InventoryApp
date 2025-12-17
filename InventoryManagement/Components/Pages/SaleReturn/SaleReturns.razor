@@ -1,9 +1,10 @@
- @page "/sale-returns"
+@page "/sale-returns"
 @inject ISaleReturnService SaleReturnService
 @inject ICompanyService CompanyService
 @inject IProductService ProductService
 @inject ICategoryService CategoryService
 @inject IOutwardService OutwardService
+@using InventoryManagement.Services.DTO
 
 @inject IJSRuntime JSRuntime
 
@@ -24,7 +25,7 @@
     </div>
 </div>
 
-@if(isLoading)
+@if (isLoading)
 {
     <div>
         <div class="spinner-border text-light" role="status"></div>
@@ -36,15 +37,15 @@ else
                      BillToCompanies="BillToCompanyList"
                      OnEditSaleReturn="ShowEditModal"
                      OnAddItems="OpenItemModel" />
-    
+
 }
 
-  <SaleReturnFormModal @ref="saleReturnFormModal"
+<SaleReturnFormModal @ref="saleReturnFormModal"
                      Title="@modalTitle"
                      SaleReturnModel="saleReturn"
                      BillToCompanyList="BillToCompanyList"
-                     OnSave="SaveSaleReturn" 
-                     OnCancel="HideModal"/>
+                     OnSave="SaveSaleReturn"
+                     OnCancel="HideModal" />
 
 <SaleReturnItemsFormModal @ref="saleReturnItemsFormModal"
                           Title="@itemTitle"
@@ -58,8 +59,9 @@ else
                           OnClose="HideItemModal"
                           OnDelete="DeleteSaleReturnItem"
                           OnSave="SaveSaleReturnItem"
-                          AddItemRow="AddNewItemRow"
-                          />
+                          OnSaveResponse="HandleResponse"
+                          AddItemRow="AddEmptyItemRow"
+                          RemoveItemRow="RemoveItemrow" />
 
 @code
 {
@@ -206,64 +208,113 @@ else
     }
     private async Task SaveSaleReturnItem(SaleReturnItemsModel item)
     {
-        item.SaleReturnId = selectedSaleReturn.Id;
-        if(item.SaleReturnId != 0)
+        if (selectedSaleReturn == null || selectedSaleReturn.Id == 0)
         {
-            bool success = item.Id == 0
-            ? await SaleReturnService.CreateSaleReturnItem(item)
-            : await SaleReturnService.UpdateSaleReturnItem(item);
-
-            if (success)
-            {
-                SaleReturnItems = await SaleReturnService.GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
-            }
+            await SendOperationResponse(false, "Sale Return is not selected");
+            return;
         }
-        
-        StateHasChanged();
 
+        item.SaleReturnId = selectedSaleReturn.Id;
+
+        bool isUpdate = item.Id > 0;
+
+        bool success = isUpdate
+            ? await SaleReturnService.UpdateSaleReturnItem(item)
+            : await SaleReturnService.CreateSaleReturnItem(item);
+
+        if (!success)
+        {
+            await SendOperationResponse(false, "Operation failed");
+            return;
+        }
+
+        SaleReturnItems = await SaleReturnService
+            .GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
+
+        await SendOperationResponse(
+            true,
+            isUpdate ? "Updated successfully" : "Saved successfully"
+        );
+    }
+    private async Task SendOperationResponse(bool isSuccess, string message)
+    {
+        var ResponseDto = new OperationResponse()
+        {
+            IsSuccess = isSuccess,
+            Message = message
+        };
+        await HandleResponse(ResponseDto);
+    }
+    private async Task HandleResponse(OperationResponse Dto)
+    {   
+        await saleReturnItemsFormModal.HandleResponse(Dto);
     }
 
     private async Task DeleteSaleReturnItem(int itemId)
     {
         await SaleReturnService.DeleteSaleReturnItem(itemId);
         SaleReturnItems = await SaleReturnService.GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
-        StateHasChanged();  
+     
     }
-    private async Task AddNewItemRow()
+    private async Task AddEmptyItemRow()
     {
-        var hasBlankRow = SaleReturnItems.Any(item => item.Id == 0 && (item.ProductId == 0 || item.ReturnQuantity == 0));
+        await AddNewItemRow(null);
+    }
 
-        if (hasBlankRow)
+    private async Task AddNewItemRow(SaleReturnValidationResult? data)
+    {
+        SaleReturnItems ??= new List<SaleReturnItemsModel>();
+
+        if (data == null || data.ProductId == null || data.ProductId == 0)
         {
-            return;
-        }
-        SaleReturnItems.Add(new());
-        StateHasChanged();
+            var hasBlankRow = SaleReturnItems.Any(item =>
+                item.Id == 0 && (item.ProductId == 0 || item.ReturnQuantity == 0));
 
+            if (hasBlankRow)
+                return;
+        }
+
+        SaleReturnItems.Add(new SaleReturnItemsModel
+        {
+            ProductId = data?.ProductId ?? 0,
+            ShipToCompanyId = data?.ShipToId ?? 0,
+            UnitId = data?.UnitId ?? 0,
+            OutwardId = data?.OutwardId ?? 0,
+            BarCodeNo = data?.BarcodeNo ?? null,
+            ReturnQuantity = 1
+        });
+
+        StateHasChanged();
     }
     private async Task HideItemModal()
     {
         await saleReturnItemsFormModal.Hide();
 
     }
-  
-  #endregion
-    
+    private async Task RemoveItemrow(SaleReturnItemsModel item)
+    {
+        SaleReturnItems.Remove(item);
+        StateHasChanged();
+
+    }
+
+    #endregion
+
     private async Task ValidateBarcode()
     {
         try
         {
             if (string.IsNullOrWhiteSpace(itemsModel.BarCodeNo))
             {
-                 validationMessage = "Please enter a barcode first.";
-                 validationIsValid = false;
+                validationMessage = "Please enter a barcode first.";
+                validationIsValid = false;
                 return;
             }
 
             if (selectedSaleReturn?.BillToCompanyId == 0)
             {
-                 validationMessage = "Please select a company first.";
-                 validationIsValid = false;
+                validationMessage = "Please select a company first.";
+                validationIsValid = false;
                 return;
             }
 
@@ -272,11 +323,14 @@ else
                 selectedSaleReturn.BillToCompanyId
             );
 
-             validationIsValid = validationResult.IsValid;
-             validationMessage = validationResult.IsValid
-                ? $"Valid barcode. Product: {validationResult.ProductName}"
-                : validationResult.ErrorMessage;
-
+            validationIsValid = validationResult.IsValid;
+            validationMessage = validationResult.IsValid
+               ? $"Valid barcode. Product: {validationResult.ProductName}"
+               : validationResult.ErrorMessage;
+            if (validationResult.IsValid)
+            {
+                await AddNewItemRow(validationResult);
+            }
             StateHasChanged();
         }
         catch

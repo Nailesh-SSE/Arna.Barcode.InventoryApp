@@ -258,11 +258,12 @@ public class SaleReturnService : ISaleReturnService
         }
 
         var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
-        var barcodeItems = await barcodeItemRepository.FindAsync(bi =>
-            bi.BarcodeNo == barcodeNo && !bi.IsDeleted);
+        var barcodeItems = await barcodeItemRepository.FindWithIncludesAsync(bi =>
+            bi.BarcodeNo == barcodeNo && !bi.IsDeleted,
+             bi => bi.Inward,bi=>bi.InwardItem);
 
         var barcodeItem = barcodeItems.FirstOrDefault();
-
+      
         if (barcodeItem == null)
         {
             return new SaleReturnValidationResult
@@ -271,6 +272,8 @@ public class SaleReturnService : ISaleReturnService
                 ErrorMessage = "Invalid barcode. Barcode does not exist in inventory."
             };
         }
+        var shipmentCompanyId = barcodeItem.Inward?.ShipMentCompanyId;
+        var unitId = barcodeItem.InwardItem?.InwardUnitId;
 
         var outwardDetailRepository = _unitOfWork.GetRepository<OutwardDetail>();
         var outwardDetails = await outwardDetailRepository.FindWithIncludesAsync(
@@ -298,6 +301,7 @@ public class SaleReturnService : ISaleReturnService
                 ErrorMessage = "This barcode was not sold to the selected company."
             };
         }
+        var outwardId = outward.Id;
 
         if (barcodeItem.IsInStock)
         {
@@ -315,7 +319,13 @@ public class SaleReturnService : ISaleReturnService
         return new SaleReturnValidationResult
         {
             IsValid = true,
-            ProductName = productName
+            ProductName = productName,
+            ProductId=outwardDetail.ProductId,
+            ShipToId= shipmentCompanyId,
+            UnitId= unitId,
+            OutwardId= outwardId,
+            BarcodeNo=barcodeNo
+
         };
     }
 
