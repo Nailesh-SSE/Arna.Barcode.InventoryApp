@@ -504,10 +504,13 @@
             // Give the modal time to render before focusing
             await Task.Delay(150);
 
-            if (barcodeInput.Element.HasValue)
+            if (selectedOutward.IsFinished == false)
             {
-                await barcodeInput.Element.Value.FocusAsync();
-            }
+                if (barcodeInput.Element.HasValue)
+                {
+                    await barcodeInput.Element.Value.FocusAsync();
+                }
+            } 
         }
         catch (Exception)
         {
