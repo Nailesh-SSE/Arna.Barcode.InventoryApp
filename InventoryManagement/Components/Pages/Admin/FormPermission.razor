@@ -78,43 +78,58 @@ else
 
 <Modal @ref="modal" Title="@title">
     <BodyTemplate>
-        <EditForm Model="@model" OnValidSubmit="Save">
+        
+        <EditForm Model="@editContext" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
             <div class="mb-2">
                 <label class="form-label">Role</label>
-                <select class="form-control" @bind="@model.RoleId">
-                    @foreach (var r in roles)
-                    {
-                        <option value="@r.Id">@r.Name</option>
-                    }
-                </select>
+                <DropDown TItem="Roles"
+                          Items="@roles"
+                          SelectedId="@model.Id"
+                          ValueSelector="x => x.Id"
+                          TextSelector="x => x.Name"
+                          Placeholder="-- Select Role--"
+                          OnValueChanged="HandleRole" />
+                <ValidationMessage For="@(() => model.Id)" />
             </div>
 
 
             <div class="mb-2">
                 <label class="form-label">Form</label>
-                <select class="form-control" @bind="@model.FormId">
-                    @foreach (var f in forms)
-                    {
-                        <option value="@f.Id">@f.FormName</option>
-                    }
-                </select>
+                <DropDown TItem="FormPermissionModel"
+                          Items="@list"
+                          SelectedId="@model.FormId"
+                          ValueSelector="x => x.Id"
+                          TextSelector="x => x.FormName"
+                          Placeholder="-- Select Role--"
+                          OnValueChanged="HandleRole" />>
+                <ValidationMessage For="@(() => model.FormId)" />
+
             </div>
 
-            <div class="mb-2">
-                <InputCheckbox @bind-Value="model.CanView" /> View
-            </div>
-            <div class="mb-2">
-                <InputCheckbox @bind-Value="model.CanCreate" /> Create
-            </div>
-            <div class="mb-2">
-                <InputCheckbox @bind-Value="model.CanEdit" /> Edit
-            </div>
-            <div class="mb-2">
-                <InputCheckbox @bind-Value="model.CanDelete" /> Delete
-            </div>
+            <div class="d-flex gap-4 mt-4">
+                <div class="form-check">
+                    <InputCheckbox class="form-check-input" @bind-Value="model.CanView" />
+                    <label class="form-check-label">View</label>
+                </div>
 
+                <div class="form-check">
+                    <InputCheckbox class="form-check-input" @bind-Value="model.CanCreate" />
+                    <label class="form-check-label">Create</label>
+                </div>
+
+                <div class="form-check">
+                    <InputCheckbox class="form-check-input" @bind-Value="model.CanEdit" />
+                    <label class="form-check-label">Edit</label>
+                </div>
+
+                <div class="form-check">
+                    <InputCheckbox class="form-check-input" @bind-Value="model.CanDelete" />
+                    <label class="form-check-label">Delete</label>
+                </div>
+            </div>
             <div class="text-end mt-3">
-                <Button Type="ButtonType.Submit">Save</Button>
+                <Button Color=ButtonColor.Primary Type="ButtonType.Submit">Save</Button>
             </div>
         </EditForm>
     </BodyTemplate>
@@ -126,10 +141,12 @@ else
 @code {
     List<FormPermissionModel> list = new();
     List<FormMasterModel> forms = new();
-    List<Roles> roles = new();
+    public List<Roles> roles = new();
 
+    private EditContext editContext { get; set; }
+    private ValidationMessageStore validationMessage;
 
-    FormPermissionModel model = new();
+    public FormPermissionModel model = new();
     Modal? modal;
     Grid<FormPermissionModel>? grid;
     string? title;
@@ -148,11 +165,18 @@ else
         await LoadData();
     }
 
+    public void InitializeEditContextAsync()
+    {
+        editContext = new EditContext(model);
+        validationMessage = new ValidationMessageStore(editContext);
+    }
+
     private async Task LoadData()
     {
         list = await Service.GetAllAsync();
         forms = await FormService.GetAllAsync();
         roles = await Service.GetAllRolesAsync();
+        InitializeEditContextAsync();
     }
 
     void ShowAddModal()
@@ -208,6 +232,35 @@ else
             await grid!.RefreshDataAsync();
         }
     }
+    private async Task HandleRole()
+    {
+
+        await ValidateRole();
+    }
+    private async Task HandleForm()
+    {
+        await ValidateForm();
+
+    }
+    private async Task ValidateRole()
+    {
+        validationMessage.Clear(() => model.Id);
+        if (model.Id <= 0)
+        {
+            validationMessage.Add(() => model.Id, "Role  is required");
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+    private async Task ValidateForm()
+    {
+        validationMessage.Clear(() => model.FormId);
+        if (model.FormId <=0)
+        {
+            validationMessage.Add(() => model.FormId, "Page is required");
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+  
     private void GoHome()
     {
         NavigationManager.NavigateTo("/");
