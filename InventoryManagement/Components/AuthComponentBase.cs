@@ -25,24 +25,30 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
 
         if (User.Identity?.IsAuthenticated == true && !PermissionState.IsLoaded)
         {
-            PermissionState.SetPermissions(
-                await PermissionService.GetUserPermissionsAsync(UserId)
-            );
+            PermissionState.SetPermissions(await PermissionService.GetUserPermissionsAsync(UserId));
         }
 
         AuthProvider.AuthenticationStateChanged += OnAuthChanged;
     }
 
-    private async void OnAuthChanged(Task<AuthenticationState> task)
+    private void OnAuthChanged(Task<AuthenticationState> task)
+    {
+        _ = HandleAuthChangedAsync(task);
+    }
+
+    private async Task HandleAuthChangedAsync(Task<AuthenticationState> task)
     {
         var authState = await task;
         User = authState.User;
 
         if (!User.Identity?.IsAuthenticated ?? true)
+        {
             PermissionState.Clear();
+        }
 
         await InvokeAsync(StateHasChanged);
     }
+
 
     public bool CanView(string route)
     {

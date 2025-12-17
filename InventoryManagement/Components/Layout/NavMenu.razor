@@ -1,31 +1,6 @@
 @using Microsoft.AspNetCore.Components.Authorization
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@inject IPermissionService PermissionService
 @using InventoryManagement.Components.Auth
-@using System.Security.Claims
-
-
-@code {
-[CascadingParameter]
-private Task<AuthenticationState> authenticationStateTask { get; set; } = default!;
-protected ClaimsPrincipal User { get; private set; } = new(new ClaimsIdentity());
-protected bool IsAdminUser { get; private set; }
-
-protected override async Task OnInitializedAsync()
-{
-    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-    User = authState.User;
-    
-    if (User.Identity?.IsAuthenticated == true)
-    {
-        var userId = int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
-        var permissions = await PermissionService.GetUserPermissionsAsync(userId);
-        IsAdminUser = permissions.Any(p => p.Route == "*" && p.CanView && p.CanCreate && p.CanEdit && p.CanDelete);
-    }
-}
-
-}
-
+@inherits AuthComponentBase
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -115,7 +90,7 @@ protected override async Task OnInitializedAsync()
         </NavLink>
     </div>
 
-    @if (IsAdminUser)
+    @if (IsAdmin())
     {
         <div class="nav-item px-3">
             <div class="nav-link text-white fw-bold">
@@ -141,5 +116,5 @@ protected override async Task OnInitializedAsync()
             </NavLink>
         </div>
     }
-</nav>
+  </nav>
 </div>

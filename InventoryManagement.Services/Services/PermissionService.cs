@@ -116,4 +116,10 @@ public class PermissionService : IPermissionService
 
         return permissions;
     }
+    public void ClearUserPermissionCache(int userId)
+    {
+        var cacheKey = $"user-permissions-{userId}";
+        _cache.Remove(cacheKey);
+    }
+
 }
