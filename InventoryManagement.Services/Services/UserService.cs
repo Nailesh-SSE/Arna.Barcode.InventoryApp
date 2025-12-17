@@ -132,24 +132,26 @@ public class UserService : IUserService
             };
 
             await userRepo.AddAsync(user);
+            await _unitOfWork.SaveChangesAsync();
 
             await roleRepo.AddAsync(new UsersInRole
             {
                 UserId = user.Id,
                 RoleId = model.RoleId,
+                CompanyId = 1,
                 CreatedBy = model.CreatedBy,
                 CreatedOn = DateTime.UtcNow
             });
-
             await _unitOfWork.SaveChangesAsync();
             return true;
+
         }
         catch (Exception ex)
         {
 
             throw;
         }
-       
+
     }
     public async Task<List<Roles>> GetAllRolesAsync()
     {
