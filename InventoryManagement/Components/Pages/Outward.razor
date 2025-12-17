@@ -154,7 +154,7 @@ else
     </BodyTemplate>
 </Modal>
 
-<Modal @ref="itemModal" Title="@($"Manage Items - {selectedOutward?.OutwardNo}")" Size="ModalSize.Regular">
+<Modal @ref="itemModal" Title="@($"Manage Items - {selectedOutward?.OutwardNo}")" Size="ModalSize.Regular" OnHidden="HideItemModal">
     <BodyTemplate>
         @if (selectedOutward != null)
         {
@@ -166,7 +166,22 @@ else
                         {
                             <div class="row">
                                 <div class="col-12 mb-2">
-                                    <div id="reader" style="width: 100%;"></div>
+                                    <div class="position-relative">
+
+                                        @if (isScanning)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2"
+                                                    title="Close Camera"
+                                                    style="z-index: 10;"
+                                                    @onclick="CloseCamera">
+                                                <Icon Name="IconName.XCircle" />
+                                            </button>
+                                        }
+
+                                        <div id="reader" class="border rounded" style="width: 100%;"></div>
+
+                                    </div>
                                 </div>
 
                                 <div class="col-sm-10">
@@ -494,10 +509,13 @@ else
             // Give the modal time to render before focusing
             await Task.Delay(150);
 
-            if (barcodeInput.Element.HasValue)
+            if (selectedOutward.IsFinished == false)
             {
-                await barcodeInput.Element.Value.FocusAsync();
-            }
+                if (barcodeInput.Element.HasValue)
+                {
+                    await barcodeInput.Element.Value.FocusAsync();
+                }
+            } 
         }
         catch (Exception)
         {
@@ -589,7 +607,7 @@ else
     {
         try
         {
-            await JSRuntime.InvokeVoidAsync("manageScanner.stop");
+            await JSRuntime.InvokeVoidAsync("manageScanner.forceStop");
         }
         catch { }
 
@@ -637,9 +655,9 @@ else
             return;
 
         newItem.BarcodeNo = scannedBarcode;
-        
+
         isScanning = false;
-        
+
         StateHasChanged();
 
         await AddItemToList();
@@ -699,7 +717,7 @@ else
 
         try
         {
-            await JSRuntime.InvokeVoidAsync("manageScanner.stop");
+            await JSRuntime.InvokeVoidAsync("manageScanner.forceStop");
         }
         catch { }
 
@@ -707,6 +725,28 @@ else
         {
             dotNetHelper.Dispose();
             dotNetHelper = null;
+        }
+    }
+
+    public async Task CloseCamera()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
+
+        if (dotNetHelper != null)
+        {
+            dotNetHelper.Dispose();
+            dotNetHelper = null;
+        }
+
+        isScanning = false;
+
+        if (barcodeInput.Element.HasValue)
+        {
+            await barcodeInput.Element.Value.FocusAsync();
         }
     }
     #endregion
@@ -762,6 +802,24 @@ else
                     resolve();
                 }
             });
+        },
+        forceStop: () => {
+            if (!html5QrcodeScanner) return;
+
+            try 
+            {
+                html5QrcodeScanner.stop();
+                html5QrcodeScanner.clear();
+            } 
+            catch (e) 
+            {
+                console.warn("Scanner stop error", e);
+            }
+
+            html5QrcodeScanner = null;
+
+            const reader = document.getElementById("reader");
+            if (reader) reader.innerHTML = "";
         }
     };
 </script>

@@ -101,7 +101,7 @@
                                     <option value="InwardNo">Inward Number</option>
                                     <option value="ShipmentCompany">Supplier</option>
                                     <option value="Quantity">Quantity</option>
-                                    <option value="TotalCost">Total Cost</option>
+                                     <option value="TotalCost">Total Cost</option> 
                                 </InputSelect>
                             </div>
                             <div class="col-6">
@@ -214,6 +214,7 @@
                                             <th>Product</th>
                                             <th>SKU</th>
                                             <th>Category</th>
+                                            <th>Brand</th>
                                             <th class="text-end">Quantity</th>
                                             <th>Unit</th>
                                             <th>Supplier</th>
@@ -231,6 +232,7 @@
                                                 <td>@item.ProductName</td>
                                                 <td><code>@item.SKU</code></td>
                                                 <td>@item.CategoryName</td>
+                                                <td>@item.BrandName</td>
                                                 <td class="text-end">@item.Quantity.ToString("N2")</td>
                                                 <td>@item.Unit</td>
                                                 <td>@item.ShipmentCompanyName</td>

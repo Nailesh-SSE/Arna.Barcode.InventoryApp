@@ -33,6 +33,7 @@ public class InwardFilter : BaseReportFilter
 {
     public string? InwardNumbers { get; set; }
     public int? ShipmentCompanyId { get; set; }
+    public int? BrandId { get; set; }
     public decimal? MinQuantity { get; set; }
     public decimal? MaxQuantity { get; set; }
     public string? ProductSKUs { get; set; }
@@ -58,6 +59,8 @@ public class InwardReportItem
     public decimal TotalCost { get; set; }
     public string? BatchNumber { get; set; }
     public string? SerialNumber { get; set; }
+    public int? BrandId { get; set; }
+    public string? BrandName { get; set; }
     public int ShipmentCompanyId { get; set; }
     public string ShipmentCompanyName { get; set; } = string.Empty;
     public string? Remarks { get; set; }
