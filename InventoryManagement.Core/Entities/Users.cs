@@ -35,6 +35,9 @@ public partial class Users : Common
 
     public bool IsLoginAllowed { get; set; } = true;
 
+    public int RoleId { get; set; } = 0;
+
+
     [NotMapped]
     public string Name => $"{FirstName} {LastName}";
 

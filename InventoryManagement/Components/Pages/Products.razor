@@ -10,166 +10,171 @@
 @inherits AuthComponentBase
 
 <PageTitle>Products</PageTitle>
+@if (!CanView("/outward"))
+{
+    <AccessDenied />
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col">
+                <h3><Icon Name="IconName.Box" /> Products</h3>
+            </div>
+            <div class="col-auto">
+                <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                    <Icon Name="IconName.Plus" /> Add New
+                </Button>
+            </div>
+        </div>
 
-<div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col">
-            <h3><Icon Name="IconName.Box" /> Products</h3>
-        </div>
-        <div class="col-auto">
-            <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
-                <Icon Name="IconName.Plus" /> Add New
-            </Button>
-        </div>
+        @if (isLoading)
+        {
+            <div class="text-center">
+                <Spinner Type="SpinnerType.Border" />
+            </div>
+        }
+        else
+        {
+            <Grid TItem="ProductModel"
+                  @ref=productGrid
+                  Class="table table-hover table-bordered table-striped"
+                  Data="@products"
+                  AllowPaging="true"
+                  PageSize="10"
+                  Responsive="true">
+
+                <GridColumn TItem="ProductModel" HeaderText="No" PropertyName="Id">
+                    @{
+                        var index = products.IndexOf(context) + 1;
+                    }
+                    @index
+                </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="SKU" PropertyName="SKU">
+                    @context.SKU
+                </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="Name" PropertyName="Name">
+                    @context.Name
+                </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="Category" PropertyName="CategoryId">
+                    @(categories.FirstOrDefault(c => c.Id == context.CategoryId)?.Name ?? "N/A")
+                </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="Unit" PropertyName="Unit">
+                    @context.Unit
+                </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="Status" PropertyName="IsActive">
+                    @if (context.IsActive)
+                    {
+                        <Badge Color="BadgeColor.Success">Active</Badge>
+                    }
+                    else
+                    {
+                        <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                    }
+                </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="Actions">
+                    <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                        <Icon Name="IconName.PencilSquare" /> Edit
+                    </Button>
+                    <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteProduct(context.Id)">
+                        <Icon Name="IconName.Trash" /> Delete
+                    </Button>
+                </GridColumn>
+            </Grid>
+        }
     </div>
 
-    @if (isLoading)
-    {
-        <div class="text-center">
-            <Spinner Type="SpinnerType.Border" />
-        </div>
-    }
-    else
-    {
-        <Grid TItem="ProductModel"
-              @ref=productGrid
-              Class="table table-hover table-bordered table-striped"
-              Data="@products"
-              AllowPaging="true"
-              PageSize="10"
-              Responsive="true">
-
-            <GridColumn TItem="ProductModel" HeaderText="No" PropertyName="Id">
-                @{
-                    var index = products.IndexOf(context) + 1;
-                }
-                @index
-            </GridColumn>
-
-            <GridColumn TItem="ProductModel" HeaderText="SKU" PropertyName="SKU">
-                @context.SKU
-            </GridColumn>
-
-            <GridColumn TItem="ProductModel" HeaderText="Name" PropertyName="Name">
-                @context.Name
-            </GridColumn>
-
-            <GridColumn TItem="ProductModel" HeaderText="Category" PropertyName="CategoryId">
-                @(categories.FirstOrDefault(c => c.Id == context.CategoryId)?.Name ?? "N/A")
-            </GridColumn>
-
-            <GridColumn TItem="ProductModel" HeaderText="Unit" PropertyName="Unit">
-                @context.Unit
-            </GridColumn>
-
-            <GridColumn TItem="ProductModel" HeaderText="Status" PropertyName="IsActive">
-                @if (context.IsActive)
-                {
-                    <Badge Color="BadgeColor.Success">Active</Badge>
-                }
-                else
-                {
-                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
-                }
-            </GridColumn>
-
-            <GridColumn TItem="ProductModel" HeaderText="Actions">
-                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                    <Icon Name="IconName.PencilSquare" /> Edit
-                </Button>
-                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteProduct(context.Id)">
-                    <Icon Name="IconName.Trash" /> Delete
-                </Button>
-            </GridColumn>
-        </Grid>
-    }
-</div>
-
-<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
-    <BodyTemplate>
-        <EditForm EditContext="@editContext" OnValidSubmit="SaveProduct">
-            <DataAnnotationsValidator />
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="productModel.Name" @oninput="HandleNameChange" />
-                    <ValidationMessage For="@(() => productModel.Name)" />
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+        <BodyTemplate>
+            <EditForm EditContext="@editContext" OnValidSubmit="SaveProduct">
+                <DataAnnotationsValidator />
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="productModel.Name" @oninput="HandleNameChange" />
+                        <ValidationMessage For="@(() => productModel.Name)" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Brand <span class="text-danger">*</span></label>
+                        <DropDown TItem="CompanyModel"
+                                  Items="@companies"
+                                  SelectedId="@productModel.MakeCompanyId"
+                                  ValueSelector="x => x.Id"
+                                  TextSelector="x => x.Name"
+                                  Placeholder="-- Select Brand--"
+                                  OnValueChanged="OnBrandSelected" />
+                        <ValidationMessage For="@(() => productModel.MakeCompanyId)" />
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Brand <span class="text-danger">*</span></label>
-                    <DropDown TItem="CompanyModel"
-                              Items="@companies"
-                              SelectedId="@productModel.MakeCompanyId"
-                              ValueSelector="x => x.Id"
-                              TextSelector="x => x.Name"
-                              Placeholder="-- Select Brand--"
-                              OnValueChanged="OnBrandSelected" />
-                    <ValidationMessage For="@(() => productModel.MakeCompanyId)" />
-                </div>
-            </div>
 
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                     <label class="form-label">Category <span class="text-danger">*</span></label>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Category <span class="text-danger">*</span></label>
                         <DropDown TItem="CategoryModel"
-                        Items="@categories"
-                        SelectedId="@productModel.CategoryId"
-                        ValueSelector="x => x.Id"
-                        TextSelector="x => x.Name"
-                              Placeholder="-- Select Category --"
-                        OnValueChanged="OnCategorySelected"/>
-                    <ValidationMessage For="@(() => productModel.CategoryId)" /> 
+                                  Items="@categories"
+                                  SelectedId="@productModel.CategoryId"
+                                  ValueSelector="x => x.Id"
+                                  TextSelector="x => x.Name"
+                                  Placeholder="-- Select Category --"
+                                  OnValueChanged="OnCategorySelected" />
+                        <ValidationMessage For="@(() => productModel.CategoryId)" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Unit <span class="text-danger">*</span></label>
+                        <DropDown TItem="UnitModel"
+                                  Items="@Units"
+                                  SelectedId="@productModel.UnitId"
+                                  ValueSelector="x => x.Id"
+                                  TextSelector="x => x.Name"
+                                  Placeholder="-- Select Unit --"
+                                  OnValueChanged="OnUnitSelected" />
+                        <ValidationMessage For="@(() => productModel.UnitId)" />
+                    </div>
                 </div>
 
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Unit <span class="text-danger">*</span></label>
-                    <DropDown TItem="UnitModel"
-                              Items="@Units"
-                              SelectedId="@productModel.UnitId"
-                              ValueSelector="x => x.Id"
-                              TextSelector="x => x.Name"
-                              Placeholder="-- Select Unit --"
-                              OnValueChanged="OnUnitSelected" />
-                    <ValidationMessage For="@(() => productModel.UnitId)" />
+                <div class="row">
+                    <div class="col-md-6 mb-3 position-relative">
+                        <label class="form-label">Colour <span class="text-danger">*</span></label>
+
+                        <SearchableDropdown TItem="ColourModel"
+                                            Items="@Colours"
+                                            ItemTextSelector="@(c => c.Name)"
+                                            SelectedText="@productModel.ColourSearchText"
+                                            Placeholder="Search Colour..."
+                                            OnItemSelected="OnColourSelected"
+                                            IsRequired="true"
+                                            ShowValidationMessage="true" />
+
+                        <ValidationMessage For="@(() => productModel.ColourId)" />
+                    </div>
                 </div>
-            </div>
 
-            <div class="row">
-                <div class="col-md-6 mb-3 position-relative">
-                    <label class="form-label">Colour <span class="text-danger">*</span></label>
-
-                    <SearchableDropdown TItem="ColourModel"
-                    Items="@Colours"
-                    ItemTextSelector="@(c => c.Name)"
-                    SelectedText="@productModel.ColourSearchText"
-                    Placeholder="Search Colour..."
-                    OnItemSelected="OnColourSelected"
-                    IsRequired="true"
-                    ShowValidationMessage="true"/>
-
-                    <ValidationMessage For="@(() => productModel.ColourId)" />
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Description</label>
-                <InputTextArea class="form-control" rows="3" @bind-Value="productModel.Description" />
-            </div>
-
-            @if (productModel.Id > 0)
-            {
                 <div class="mb-3">
-                    <InputCheckbox @bind-Value="productModel.IsActive" /> Active
+                    <label class="form-label">Description</label>
+                    <InputTextArea class="form-control" rows="3" @bind-Value="productModel.Description" />
                 </div>
-            }
-            <div class="text-end">
-                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
-            </div>
-        </EditForm>
-    </BodyTemplate>
-</Modal>
 
+                @if (productModel.Id > 0)
+                {
+                    <div class="mb-3">
+                        <InputCheckbox @bind-Value="productModel.IsActive" /> Active
+                    </div>
+                }
+                <div class="text-end">
+                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+                </div>
+            </EditForm>
+        </BodyTemplate>
+    </Modal>
+}
 @code {
     private Modal modal = default!;
     private List<ProductModel> products = new();
@@ -466,5 +471,5 @@
 
         ValidateUnit();
     }
-    
+
 }

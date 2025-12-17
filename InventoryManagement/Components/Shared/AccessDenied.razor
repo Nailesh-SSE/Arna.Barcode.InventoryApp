@@ -1,0 +1,19 @@
+﻿<PageTitle>Access Denied</PageTitle>
+
+<div class="container text-center mt-5">
+    <h1 class="text-danger">Access Denied</h1>
+    <p>You do not have permission to access this page.</p>
+
+    <Button Color="ButtonColor.Primary" @onclick="GoHome">
+        Go to Dashboard
+    </Button>
+</div>
+
+@code {
+    [Inject] NavigationManager NavigationManager { get; set; } = default!;
+
+    void GoHome()
+    {
+        NavigationManager.NavigateTo("/dashboard");
+    }
+}

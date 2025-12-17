@@ -5,7 +5,12 @@
 @inject IJSRuntime JS
 
 <PageTitle>Ship To Companies</PageTitle>
-
+@if (!CanView("/companies/ship-to"))
+{
+    <AccessDenied />
+}
+else
+{
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col">
@@ -99,6 +104,7 @@
         </EditForm>
     </BodyTemplate>
 </Modal>
+}
 
 @code {
     private Modal modal;
@@ -114,14 +120,19 @@
 
     protected override async Task OnInitializedAsync()
     {
+        isLoading = true;
+
         await base.OnInitializedAsync(); // This will call the base authentication check
+       
+        await LoadCompanies();
 
         if (!IsAuthenticated)
         {
             NavigationManager.NavigateTo("/logout", forceLoad: true);
             return;
         }
-        await LoadCompanies();
+
+        isLoading = false;
     }
 
     private void InitializeEditContext()
@@ -131,7 +142,6 @@
     }
     private async Task LoadCompanies()
     {
-        isLoading = true;
         companyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo))?.ToList() ?? new List<CompanyModel>();
         isLoading = false;
     }

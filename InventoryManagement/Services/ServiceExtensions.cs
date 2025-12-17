@@ -40,7 +40,10 @@ public static class ServiceExtensions
         services.AddScoped<ISaleReturnService, SaleReturnService>();
         services.AddScoped<IColourService, ColourService>();
         services.AddScoped<IPlatformService, PlatformService>();
-
+        services.AddScoped<IPermissionService, PermissionService>();
+        services.AddScoped<IFormPermissionService, FormPermissionService>();
+        services.AddScoped<IFormMasterService, FormMasterService>();
+  
         // Register generators
         services.AddTransient<IInwardReportService, InwardReportGenerator>();
         services.AddTransient<IOutwardReportService, OutwardReportGenerator>();
@@ -50,6 +53,8 @@ public static class ServiceExtensions
         services.AddScoped<ProtectedLocalStorage>();
         services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
         services.AddScoped<CustomAuthStateProvider>();
+        services.AddScoped<PermissionState>();
+        services.AddMemoryCache();
 
         return services;
     }

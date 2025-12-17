@@ -1,0 +1,285 @@
+﻿@page "/form"
+@using InventoryManagement.Services
+@using System.Security.Claims
+@using InventoryManagement.Components.Auth
+@inherits AuthComponentBase
+@inject IFormMasterService FormService
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+<PageTitle>Form Master</PageTitle>
+
+
+@if (!IsAdmin())
+{
+    <div class="container-fluid mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="alert alert-danger text-center">
+                    <h4>Access Denied</h4>
+                    <p>You don't have permission to access this page.</p>
+                    <Button Color="ButtonColor.Primary" @onclick="GoHome">
+                        Go to Home
+                    </Button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <Spinner Type="SpinnerType.Border" />
+        </div>
+    }
+    else
+    {
+        <div class="container-fluid">
+            <div class="row mb-3">
+                <div class="col">
+                    <h3><Icon Name="IconName.FileEarmarkText" /> Form Master</h3>
+                </div>
+                <div class="col-auto">
+                    @if (CanCreate("/form"))
+                    {
+                        <Button Color="ButtonColor.Primary"
+                                @onclick="ShowAddModal">
+                            <Icon Name="IconName.Plus" /> Add New
+                        </Button>
+                    }
+                </div>
+            </div>
+
+
+            <Grid TItem="FormMasterModel"
+                  Class="table table-hover table-bordered table-striped"
+                  Data="formList"
+                  AllowPaging="true"
+                  PageSize="10"
+                  Responsive="true"
+                  @ref="FormGrid">
+
+                <GridColumn TItem="FormMasterModel" HeaderText="No">
+                    @(formList.IndexOf(context) + 1)
+                </GridColumn>
+
+                <GridColumn TItem="FormMasterModel" HeaderText="Form Name" PropertyName="FormName">
+                    @context.FormName
+                </GridColumn>
+
+                <GridColumn TItem="FormMasterModel" HeaderText="Route" PropertyName="Route">
+                    @context.Route
+                </GridColumn>
+
+                <GridColumn TItem="FormMasterModel" HeaderText="Status" PropertyName="IsActive">
+                    @if (context.IsActive)
+                    {
+                        <Badge Color="BadgeColor.Success">Active</Badge>
+                    }
+                    else
+                    {
+                        <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                    }
+                </GridColumn>
+
+                <GridColumn TItem="FormMasterModel" HeaderText="Actions">
+                    @if (CanEdit("/form"))
+                    {
+                        <Button Color="ButtonColor.Warning"
+                                Size="ButtonSize.Small"
+                                @onclick="() => ShowEditModal(context)">
+                            <Icon Name="IconName.PencilSquare" /> Edit
+                        </Button>
+                    }
+
+                    @if (CanDelete("/form"))
+                    {
+                        <Button Color="ButtonColor.Danger"
+                                Size="ButtonSize.Small"
+                                @onclick="() => DeleteForm(context.Id)">
+                            <Icon Name="IconName.Trash" /> Delete
+                        </Button>
+                    }
+                </GridColumn>
+            </Grid>
+        </div>
+    }
+
+}
+
+
+<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+    <BodyTemplate>
+        <EditForm EditContext="@editContext" OnValidSubmit="SaveForm">
+            <DataAnnotationsValidator />
+
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">
+                        Form Name <span class="text-danger">*</span>
+                    </label>
+                    <InputText class="form-control"
+                               @bind-Value="formModel.FormName"
+                               @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
+                    <ValidationMessage For="@(() => formModel.FormName)" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">
+                        Route <span class="text-danger">*</span>
+                    </label>
+                    <InputText class="form-control"
+                               @bind-Value="formModel.Route" />
+                    <ValidationMessage For="@(() => formModel.Route)" />
+                </div>
+            </div>
+
+            @if (formModel.Id > 0)
+            {
+                <div class="mb-3">
+                    <InputCheckbox @bind-Value="formModel.IsActive" /> Active
+                </div>
+            }
+
+            <div class="text-end">
+                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+
+</Modal>
+
+
+
+@code {
+    private Modal modal;
+    private bool isEditMode;
+    private bool isLoading = true;
+
+
+    private string modalTitle = "Add Form";
+
+    private FormMasterModel formModel = new();
+    private List<FormMasterModel> formList = new();
+
+    private Grid<FormMasterModel> FormGrid;
+
+    private EditContext editContext;
+    private ValidationMessageStore validationMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await LoadForms();
+    }
+
+    private async Task LoadForms()
+    {
+        isLoading = true;
+        formList = await FormService.GetAllAsync();
+        isLoading = false;
+    }
+
+    private void InitializeEditContext()
+    {
+        editContext = new EditContext(formModel);
+        validationMessage = new ValidationMessageStore(editContext);
+    }
+
+    private async Task ShowAddModal()
+    {
+        modalTitle = "Add Form";
+        isEditMode = false;
+
+        formModel = new FormMasterModel
+        {
+            CreatedBy = UserId
+        };
+
+        InitializeEditContext();
+        await modal.ShowAsync();
+    }
+
+    private async Task ShowEditModal(FormMasterModel model)
+    {
+        modalTitle = "Edit Form";
+        isEditMode = true;
+
+        formModel = new FormMasterModel
+        {
+            Id = model.Id,
+            FormName = model.FormName,
+            Route = model.Route,
+            IsActive = model.IsActive,
+            UpdatedBy = UserId
+        };
+
+        InitializeEditContext();
+        await modal.ShowAsync();
+    }
+
+    private async Task SaveForm()
+    {
+        if (!editContext.Validate())
+            return;
+
+        await ValidateDuplicateNameAsync();
+        if (editContext.GetValidationMessages().Any())
+            return;
+
+        if (isEditMode)
+            await FormService.UpdateAsync(formModel);
+        else
+            await FormService.CreateAsync(formModel);
+
+        await HideModal();
+        await LoadForms();
+        await FormGrid.RefreshDataAsync();
+    }
+
+    private async Task DeleteForm(int id)
+    {
+        bool confirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
+        if (!confirm) return;
+
+        await FormService.DeleteAsync(id, UserId);
+        await LoadForms();
+        await FormGrid.RefreshDataAsync();
+    }
+
+    private async Task HideModal()
+    {
+        await modal.HideAsync();
+    }
+
+    private async Task ValidateDuplicateNameAsync()
+    {
+        validationMessage.Clear(() => formModel.FormName);
+
+        if (!string.IsNullOrWhiteSpace(formModel.FormName))
+        {
+            var isUnique = await FormService.IsFormNameUniqueAsync(
+                formModel.FormName, formModel.Id);
+
+            if (!isUnique)
+                validationMessage.Add(() => formModel.FormName, "Form name already exists");
+
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+
+    private async Task HandleNameChangeAsync(string value)
+    {
+        formModel.FormName = value;
+        await ValidateDuplicateNameAsync();
+    }
+    private void GoHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+}

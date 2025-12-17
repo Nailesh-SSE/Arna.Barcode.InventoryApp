@@ -7,6 +7,12 @@
 @inherits InventoryManagement.Components.Auth.AuthComponentBase
 <PageTitle>Outward Management</PageTitle>
 
+@if (!CanView("/outward"))
+{
+    <AccessDenied />
+}
+else
+{
 <div class="container-fluid">
     @if (showErrorMessage)
     {
@@ -268,7 +274,7 @@
         }
     </BodyTemplate>
 </Modal>
-
+}
 @code {
     private Modal modal = default!;
     private Modal itemModal = default!;
@@ -302,13 +308,17 @@
 
     protected override async Task OnInitializedAsync()
     {
+        isLoading = true;
         await base.OnInitializedAsync();
+        await LoadData();
+
         if (!IsAuthenticated)
         {
             NavigationManager.NavigateTo("/logout", forceLoad: true);
             return;
         }
-        await LoadData();
+        isLoading = false;
+     
     }
 
     private void InitializeEditContext()
@@ -326,7 +336,6 @@
     {
         try
         {
-            isLoading = true;
             outwards = await OutwardService.GetAllOutwardsAsync();
             billCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
             platforms = (await PlatformService.GetAllPlatformAsync()).ToList();
@@ -336,11 +345,7 @@
         {
             ShowError("Connectivity issue happened, operation failed");
         }
-        finally
-        {
-            isLoading = false;
-        }
-    }
+}
 
     #region Outward CRUD Operations
     private void ShowAddModal()

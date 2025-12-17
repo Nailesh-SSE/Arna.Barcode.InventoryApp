@@ -1,0 +1,215 @@
+﻿@page "/form-permission"
+@using InventoryManagement.Components.Auth
+@attribute [Authorize]
+@inherits AuthComponentBase
+@inject IFormPermissionService Service
+@inject IFormMasterService FormService
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+
+<PageTitle>Form Permission</PageTitle>
+
+
+@if (!IsAdmin())
+{
+    <div class="container-fluid mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="alert alert-danger text-center">
+                    <h4>Access Denied</h4>
+                    <p>You don't have permission to access this page.</p>
+                    <Button Color="ButtonColor.Primary" @onclick="GoHome">
+                        Go to Home
+                    </Button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col"><h3>Form Permission</h3></div>
+            <div class="col-auto">
+                @if (CanCreate("/form-permission"))
+                {
+                    <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">Add</Button>
+                }
+            </div>
+        </div>
+
+
+        <Grid TItem="FormPermissionModel" Class="table table-hover table-bordered table-striped" Data="list" @ref="grid">
+            <GridColumn TItem="FormPermissionModel" HeaderText="Role">
+                @context.RoleName
+            </GridColumn>
+            <GridColumn TItem="FormPermissionModel" HeaderText="Form">
+                @context.FormName
+            </GridColumn>
+            <GridColumn TItem="FormPermissionModel" HeaderText="View">
+                @context.CanView
+            </GridColumn>
+            <GridColumn TItem="FormPermissionModel" HeaderText="Create">
+                @context.CanCreate
+            </GridColumn>
+            <GridColumn TItem="FormPermissionModel" HeaderText="Edit">
+                @context.CanEdit
+            </GridColumn>
+            <GridColumn TItem="FormPermissionModel" HeaderText="Delete">
+                @context.CanDelete
+            </GridColumn>
+            <GridColumn TItem="FormPermissionModel" HeaderText="Action">
+                @if (CanEdit("/form-permission"))
+                {
+                    <Button Color="ButtonColor.Warning" @onclick="() => Edit(context)">Edit</Button>
+                }
+                @if (CanDelete("/form-permission"))
+                {
+                    <Button Color="ButtonColor.Danger" @onclick="() => Delete(context.Id)">Delete</Button>
+                }
+            </GridColumn>
+        </Grid>
+    </div>
+
+}
+
+
+<Modal @ref="modal" Title="@title">
+    <BodyTemplate>
+        <EditForm Model="@model" OnValidSubmit="Save">
+            <div class="mb-2">
+                <label class="form-label">Role</label>
+                <select class="form-control" @bind="@model.RoleId">
+                    @foreach (var r in roles)
+                    {
+                        <option value="@r.Id">@r.Name</option>
+                    }
+                </select>
+            </div>
+
+
+            <div class="mb-2">
+                <label class="form-label">Form</label>
+                <select class="form-control" @bind="@model.FormId">
+                    @foreach (var f in forms)
+                    {
+                        <option value="@f.Id">@f.FormName</option>
+                    }
+                </select>
+            </div>
+
+            <div class="mb-2">
+                <InputCheckbox @bind-Value="model.CanView" /> View
+            </div>
+            <div class="mb-2">
+                <InputCheckbox @bind-Value="model.CanCreate" /> Create
+            </div>
+            <div class="mb-2">
+                <InputCheckbox @bind-Value="model.CanEdit" /> Edit
+            </div>
+            <div class="mb-2">
+                <InputCheckbox @bind-Value="model.CanDelete" /> Delete
+            </div>
+
+            <div class="text-end mt-3">
+                <Button Type="ButtonType.Submit">Save</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+
+</Modal>
+
+
+
+@code {
+    List<FormPermissionModel> list = new();
+    List<FormMasterModel> forms = new();
+    List<Roles> roles = new();
+
+
+    FormPermissionModel model = new();
+    Modal? modal;
+    Grid<FormPermissionModel>? grid;
+    string? title;
+    private const string Route = "/form-permission";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        if (!CanView(Route))
+        {
+            NavigationManager.NavigateTo("/access-denied", true);
+            return;
+        }
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        list = await Service.GetAllAsync();
+        forms = await FormService.GetAllAsync();
+        roles = await Service.GetAllRolesAsync();
+    }
+
+    void ShowAddModal()
+    {
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            title = "Add Permission";
+            model = new()
+            {
+                CreatedBy = UserId
+            };
+            _ = modal?.ShowAsync();
+        }
+    }
+
+    void Edit(FormPermissionModel m)
+    {
+        title = "Edit Permission";
+        model = m;
+        _ = modal?.ShowAsync();
+    }
+
+    async Task Save()
+    {
+        if (await Service.ExistsAsync(model.RoleId, model.FormId, model.Id))
+        {
+            await JS.InvokeVoidAsync("alert", "Already exists");
+            return;
+        }
+
+        if (model.Id > 0)
+            await Service.UpdateAsync(model);
+        else
+            await Service.CreateAsync(model);
+
+        if (modal is not null)
+            await modal.HideAsync();
+
+        await LoadData();
+        if (grid is not null)
+            await grid.RefreshDataAsync();
+    }
+
+    async Task Delete(int id)
+    {
+        if (User.Identity?.IsAuthenticated != true)
+            return;
+
+        if (await JS.InvokeAsync<bool>("confirm", "Delete?"))
+        {
+            await Service.DeleteAsync(id, UserId);
+            await LoadData();
+            await grid!.RefreshDataAsync();
+        }
+    }
+    private void GoHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

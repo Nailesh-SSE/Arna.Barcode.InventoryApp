@@ -10,39 +10,44 @@
 @inject IJSRuntime JS
 
 <PageTitle>Inward Management</PageTitle>
+@if (!CanView("/inward"))
+{
+    <AccessDenied />
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col">
+                <h3>Inward Management</h3>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" @onclick="ShowAddModal">
+                    <Icon Name="IconName.Plus" />  Add New Inward
+                </button>
+            </div>
+        </div>
 
-<div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col">
-            <h3>Inward Management</h3>
-        </div>
-        <div class="col-auto">
-            <button class="btn btn-primary" @onclick="ShowAddModal">
-                <Icon Name="IconName.Plus" />  Add New Inward
-            </button>
-        </div>
+        @if (isLoading)
+        {
+            <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-50"
+                 style="z-index: 1050;">
+                <div class="spinner-border text-light" role="status"></div>
+            </div>
+        }
+        else
+        {
+            <InwardTable Inwards="inwards" ShipCompanies="shipCompanies" OnEdit="ShowEditModal" OnDelete="DeleteInward" OnAddItems="OpenAddItemModal" />
+        }
     </div>
 
-    @if (isLoading)
-    {
-        <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-50"
-             style="z-index: 1050;">
-            <div class="spinner-border text-light" role="status"></div>
-        </div>
-    }
-    else
-    {
-        <InwardTable Inwards="inwards" ShipCompanies="shipCompanies" OnEdit="ShowEditModal" OnDelete="DeleteInward" OnAddItems="OpenAddItemModal" />
-    }
-</div>
+    <InwardFormModal @ref="inwardFormModal" Title="@modalTitle" Inward="inward" ShipCompanies="shipCompanies" Categories="categories"
+                     Products="products" OnSave="SaveInward" OnCancel="HideModal" />
 
-<InwardFormModal @ref="inwardFormModal" Title="@modalTitle" Inward="inward" ShipCompanies="shipCompanies" Categories="categories"
-                 Products="products" OnSave="SaveInward" OnCancel="HideModal" />
-
-<InwardItemsModal @ref="itemsModal" Title="@itemTitle" SelectedInward="selectedInward" InwardItems="inwardItems" FilteredProducts="filteredProductsbyCategory" Brands="filteredBrandsByCategory"
-                  OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnDownloadPdf="DownloadSingleItemPdf" OnAddItem="AddNewItemRow"
-                  OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" />
-
+    <InwardItemsModal @ref="itemsModal" Title="@itemTitle" SelectedInward="selectedInward" InwardItems="inwardItems" FilteredProducts="filteredProductsbyCategory" Brands="filteredBrandsByCategory"
+                      OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnDownloadPdf="DownloadSingleItemPdf" OnAddItem="AddNewItemRow"
+                      OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" />
+}
 @code {
     private List<InwardModel> inwards = new();
     private List<CompanyModel> shipCompanies = new();
@@ -65,15 +70,19 @@
 
     protected override async Task OnInitializedAsync()
     {
+        isLoading = true;
         await base.OnInitializedAsync();
+
+
+        await LoadData();
 
         if (!IsAuthenticated)
         {
             NavigationManager.NavigateTo("/logout", forceLoad: true);
             return;
         }
+        isLoading = false;
 
-        await LoadData();
     }
 
     private async Task LoadData()
@@ -85,7 +94,6 @@
         categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
         products = (await ProductService.GetAllProductsAsync()).Where(e => e.IsActive == true).ToList();
 
-        isLoading = false;
         StateHasChanged();
     }
 

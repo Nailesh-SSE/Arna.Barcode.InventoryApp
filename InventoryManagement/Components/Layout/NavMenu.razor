@@ -1,8 +1,39 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IPermissionService PermissionService
+@using InventoryManagement.Components.Auth
+@using System.Security.Claims
+
+
+@code {
+[CascadingParameter]
+private Task<AuthenticationState> authenticationStateTask { get; set; } = default!;
+protected ClaimsPrincipal User { get; private set; } = new(new ClaimsIdentity());
+protected bool IsAdminUser { get; private set; }
+
+protected override async Task OnInitializedAsync()
+{
+    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    User = authState.User;
+    
+    if (User.Identity?.IsAuthenticated == true)
+    {
+        var userId = int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
+        var permissions = await PermissionService.GetUserPermissionsAsync(userId);
+        IsAdminUser = permissions.Any(p => p.Route == "*" && p.CanView && p.CanCreate && p.CanEdit && p.CanDelete);
+    }
+}
+
+}
+
+
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">Inventory Management</a>
     </div>
 </div>
+
+
 
 <div class="nav-scrollable">
     <nav class="flex-column">
@@ -12,76 +43,103 @@
             </NavLink>
         </div>
 
+    <div class="nav-item px-3">
+        <div class="nav-link text-white fw-bold">
+            <Icon Name="IconName.Building" />&nbsp; Master Data
+        </div>
+    </div>
+
+    <div class="nav-item px-3 ms-3">
+        <NavLink class="nav-link" href="categories">
+            <Icon Name="IconName.Tags" />&nbsp; Categories
+        </NavLink>
+    </div>
+
+    <div class="nav-item px-3 ms-3">
+        <NavLink class="nav-link" href="platforms">
+            <Icon Name="IconName.Stack" />&nbsp; Platforms
+        </NavLink>
+    </div>
+
+    <div class="nav-item px-3 ms-3">
+        <NavLink class="nav-link" href="products">
+            <Icon Name="IconName.Box" />&nbsp; Products
+        </NavLink>
+    </div>
+
+    <div class="nav-item px-3 ms-3">
+        <NavLink class="nav-link" href="companies/make-to">
+            <Icon Name="IconName.Tags" />&nbsp; Brands
+        </NavLink>
+    </div>
+
+    <div class="nav-item px-3 ms-3">
+        <NavLink class="nav-link" href="companies/ship-to">
+            <Icon Name="IconName.Truck" />&nbsp; Ship To Companies
+        </NavLink>
+    </div>
+
+    <div class="nav-item px-3 ms-3">
+        <NavLink class="nav-link" href="companies/bill-to">
+            <Icon Name="IconName.Receipt" />&nbsp; Bill To Companies
+        </NavLink>
+    </div>
+
+    <div class="nav-item px-3 ms-3">
+        <NavLink class="nav-link" href="colour">
+            <Icon Name="IconName.Palette" />&nbsp; Colours
+        </NavLink>
+    </div>
+
+    <div class="nav-item px-3">
+        <div class="nav-link text-white fw-bold">
+            <Icon Name="IconName.ClipboardData" />&nbsp; Inventory Management
+        </div>
+    </div>
+
+    <div class="nav-item px-3 ms-3">
+        <NavLink class="nav-link" href="inward">
+            <Icon Name="IconName.ArrowDownCircle" />&nbsp; Inward
+        </NavLink>
+    </div>
+
+    <div class="nav-item px-3 ms-3">
+        <NavLink class="nav-link" href="outward">
+            <Icon Name="IconName.ArrowUpCircle" />&nbsp; Outward
+        </NavLink>
+    </div>
+
+    <div class="nav-item px-3 ms-3">
+        <NavLink class="nav-link" href="sale-returns">
+            <Icon Name="IconName.ArrowReturnLeft" />&nbsp; Sales Return
+        </NavLink>
+    </div>
+
+    @if (IsAdminUser)
+    {
         <div class="nav-item px-3">
             <div class="nav-link text-white fw-bold">
-                <Icon Name="IconName.Building" />&nbsp; Master Data
+                <Icon Name="IconName.Gear" />&nbsp; Administration
             </div>
         </div>
 
         <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="categories">
-                <Icon Name="IconName.Tags" />&nbsp; Categories
+            <NavLink class="nav-link" href="form">
+                <Icon Name="IconName.FileEarmarkText" />&nbsp; Form Master
             </NavLink>
         </div>
 
         <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="platforms">
-                <Icon Name="IconName.Stack" />&nbsp; Platforms
+            <NavLink class="nav-link" href="form-permission">
+                <Icon Name="IconName.ShieldLock" />&nbsp; Form Permission
             </NavLink>
         </div>
 
         <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="products">
-                <Icon Name="IconName.Box" />&nbsp; Products
+            <NavLink class="nav-link" href="users">
+                <Icon Name="IconName.People" />&nbsp; Users
             </NavLink>
         </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="companies/make-to">
-                <Icon Name="IconName.Tags" />&nbsp; Brands
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="companies/ship-to">
-                <Icon Name="IconName.Truck" />&nbsp; Ship To Companies
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="companies/bill-to">
-                <Icon Name="IconName.Receipt" />&nbsp; Bill To Companies
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="colour">
-                <Icon Name="IconName.Palette" />&nbsp; Colours
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <div class="nav-link text-white fw-bold">
-                <Icon Name="IconName.ClipboardData" />&nbsp; Inventory Management
-            </div>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="inward">
-                <Icon Name="IconName.ArrowDownCircle" />&nbsp; Inward
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="outward">
-                <Icon Name="IconName.ArrowUpCircle" />&nbsp; Outward
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="sale-returns">
-                <Icon Name="IconName.ArrowReturnLeft" />&nbsp; Sales Return
-            </NavLink>
-        </div>
-    </nav>
+    }
+</nav>
 </div>
