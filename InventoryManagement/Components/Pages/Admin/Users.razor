@@ -1,6 +1,7 @@
 ﻿@page "/users"
 @using InventoryManagement.Components.Auth
 @inject IUserService UserService
+@inject IRoleService RoleService
 @inject IJSRuntime JS
 @inherits AuthComponentBase
 
@@ -149,7 +150,7 @@ else
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Role *</label>
-                        <DropDown TItem="Roles"
+                        <DropDown TItem="RoleModel"
                         Items="@roles"
                         SelectedId="@userModel.RoleId"
                         ValueSelector="x => x.Id"
@@ -213,7 +214,7 @@ else
 
     private Grid<UserModel> userGrid = default!;
     private List<UserModel> users = new();
-    private List<Roles> roles = new();
+    private List<RoleModel> roles = new();
 
     private UserModel userModel = new();
     private string confirmPassword = string.Empty;
@@ -242,7 +243,7 @@ else
                  IsActive = u.IsActive,
                  RoleId = u.RoleId
              }).ToList();
-        roles = (await UserService.GetAllRolesAsync()).ToList();
+        roles = (await RoleService.GetAllRolesAsync()).ToList();
         isLoading = false;
     }
 
