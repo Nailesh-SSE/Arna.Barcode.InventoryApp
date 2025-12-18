@@ -2,7 +2,7 @@
 
 namespace InventoryManagement.Services.Models;
 
-public class FormPermissionModel
+public class FormPermissionModel:CommonModel
 {
     public int Id { get; set; }  
     public int RoleId { get; set; }
@@ -14,6 +14,4 @@ public class FormPermissionModel
     public bool CanCreate { get; set; }
     public bool CanEdit { get; set; }
     public bool CanDelete { get; set; }
-
-    public int CreatedBy { get; set; }
 }

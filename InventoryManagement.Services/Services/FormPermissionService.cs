@@ -34,8 +34,14 @@ public class FormPermissionService : IFormPermissionService
             CanCreate = p.CanCreate,
             CanEdit = p.CanEdit,
             CanDelete = p.CanDelete,
-            FormName = forms.First(f => f.Id == p.FormId).FormName,
-            RoleName = roles.First(r => r.Id == p.RoleId).Name
+            CreatedBy = p.CreatedBy,
+            CreatedOn = p.CreatedOn,
+            UpdatedBy = p.UpdatedBy,
+            UpdatedOn = p.UpdatedOn,
+            IsActive = p.IsActive,
+            IsDeleted = p.IsDeleted,
+            FormName = forms.FirstOrDefault(f => f.Id == p.FormId)?.FormName ?? string.Empty,
+            RoleName = roles.FirstOrDefault(r => r.Id == p.RoleId)?.Name ?? string.Empty
         }).ToList();
     }
 
@@ -76,7 +82,9 @@ public class FormPermissionService : IFormPermissionService
             CanEdit = model.CanEdit,
             CanDelete = model.CanDelete,
             CreatedBy = model.CreatedBy,
-            CreatedOn = DateTime.UtcNow
+            CreatedOn = DateTime.UtcNow,
+            IsActive = true,
+            IsDeleted = false,
         });
 
         await _unitOfWork.SaveChangesAsync();
@@ -97,7 +105,7 @@ public class FormPermissionService : IFormPermissionService
         entity.CanCreate = model.CanCreate;
         entity.CanEdit = model.CanEdit;
         entity.CanDelete = model.CanDelete;
-        entity.UpdatedBy = model.CreatedBy;
+        entity.UpdatedBy = model.UpdatedBy;
         entity.UpdatedOn = DateTime.UtcNow;
 
         repo.Update(entity);
@@ -121,14 +129,14 @@ public class FormPermissionService : IFormPermissionService
         await _unitOfWork.SaveChangesAsync();
         return true;
     }
-    public async Task<bool> CheckDuplicate(int roleId,int formId,int? ignoreId=null) 
+    public async Task<bool> CheckDuplicate(int roleId, int formId, int? ignoreId = null)
     {
         var repo = _unitOfWork.GetRepository<RoleFormPermission>();
-        var result = await repo.GetQueryable().AnyAsync(e=>e.RoleId==roleId &&
-                                                       e.FormId== formId &&
-                                                       e.Id != ignoreId  &&
+        var result = await repo.GetQueryable().AnyAsync(e => e.RoleId == roleId &&
+                                                       e.FormId == formId &&
+                                                       e.Id != ignoreId &&
                                                        !e.IsDeleted);
-            
+
         return result;
     }
 }

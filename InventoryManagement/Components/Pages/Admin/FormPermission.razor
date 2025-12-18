@@ -243,6 +243,7 @@ else
     {
         errorMessage = string.Empty;
         title = "Edit Permission";
+        m.UpdatedBy = Convert.ToInt32(CurrentUserId);
         model = m;
         _ = modal?.ShowAsync();
         InitializeEditContextAsync();

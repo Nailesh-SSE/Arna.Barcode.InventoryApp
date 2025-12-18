@@ -240,6 +240,8 @@ else
                  UserName = u.UserName,
                  Email = u.EmailId,
                  ContactNo = u.ContactNo,
+                 CreatedBy= u.CreatedBy,
+                 UpdatedBy= u.UpdatedBy,
                  IsActive = u.IsActive,
                  RoleId = u.RoleId
              }).ToList();
@@ -279,6 +281,7 @@ else
                 UserName = user.UserName,
                 Email = user.Email,
                 ContactNo = user.ContactNo,
+                CreatedBy= user.CreatedBy,
                 RoleId = user.RoleId,
                 IsActive = user.IsActive,
                 UpdatedBy = Convert.ToInt32(CurrentUserId)
