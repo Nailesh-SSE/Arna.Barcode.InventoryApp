@@ -14,4 +14,5 @@ public interface IFormPermissionService
     Task<bool> DeleteAsync(int id, int deletedBy);
 
     Task<bool> ExistsAsync(int roleId, int formId, int? id = null);
+    Task<bool> CheckDuplicate(int roleId, int formId, int? ignoreId=null);
 }

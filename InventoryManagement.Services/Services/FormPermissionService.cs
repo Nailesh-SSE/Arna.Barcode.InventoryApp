@@ -2,6 +2,7 @@
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagement.Services.Services;
 
@@ -119,5 +120,15 @@ public class FormPermissionService : IFormPermissionService
         repo.Update(entity);
         await _unitOfWork.SaveChangesAsync();
         return true;
+    }
+    public async Task<bool> CheckDuplicate(int roleId,int formId,int? ignoreId=null) 
+    {
+        var repo = _unitOfWork.GetRepository<RoleFormPermission>();
+        var result = await repo.GetQueryable().AnyAsync(e=>e.RoleId==roleId &&
+                                                       e.FormId== formId &&
+                                                       e.Id != ignoreId  &&
+                                                       !e.IsDeleted);
+            
+        return result;
     }
 }
