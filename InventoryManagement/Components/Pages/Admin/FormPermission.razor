@@ -1,6 +1,6 @@
 ﻿@page "/form-permission"
 @using InventoryManagement.Components.Auth
-@attribute [Authorize]
+
 @inherits AuthComponentBase
 @inject IFormPermissionService Service
 @inject IFormMasterService FormService
@@ -31,17 +31,41 @@ else
 {
     <div class="container-fluid">
         <div class="row mb-3">
-            <div class="col"><h3>Form Permission</h3></div>
+            <div class="col">
+                <h3>
+                    <Icon Name="IconName.Lock" /> Form Permission
+                </h3>
+            </div>
             <div class="col-auto">
                 @if (CanCreate("/form-permission"))
                 {
-                    <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">Add</Button>
+                    <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                        <Icon Name="IconName.Plus" /> Add
+                    </Button>
                 }
             </div>
         </div>
+        <div>
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>@successMessage
+                    <button type="button" class="btn-close" @onclick="@(() => successMessage = "")"></button>
+                </div>
+            }
+        </div>
+        <Grid TItem="FormPermissionModel"
+              Class="table table-hover table-bordered table-striped"
+              Data="list"
+              AllowPaging="true"
+              PageSize="10"
+              Responsive="true"
+              @ref="grid">
 
+            <GridColumn TItem="FormPermissionModel" HeaderText="No">
+                @(list.IndexOf(context) + 1)
+            </GridColumn>
 
-        <Grid TItem="FormPermissionModel" Class="table table-hover table-bordered table-striped" Data="list" @ref="grid">
             <GridColumn TItem="FormPermissionModel" HeaderText="Role">
                 @context.RoleName
             </GridColumn>
@@ -61,15 +85,19 @@ else
                 @context.CanDelete
             </GridColumn>
             <GridColumn TItem="FormPermissionModel" HeaderText="Action">
-                @if (CanEdit("/form-permission"))
-                {
-                    <Button Color="ButtonColor.Warning" @onclick="() => Edit(context)">Edit</Button>
-                }
-                @if (CanDelete("/form-permission"))
-                {
-                    <Button Color="ButtonColor.Danger" @onclick="() => Delete(context.Id)">Delete</Button>
-                }
+                <Button Color="ButtonColor.Warning"
+                        Size="ButtonSize.Small"
+                        @onclick="() => Edit(context)">
+                    <Icon Name="IconName.PencilSquare" /> Edit
+                </Button>
+
+                <Button Color="ButtonColor.Danger"
+                        Size="ButtonSize.Small"
+                        @onclick="() => Delete(context.Id)">
+                    <Icon Name="IconName.Trash" /> Delete
+                </Button>
             </GridColumn>
+
         </Grid>
     </div>
 
@@ -79,32 +107,42 @@ else
 <Modal @ref="modal" Title="@title">
     <BodyTemplate>
         
-        <EditForm Model="@editContext" OnValidSubmit="Save">
+            <div>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+                        <button type="button" class="btn-close" @onclick="@(() => errorMessage = "")"></button>
+                    </div>
+                }
+
+            </div>
+             
+        <EditForm EditContext="@editContext" OnValidSubmit="Save">
             <DataAnnotationsValidator />
             <div class="mb-2">
                 <label class="form-label">Role</label>
                 <DropDown TItem="Roles"
                           Items="@roles"
-                          SelectedId="@model.Id"
+                          SelectedId="@model.RoleId"
                           ValueSelector="x => x.Id"
                           TextSelector="x => x.Name"
                           Placeholder="-- Select Role--"
                           OnValueChanged="HandleRole" />
-                <ValidationMessage For="@(() => model.Id)" />
+                <ValidationMessage For="@(() => model.RoleId)" />
             </div>
 
 
             <div class="mb-2">
                 <label class="form-label">Form</label>
-                <DropDown TItem="FormPermissionModel"
-                          Items="@list"
+                <DropDown TItem="FormMasterModel"
+                          Items="@forms"
                           SelectedId="@model.FormId"
                           ValueSelector="x => x.Id"
                           TextSelector="x => x.FormName"
-                          Placeholder="-- Select Role--"
+                          Placeholder="-- Select Page--"
                           OnValueChanged="HandleForm" />
                 <ValidationMessage For="@(() => model.FormId)" />
-
             </div>
 
             <div class="d-flex gap-4 mt-4">
@@ -129,6 +167,7 @@ else
                 </div>
             </div>
             <div class="text-end mt-3">
+                <Button Color=ButtonColor.Secondary Type ="ButtonType.Button" @onclick="HandleClose">Close</Button>
                 <Button Color=ButtonColor.Primary Type="ButtonType.Submit">Save</Button>
             </div>
         </EditForm>
@@ -139,9 +178,11 @@ else
 
 
 @code {
-    List<FormPermissionModel> list = new();
+    List<FormPermissionModel> list = new();  
     List<FormMasterModel> forms = new();
-    public List<Roles> roles = new();
+    List<Roles> roles = new();
+    private string errorMessage { get; set; } = string.Empty;
+    private string successMessage { get; set; } = string.Empty;
 
     private EditContext editContext { get; set; }
     private ValidationMessageStore validationMessage;
@@ -181,6 +222,7 @@ else
 
     void ShowAddModal()
     {
+        errorMessage = string.Empty;
         if (User.Identity?.IsAuthenticated == true)
         {
             title = "Add Permission";
@@ -189,23 +231,28 @@ else
                 CreatedBy = UserId
             };
             _ = modal?.ShowAsync();
+            InitializeEditContextAsync();
         }
     }
 
     void Edit(FormPermissionModel m)
     {
+        errorMessage = string.Empty;
         title = "Edit Permission";
         model = m;
         _ = modal?.ShowAsync();
+        InitializeEditContextAsync();
     }
 
     async Task Save()
     {
-        if (await Service.ExistsAsync(model.RoleId, model.FormId, model.Id))
-        {
-            await JS.InvokeVoidAsync("alert", "Already exists");
-            return;
-        }
+        await ValidateRole();
+        await ValidateForm();
+        if (editContext.GetValidationMessages().Any())return;
+
+        var result= await ValidateDuplicate(model.RoleId, model.FormId,model.Id);
+        if (result) return;
+
 
         if (model.Id > 0)
             await Service.UpdateAsync(model);
@@ -232,24 +279,26 @@ else
             await grid!.RefreshDataAsync();
         }
     }
-    private async Task HandleRole()
-    {
-
+    private async Task HandleRole((int? id,string name)selected)
+    {      
+        model.RoleId = selected.id??0;
         await ValidateRole();
     }
-    private async Task HandleForm()
+    private async Task HandleForm((int? formId, string FormName)selected)
     {
+        model.FormId = selected.formId ?? 0;
         await ValidateForm();
 
     }
     private async Task ValidateRole()
     {
-        validationMessage.Clear(() => model.Id);
-        if (model.Id <= 0)
+        validationMessage.Clear(() => model.RoleId);
+        if (model.RoleId <= 0)
         {
-            validationMessage.Add(() => model.Id, "Role  is required");
-            editContext.NotifyValidationStateChanged();
+            validationMessage.Add(() => model.RoleId, "Role  is required");         
         }
+        editContext.NotifyValidationStateChanged();
+
     }
     private async Task ValidateForm()
     {
@@ -257,10 +306,25 @@ else
         if (model.FormId <=0)
         {
             validationMessage.Add(() => model.FormId, "Page is required");
-            editContext.NotifyValidationStateChanged();
         }
+        editContext.NotifyValidationStateChanged();
+
     }
-  
+    private async Task<bool> ValidateDuplicate(int roleId,int formId,int? id)
+    {
+        var result= await Service.CheckDuplicate(roleId, formId,id);
+        if(result)
+        {
+            errorMessage = "Permission already exists for the selected Role and Form.";
+        }
+        StateHasChanged();
+        return result;
+       
+    }
+    private async Task HandleClose()
+    {
+     await modal.HideAsync();
+    }
     private void GoHome()
     {
         NavigationManager.NavigateTo("/");
