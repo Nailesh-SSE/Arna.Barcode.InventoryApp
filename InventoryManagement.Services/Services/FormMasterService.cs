@@ -91,8 +91,24 @@ public class FormMasterService : IFormMasterService
         entity.UpdatedBy = userId;
         entity.UpdatedOn = DateTime.UtcNow;
 
+        await DeleteFormPermissionAsync(id,userId);
         await _unitOfWork.SaveChangesAsync();
         return true;
+    }
+
+    private async Task DeleteFormPermissionAsync(int formId,int userId) 
+    {
+        var permissionRepo = _unitOfWork.GetRepository<RoleFormPermission>();
+        var entities = await permissionRepo.FindAsync(p => p.FormId == formId);
+        foreach(var entity in entities) 
+        {
+            entity.IsDeleted = true;
+            entity.IsActive = false;
+            entity.UpdatedBy = userId;
+            entity.UpdatedOn = DateTime.UtcNow;
+
+            permissionRepo.Update(entity);
+        }
     }
 
     public async Task<bool> IsFormNameUniqueAsync(string name, int id = 0)

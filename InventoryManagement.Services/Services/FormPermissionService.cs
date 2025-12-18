@@ -17,32 +17,39 @@ public class FormPermissionService : IFormPermissionService
 
     public async Task<List<FormPermissionModel>> GetAllAsync()
     {
-        var repo = _unitOfWork.GetRepository<RoleFormPermission>();
-        var formRepo = _unitOfWork.GetRepository<FormMaster>();
-        var roleRepo = _unitOfWork.GetRepository<Roles>();
-
-        var permissions = (await repo.FindAsync(x => !x.IsDeleted)).ToList();
-        var forms = (await formRepo.FindAsync(x => !x.IsDeleted)).ToList();
-        var roles = (await roleRepo.FindAsync(x => !x.IsDeleted)).ToList();
-
-        return permissions.Select(p => new FormPermissionModel
+        try
         {
-            Id = p.Id,
-            RoleId = p.RoleId,
-            FormId = p.FormId,
-            CanView = p.CanView,
-            CanCreate = p.CanCreate,
-            CanEdit = p.CanEdit,
-            CanDelete = p.CanDelete,
-            CreatedBy = p.CreatedBy,
-            CreatedOn = p.CreatedOn,
-            UpdatedBy = p.UpdatedBy,
-            UpdatedOn = p.UpdatedOn,
-            IsActive = p.IsActive,
-            IsDeleted = p.IsDeleted,
-            FormName = forms.FirstOrDefault(f => f.Id == p.FormId)?.FormName ?? string.Empty,
-            RoleName = roles.FirstOrDefault(r => r.Id == p.RoleId)?.Name ?? string.Empty
-        }).ToList();
+            var repo = _unitOfWork.GetRepository<RoleFormPermission>();
+            var formRepo = _unitOfWork.GetRepository<FormMaster>();
+            var roleRepo = _unitOfWork.GetRepository<Roles>();
+
+            var permissions = (await repo.FindAsync(x => !x.IsDeleted)).ToList();
+            var forms = (await formRepo.FindAsync(x => !x.IsDeleted)).ToList();
+            var roles = (await roleRepo.FindAsync(x => !x.IsDeleted)).ToList();
+
+            return permissions.Select(p => new FormPermissionModel
+            {
+                Id = p.Id,
+                RoleId = p.RoleId,
+                FormId = p.FormId,
+                CanView = p.CanView,
+                CanCreate = p.CanCreate,
+                CanEdit = p.CanEdit,
+                CanDelete = p.CanDelete,
+                CreatedBy = p.CreatedBy,
+                CreatedOn = p.CreatedOn,
+                UpdatedBy = p.UpdatedBy,
+                UpdatedOn = p.UpdatedOn,
+                IsActive = p.IsActive,
+                IsDeleted = p.IsDeleted,
+                FormName = forms.FirstOrDefault(f => f.Id == p.FormId)?.FormName ?? string.Empty,
+                RoleName = roles.FirstOrDefault(r => r.Id == p.RoleId)?.Name ?? string.Empty
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
     }
 
     public async Task<List<FormMaster>> GetAllFormsAsync()
