@@ -1,0 +1,97 @@
+﻿using InventoryManagement.Core.Entities;
+using InventoryManagement.Infrastructure.Repositories;
+using InventoryManagement.Services.Interfaces;
+using InventoryManagement.Services.Models;
+
+namespace InventoryManagement.Services.Services;
+
+public class RoleService : IRoleService
+{
+    private readonly IUnitOfWork _unitOfWork;
+    public RoleService(IUnitOfWork unitOfWork)
+    {
+        _unitOfWork = unitOfWork;
+    }
+
+    public async Task<List<RoleModel>> GetAllRolesAsync()
+    {
+        var RoleRepository = _unitOfWork.GetRepository<Roles>();
+        var rolelist = await RoleRepository.FindAsync(c => !c.IsDeleted);
+        var model = rolelist.Select(c => new RoleModel
+        {
+            Id = c.Id,
+            Name = c.Name,
+            IsActive = c.IsActive,
+            CreatedBy= c.CreatedBy,
+            CreatedOn= c.CreatedOn,
+            UpdatedBy= c.UpdatedBy,
+            UpdatedOn= c.UpdatedOn,
+            IsDeleted= c.IsDeleted
+        }).ToList();
+        return model;
+    }
+    public async Task<bool> CreateRoleAsync(RoleModel roleModel)
+    {
+        var RoleRepository = _unitOfWork.GetRepository<Roles>();
+        var Role = new Roles
+        {
+            Id = roleModel.Id,
+            Name = roleModel.Name,
+            IsActive = true,
+            IsDeleted = false,
+            CreatedBy = roleModel.CreatedBy,
+            CreatedOn = DateTime.UtcNow
+        };
+        await RoleRepository.AddAsync(Role);
+        await _unitOfWork.SaveChangesAsync();
+        return true;
+    }
+    public async Task<bool> UpdateRoleAsync(RoleModel roleModel)
+    {
+        var roleRepository = _unitOfWork.GetRepository<Roles>();
+        var Role = await roleRepository.GetByIdAsync(roleModel.Id);
+
+        Role.Id = roleModel.Id;
+        Role.Name = roleModel.Name;
+        Role.IsActive = roleModel.IsActive;
+        Role.IsDeleted = roleModel.IsDeleted;
+        Role.UpdatedBy = roleModel.UpdatedBy;
+        Role.UpdatedOn = DateTime.UtcNow;
+
+        roleRepository.Update(Role);
+        await _unitOfWork.SaveChangesAsync();
+        return true;
+    }
+    public async Task<bool> DeleteRoleAsync(int id, int deletedBy)
+    {
+        try
+        {
+            var roleRepository = _unitOfWork.GetRepository<Roles>();
+            var Role = await roleRepository.GetByIdAsync(id);
+            if (Role == null) return false;
+            Role.IsDeleted = true;
+            Role.IsActive = false;
+            Role.UpdatedOn = DateTime.UtcNow;
+            Role.UpdatedBy = deletedBy;
+            roleRepository.Update(Role);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            return false;
+        }
+    }
+    public async Task<bool> IsRoleNameUnique(string Name, int? id = null)
+    {
+        var roleRepository = _unitOfWork.GetRepository<Roles>();
+
+        var Roles = await roleRepository.FindAsync(c => c.Name.ToLower() == Name.Trim().ToLower() && !c.IsDeleted);
+        if (id.HasValue)
+        {
+            Roles = Roles.Where(c => c.Id != id.Value);
+        }
+        return !Roles.Any();
+    }
+}
+

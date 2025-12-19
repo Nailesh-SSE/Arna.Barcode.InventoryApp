@@ -43,7 +43,8 @@ public static class ServiceExtensions
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IFormPermissionService, FormPermissionService>();
         services.AddScoped<IFormMasterService, FormMasterService>();
-  
+        services.AddScoped<IRoleService, RoleService>();
+
         // Register generators
         services.AddTransient<IInwardReportService, InwardReportGenerator>();
         services.AddTransient<IOutwardReportService, OutwardReportGenerator>();

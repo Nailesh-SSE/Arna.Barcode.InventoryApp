@@ -47,6 +47,7 @@ public class UserService : IUserService
         user.UpdatedBy = model.UpdatedBy;
         user.UpdatedOn = DateTime.UtcNow;
         user.Password = model.Password;
+        user.RoleId = model.RoleId;
         await _unitOfWork.SaveChangesAsync();
         return true;
     }
@@ -128,7 +129,8 @@ public class UserService : IUserService
                 IsDeleted = false,
                 CreatedBy = model.CreatedBy,
                 CreatedOn = DateTime.UtcNow,
-                Password = model.Password
+                Password = model.Password,
+                RoleId=model.RoleId
             };
 
             await userRepo.AddAsync(user);

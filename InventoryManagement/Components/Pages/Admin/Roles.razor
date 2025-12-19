@@ -1,13 +1,25 @@
-﻿@page "/colour"
+﻿@page "/role"
 @using InventoryManagement.Components.Auth
 @inherits AuthComponentBase
-@inject IColourService ColourService
+@inject IRoleService roleService
 @inject IJSRuntime JS
 
-<PageTitle>Colour</PageTitle>
-@if (!CanView(Route))
+<PageTitle>Role</PageTitle>
+@if (!IsAdmin())
 {
-    <AccessDenied />
+    <div class="container-fluid mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="alert alert-danger text-center">
+                    <h4>Access Denied</h4>
+                    <p>You don't have permission to access this page.</p>
+                    <Button Color="ButtonColor.Primary" @onclick="GoHome">
+                        Go to Home
+                    </Button>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 else
 {
@@ -22,7 +34,7 @@ else
         <div class="container-fluid">
             <div class="row mb-3">
                 <div class="col">
-                    <h3><Icon Name="IconName.Palette" />Colour</h3>
+                    <h3><Icon Name="IconName.FilePerson" />Role</h3>
                 </div>
                 <div class="col-auto">
                     @if (CanCreate(Route))
@@ -34,25 +46,21 @@ else
                 </div>
             </div>
 
-            <Grid TItem="ColourModel"
+            <Grid TItem="RoleModel"
                   Class="table table-hover table-bordered table-striped"
-                  Data="colourList"
+                  Data="roleList"
                   AllowPaging="true"
                   PageSize="10"
                   Responsive="true"
-                  @ref=ColourGrid>
+                  @ref=roleGrid>
 
-                <GridColumn TItem="ColourModel" HeaderText="No">
-                    @(colourList.IndexOf(context) + 1)
+                <GridColumn TItem="RoleModel" HeaderText="No">
+                    @(roleList.IndexOf(context) + 1)
                 </GridColumn>
-                <GridColumn TItem="ColourModel" HeaderText="Name" PropertyName="Name">
+                <GridColumn TItem="RoleModel" HeaderText="Name" PropertyName="Name">
                     @context.Name
                 </GridColumn>
-                <GridColumn TItem="ColourModel" HeaderText="Code" PropertyName="Code">
-                    @context.Code
-                </GridColumn>
-
-                <GridColumn TItem="ColourModel" HeaderText="Status" PropertyName="IsActive">
+                <GridColumn TItem="RoleModel" HeaderText="Status" PropertyName="IsActive">
                     @if (context.IsActive)
                     {
                         <Badge Color="BadgeColor.Success">Active</Badge>
@@ -63,7 +71,7 @@ else
                     }
                 </GridColumn>
 
-                <GridColumn TItem="ColourModel" HeaderText="Actions">
+                <GridColumn TItem="RoleModel" HeaderText="Actions">
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {
@@ -74,37 +82,32 @@ else
 
                         @if (CanDelete(Route))
                         {
-                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteColour(context.Id)">
+                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteRole(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
                             </Button>
                         }
                     </div>
                 </GridColumn>
             </Grid>
-
         </div>
     }
-    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Small">
         <BodyTemplate>
-            <EditForm EditContext="@editContext" OnValidSubmit="SaveColour">
+            <EditForm EditContext="@editContext" OnValidSubmit="SaveRole">
                 <DataAnnotationsValidator />
 
                 <div class="row">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-12 mb-3">
                         <label class="form-label">Name <span class="text-danger">*</span></label>
-                        <InputText class="form-control" @bind-Value="colourModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
-                        <ValidationMessage For="@(() => colourModel.Name)" />
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Code <span class="text-danger">*</span> </label>
-                        <InputText class="form-control" @bind-Value="colourModel.Code" @oninput="(e) => HandleCodeChangeAsync(e.Value?.ToString())" />
-                        <ValidationMessage For="@(() => colourModel.Code)" />
+                        <InputText class="form-control" @bind-Value="roleModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
+                        <ValidationMessage For="@(() => roleModel.Name)" />
                     </div>
                 </div>
-                @if (colourModel.Id > 0)
+                @if (roleModel.Id > 0)
                 {
                     <div class="mb-3">
-                        <InputCheckbox @bind-Value="colourModel.IsActive" /> Active
+                        <InputCheckbox @bind-Value="roleModel.IsActive" /> Active
                     </div>
                 }
                 <div class="text-end">
@@ -119,11 +122,11 @@ else
     private Modal modal { get; set; }
     private bool isEditMode = false;
     private bool isLoading = true;
-    private ColourModel colourModel { get; set; }
-    private string modalTitle = "Add Colours";
-    private Grid<ColourModel> ColourGrid;
-    private List<ColourModel> colourList = new();
-    private string Route = "/colour";
+    private RoleModel roleModel { get; set; }
+    private string modalTitle = "Add Roles";
+    private Grid<RoleModel> roleGrid;
+    private List<RoleModel> roleList = new();
+    private string Route = "/role";
     private EditContext editContext { get; set; }
     private ValidationMessageStore validationMessage;
 
@@ -131,7 +134,7 @@ else
     {
         isLoading = true;
         await base.OnInitializedAsync();
-        await LoadColour();
+        await LoadRole();
         StateHasChanged();
         if (!IsAuthenticated)
         {
@@ -142,71 +145,67 @@ else
 
     }
 
-    private async Task LoadColour()
+    private async Task LoadRole()
     {
-        colourList = await ColourService.GetAllColourAsync();
+        roleList = await roleService.GetAllRolesAsync();
     }
 
     public void InitializeEditContextAsync()
     {
-        editContext = new EditContext(colourModel);
+        editContext = new EditContext(roleModel);
         validationMessage = new ValidationMessageStore(editContext);
     }
 
     private void ShowAddModal()
     {
-        modalTitle = "Add Colour";
+        modalTitle = "Add Role";
         isEditMode = false;
-        colourModel = new ColourModel()
+        roleModel = new RoleModel()
         {
             CreatedBy = Convert.ToInt32(CurrentUserId),
         };
         InitializeEditContextAsync();
         modal.ShowAsync();
     }
-    private void ShowEditModal(ColourModel editColour)
+    private void ShowEditModal(RoleModel editRole)
     {
-        modalTitle = "Edit Colour";
+        modalTitle = "Edit Role";
         isEditMode = true;
-        colourModel = new ColourModel
+        roleModel = new RoleModel
         {
-            Id = editColour.Id,
-            Code = editColour.Code,
-            Name = editColour.Name,
-            IsActive = editColour.IsActive,
+            Id = editRole.Id,
+            Name = editRole.Name,
+            IsActive = editRole.IsActive,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
         };
         InitializeEditContextAsync();
         modal.ShowAsync();
     }
-    private async Task SaveColour()
+    private async Task SaveRole()
     {
         if (!editContext.Validate()) return;
         await ValidateNameAsync();
-        await ValidateCodeAsync();
         if (editContext.GetValidationMessages().Any())
             return;
-
-        await ValidateDuplicateColourCode();
-        await ValidateDuplicateColourName();
+        await ValidateDuplicateRoleName();
         if (editContext.GetValidationMessages().Any())
             return;
 
         if (isEditMode)
         {
-            await ColourService.UpdateColourAsync(colourModel);
+            await roleService.UpdateRoleAsync(roleModel);
         }
         else
         {
-            await ColourService.CreateColourAsync(colourModel);
+            await roleService.CreateRoleAsync(roleModel);
         }
         await HideModal();
-        await LoadColour();
-        if (ColourGrid != null)
-            await ColourGrid.RefreshDataAsync();
+        await LoadRole();
+        if (roleGrid != null)
+            await roleGrid.RefreshDataAsync();
     }
 
-    private async Task DeleteColour(int id)
+    private async Task DeleteRole(int id)
     {
         try
         {
@@ -215,9 +214,9 @@ else
             {
                 var deletedBy = Convert.ToInt32(CurrentUserId);
 
-                await ColourService.DeleteColourAsync(id, deletedBy);
-                await LoadColour();
-                await ColourGrid.RefreshDataAsync();
+                await roleService.DeleteRoleAsync(id, deletedBy);
+                await LoadRole();
+                await roleGrid.RefreshDataAsync();
             }
         }
         catch (Exception ex)
@@ -231,29 +230,15 @@ else
         await modal.HideAsync();
 
     }
-    private async Task ValidateDuplicateColourCode()
+    private async Task ValidateDuplicateRoleName()
     {
-        validationMessage.Clear(() => colourModel.Code);
-        if (!string.IsNullOrEmpty(colourModel.Code))
+        validationMessage.Clear(() => roleModel.Name);
+        if (!string.IsNullOrEmpty(roleModel.Name))
         {
-            var isColourCodeUnique = await ColourService.IsColourCodeUnique(colourModel.Code, colourModel.Id);
-            if (!isColourCodeUnique)
+            var isRoleNameUnique = await roleService.IsRoleNameUnique(roleModel.Name, roleModel.Id);
+            if (!isRoleNameUnique)
             {
-                validationMessage.Add(() => colourModel.Code, "This Code Already Exists");
-
-            }
-            editContext.NotifyValidationStateChanged();
-        }
-    }
-    private async Task ValidateDuplicateColourName()
-    {
-        validationMessage.Clear(() => colourModel.Name);
-        if (!string.IsNullOrEmpty(colourModel.Code))
-        {
-            var isColourNameUnique = await ColourService.IsColourNameUnique(colourModel.Name, colourModel.Id);
-            if (!isColourNameUnique)
-            {
-                validationMessage.Add(() => colourModel.Name, "This Name Already Exists");
+                validationMessage.Add(() => roleModel.Name, "This Role Already Exists");
 
             }
             editContext.NotifyValidationStateChanged();
@@ -262,25 +247,16 @@ else
 
     private async Task ValidateNameAsync()
     {
-        validationMessage.Clear(() => colourModel.Name);
-        if (string.IsNullOrWhiteSpace(colourModel.Name))
+        validationMessage.Clear(() => roleModel.Name);
+        if (string.IsNullOrWhiteSpace(roleModel.Name))
         {
-            validationMessage.Add(() => colourModel.Name, "Colour name is required");
-            editContext.NotifyValidationStateChanged();
-        }
-    }
-    private async Task ValidateCodeAsync()
-    {
-        validationMessage.Clear(() => colourModel.Code);
-        if (string.IsNullOrWhiteSpace(colourModel.Code))
-        {
-            validationMessage.Add(() => colourModel.Code, "Colour Code is required");
+            validationMessage.Add(() => roleModel.Name, "Role name is required");
             editContext.NotifyValidationStateChanged();
         }
     }
     private async Task HandleNameChangeAsync(string newValue)
     {
-        colourModel.Name = newValue;
+        roleModel.Name = newValue;
         try
         {
             await ValidateNameAsync();
@@ -290,16 +266,9 @@ else
 
         }
     }
-    private async Task HandleCodeChangeAsync(string newValue)
+    private void GoHome()
     {
-        colourModel.Code = newValue;
-        try
-        {
-            await ValidateCodeAsync();
-        }
-        catch (Exception ex)
-        {
-
-        }
+        NavigationManager.NavigateTo("/");
     }
 }
+
