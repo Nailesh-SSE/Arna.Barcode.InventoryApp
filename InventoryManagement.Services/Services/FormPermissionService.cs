@@ -114,6 +114,7 @@ public class FormPermissionService : IFormPermissionService
         entity.CanDelete = model.CanDelete;
         entity.UpdatedBy = model.UpdatedBy;
         entity.UpdatedOn = DateTime.UtcNow;
+        entity.IsActive = model.IsActive;
 
         repo.Update(entity);
         await _unitOfWork.SaveChangesAsync();
@@ -129,6 +130,7 @@ public class FormPermissionService : IFormPermissionService
             return false;
 
         entity.IsDeleted = true;
+        entity.IsActive = false;
         entity.UpdatedBy = deletedBy;
         entity.UpdatedOn = DateTime.UtcNow;
 

@@ -67,18 +67,20 @@ else
                 </GridColumn>
 
                 <GridColumn TItem="PlatformModel" HeaderText="Actions">
-                    @if (CanEdit(Route))
-                    {
-                        <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                            <Icon Name="IconName.PencilSquare" /> Edit
-                        </Button>
-                    }
-                    @if (CanDelete(Route))
-                    {
-                        <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeletePlatform(context.Id)">
-                            <Icon Name="IconName.Trash" /> Delete
-                        </Button>
-                    }
+                    <div class="d-flex gap-1 justify-content-start">
+                        @if (CanEdit(Route))
+                        {
+                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                                <Icon Name="IconName.PencilSquare" /> Edit
+                            </Button>
+                        }
+                        @if (CanDelete(Route))
+                        {
+                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeletePlatform(context.Id)">
+                                <Icon Name="IconName.Trash" /> Delete
+                            </Button>
+                        }
+                    </div>
                 </GridColumn>
             </Grid>
         </div>

@@ -72,49 +72,51 @@ else
                 </GridColumn>
 
                 <GridColumn TItem="RoleModel" HeaderText="Actions">
-                    @if (CanEdit(Route))
-                    {
-                        <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                            <Icon Name="IconName.PencilSquare" /> Edit
-                        </Button>
-                    }
+                    <div class="d-flex gap-1 justify-content-start">
+                        @if (CanEdit(Route))
+                        {
+                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                                <Icon Name="IconName.PencilSquare" /> Edit
+                            </Button>
+                        }
 
-                    @if (CanDelete(Route))
-                    {
-                        <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteRole(context.Id)">
-                            <Icon Name="IconName.Trash" /> Delete
-                        </Button>
-                    }
+                        @if (CanDelete(Route))
+                        {
+                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteRole(context.Id)">
+                                <Icon Name="IconName.Trash" /> Delete
+                            </Button>
+                        }
+                    </div>
                 </GridColumn>
             </Grid>
         </div>
     }
 
-<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Small">
-    <BodyTemplate>
-        <EditForm EditContext="@editContext" OnValidSubmit="SaveRole">
-            <DataAnnotationsValidator />
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Small">
+        <BodyTemplate>
+            <EditForm EditContext="@editContext" OnValidSubmit="SaveRole">
+                <DataAnnotationsValidator />
 
-            <div class="row">
-                <div class="col-12 mb-3">
-                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="roleModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
-                    <ValidationMessage For="@(() => roleModel.Name)" />
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="roleModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
+                        <ValidationMessage For="@(() => roleModel.Name)" />
+                    </div>
                 </div>
-            </div>
-            @if (roleModel.Id > 0)
-            {
-                <div class="mb-3">
-                    <InputCheckbox @bind-Value="roleModel.IsActive" /> Active
+                @if (roleModel.Id > 0)
+                {
+                    <div class="mb-3">
+                        <InputCheckbox @bind-Value="roleModel.IsActive" /> Active
+                    </div>
+                }
+                <div class="text-end">
+                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
                 </div>
-            }
-            <div class="text-end">
-                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
-            </div>
-        </EditForm>
-    </BodyTemplate>
-</Modal>
+            </EditForm>
+        </BodyTemplate>
+    </Modal>
 }
 @code {
     private Modal modal { get; set; }
