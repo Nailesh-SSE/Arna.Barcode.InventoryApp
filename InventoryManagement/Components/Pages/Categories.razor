@@ -68,18 +68,20 @@ else
                 </GridColumn>
 
                 <GridColumn TItem="CategoryModel" HeaderText="Actions">
-                    @if (CanEdit(Route))
-                    {
-                        <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                            <Icon Name="IconName.PencilSquare" /> Edit
-                        </Button>
-                    }
-                    @if (CanDelete(Route))
-                    {
-                        <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCategory(context.Id)">
-                            <Icon Name="IconName.Trash" /> Delete
-                        </Button>
-                    }
+                    <div class="d-flex gap-1 justify-content-start">
+                        @if (CanEdit(Route))
+                        {
+                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                                <Icon Name="IconName.PencilSquare" /> Edit
+                            </Button>
+                        }
+                        @if (CanDelete(Route))
+                        {
+                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCategory(context.Id)">
+                                <Icon Name="IconName.Trash" /> Delete
+                            </Button>
+                        }
+                    </div>
                 </GridColumn>
             </Grid>
         </div>
@@ -138,7 +140,7 @@ else
     private EditContext editContext;
     private ValidationMessageStore messageStore;
     private CancellationTokenSource _validationCts;
-    private string Route  = "/categories";
+    private string Route = "/categories";
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;

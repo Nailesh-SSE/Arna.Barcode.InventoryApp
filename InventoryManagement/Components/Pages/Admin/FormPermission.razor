@@ -85,23 +85,25 @@ else
                 @context.CanDelete
             </GridColumn>
             <GridColumn TItem="FormPermissionModel" HeaderText="Action">
-                @if (CanEdit(Route))
-                {
-                    <Button Color="ButtonColor.Warning"
-                            Size="ButtonSize.Small"
-                            @onclick="() => Edit(context)">
-                        <Icon Name="IconName.PencilSquare" /> Edit
-                    </Button>
-                }
-                @if (CanDelete(Route))
-                {
-                    <Button Color="ButtonColor.Danger"
-                            Size="ButtonSize.Small"
-                            @onclick="() => Delete(context.Id)">
-                        <Icon Name="IconName.Trash" /> Delete
-                    </Button>
-                }
-             </GridColumn>
+                <div class="d-flex gap-1 justify-content-start">
+                    @if (CanEdit(Route))
+                    {
+                        <Button Color="ButtonColor.Warning"
+                                Size="ButtonSize.Small"
+                                @onclick="() => Edit(context)">
+                            <Icon Name="IconName.PencilSquare" /> Edit
+                        </Button>
+                    }
+                    @if (CanDelete(Route))
+                    {
+                        <Button Color="ButtonColor.Danger"
+                                Size="ButtonSize.Small"
+                                @onclick="() => Delete(context.Id)">
+                            <Icon Name="IconName.Trash" /> Delete
+                        </Button>
+                    }
+                </div>
+            </GridColumn>
         </Grid>
     </div>
 
@@ -234,8 +236,8 @@ else
             {
                 CreatedBy = UserId
             };
-            _ = modal?.ShowAsync();
             InitializeEditContextAsync();
+            _ = modal?.ShowAsync();
         }
     }
 
@@ -244,9 +246,22 @@ else
         errorMessage = string.Empty;
         title = "Edit Permission";
         m.UpdatedBy = Convert.ToInt32(CurrentUserId);
-        model = m;
-        _ = modal?.ShowAsync();
+        model = new FormPermissionModel
+        {
+            Id = m.Id,
+            RoleId = m.RoleId,
+            RoleName = m.RoleName,
+            FormId = m.FormId,
+            FormName = m.FormName,
+            CanView = m.CanView,
+            CanCreate = m.CanCreate,
+            CanEdit = m.CanEdit,
+            CanDelete = m.CanDelete,
+            CreatedBy = m.CreatedBy,
+            UpdatedBy = Convert.ToInt32(CurrentUserId)
+        };
         InitializeEditContextAsync();
+        _ = modal?.ShowAsync();
     }
 
     async Task Save()

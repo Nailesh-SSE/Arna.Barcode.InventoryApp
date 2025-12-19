@@ -85,15 +85,15 @@ else
                 </GridColumn>
 
                 <GridColumn TItem="FormMasterModel" HeaderText="Actions">
-                    @if (CanEdit("/form"))
-                    {
-                        <Button Color="ButtonColor.Warning"
-                                Size="ButtonSize.Small"
-                                @onclick="() => ShowEditModal(context)">
-                            <Icon Name="IconName.PencilSquare" /> Edit
-                        </Button>
-                    }
-
+                    <div class="d-flex gap-1 justify-content-start">
+                        @if (CanEdit("/form"))
+                        {
+                            <Button Color="ButtonColor.Warning"
+                                    Size="ButtonSize.Small"
+                                    @onclick="() => ShowEditModal(context)">
+                                <Icon Name="IconName.PencilSquare" /> Edit
+                            </Button>
+                        }
                     @if (CanDelete("/form"))
                     {
                         <Button Color="ButtonColor.Danger"
@@ -102,6 +102,7 @@ else
                             <Icon Name="IconName.Trash" /> Delete
                         </Button>
                     }
+                    </div>
                 </GridColumn>
             </Grid>
         </div>
