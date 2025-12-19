@@ -10,10 +10,6 @@ public interface IUserService
     Task<bool> UpdateUserAsync(UserModel user);
     Task<bool> DeleteUserAsync(int id);
     Task<IEnumerable<Users>> GetAllUsersAsync();
-
-    Task<bool> IsUsernameUniqueAsync(string username, int? id = null);
-    Task<bool> IsEmailUniqueAsync(string email, int? id = null);
-    Task<bool> IsPhoneUniqueAsync(string phone, int? id = null);
-
+    Task<(bool UserNameExists, bool PhoneExists, bool EmailExists)> CheckDuplicate(int? id, string userName, string phone, string email);
     Task<List<Roles>> GetAllRolesAsync();
 }
