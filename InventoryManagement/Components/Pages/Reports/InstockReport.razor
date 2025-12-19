@@ -21,9 +21,9 @@
                 <button class="btn btn-outline-primary" @onclick="RefreshReport">
                     <Icon Name="IconName.ArrowClockwise" /> Refresh
                 </button>
-            @*     <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
+                <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
                     <Icon Name="IconName.Download" /> Export
-                </button> *@
+                </button>
             </div>
         </div>
     </div>
@@ -100,8 +100,8 @@
                                     <option value="InwardDate">Date</option>
                                     <option value="InwardNo">Inward Number</option>
                                     <option value="ShipmentCompany">Supplier</option>
-                                    <option value="Quantity">Quantity</option>
-                                    <option value="TotalCost">Total Cost</option>
+                                    @* <option value="Quantity">Quantity</option>
+                                    <option value="TotalCost">Total Cost</option> *@
                                 </InputSelect>
                             </div>
                             <div class="col-6">
@@ -172,7 +172,7 @@
             else if (reportResult != null)
             {
                 <!-- Report Summary -->
-                <div class="row mb-4">
+                @* <div class="row mb-4">
                     <div class="col-md-6">
                         <div class="card bg-primary text-white">
                             <div class="card-body">
@@ -189,7 +189,7 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> *@
 
        
                 <!-- Data Table -->

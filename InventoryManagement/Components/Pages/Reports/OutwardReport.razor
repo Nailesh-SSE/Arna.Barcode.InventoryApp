@@ -22,9 +22,9 @@
                 <button class="btn btn-outline-primary" @onclick="RefreshReport">
                     <Icon Name="IconName.ArrowClockwise" /> Refresh
                 </button>
-              @*   <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
+                <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
                     <Icon Name="IconName.Download" /> Export
-                </button> *@
+                </button>
             </div>
         </div>
     </div>
@@ -57,7 +57,7 @@
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Supplier</label>
-                                <InputSelect class="form-select" @bind-Value="filter.CompanyId">
+                                <InputSelect class="form-select" @bind-Value="filter.BillToCompanyId">
                                     <option value="">All Bill</option>
                                     @foreach (var company in billCompanies)
                                     {
@@ -75,7 +75,7 @@
                                     }
                                 </InputSelect>
                             </div>
-                       @*      <div class="col-6">
+                            @*      <div class="col-6">
                                 <label class="form-label">Min Quantity</label>
                                 <InputNumber class="form-control" @bind-Value="filter.MinQuantity" />
                             </div>
@@ -91,18 +91,18 @@
                                 <label class="form-label">Product SKUs</label>
                                 <InputText class="form-control" @bind-Value="filter.ProductSKUs" placeholder="comma-separated" />
                             </div> *@
-                            <div class="col-12">
+                            @* <div class="col-12">
                                 <label class="form-label">Batch Numbers</label>
                                 <InputText class="form-control" @bind-Value="filter.BatchNumbers" placeholder="comma-separated" />
-                            </div>
+                            </div> *@
                             <div class="col-12">
                                 <label class="form-label">Sort By</label>
                                 <InputSelect class="form-select" @bind-Value="filter.SortBy">
                                     <option value="OutwardDate">Date</option>
                                     <option value="OutwardNo">Outward Number</option>
                                     <option value="ShipmentCompany">Supplier</option>
-                                    <option value="Quantity">Quantity</option>
-                                    <option value="TotalCost">Total Cost</option>
+                                    @* <option value="Quantity">Quantity</option>
+                                    <option value="TotalCost">Total Cost</option> *@
                                 </InputSelect>
                             </div>
                             <div class="col-6">
@@ -122,7 +122,7 @@
                                     <label class="form-check-label">Descending</label>
                                 </div>
                             </div>
-                            <div class="col-12">
+                            @* <div class="col-12">
                                 <label class="form-label">Options</label>
                                 <div class="form-check">
                                     <InputCheckbox class="form-check-input" @bind-Value="filter.IncludeInactive" />
@@ -140,7 +140,7 @@
                                     <InputCheckbox class="form-check-input" @bind-Value="filter.SummaryOnly" />
                                     <label class="form-check-label">Summary Only</label>
                                 </div>
-                            </div>
+                            </div> *@
                             <div class="col-12 d-grid gap-2">
                                 <button type="submit" class="btn btn-primary">
                                     <Icon Name="IconName.Search" /> Generate Report
@@ -173,7 +173,7 @@
             else if (reportResult is not null)
             {
                 <!-- Report Summary -->
-                <div class="row mb-4">
+                @* <div class="row mb-4">
                     <div class="col-md-6">
                         <div class="card bg-primary text-white">
                             <div class="card-body">
@@ -190,7 +190,7 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> *@
 
                 <!-- Data Table -->
                 @if (!filter.SummaryOnly && reportResult.Items.Any())
@@ -217,7 +217,7 @@
                                             <th class="text-end">Quantity</th>
                                             <th>Unit</th>
                                             <th>Supplier</th>
-                                            <th>Batch</th>
+                                            @* <th>Batch</th> *@
                                             <th>Status</th>
                                         </tr>
                                     </thead>
@@ -234,7 +234,7 @@
                                                 <td class="text-end">@item.Quantity.ToString("N2")</td>
                                                 <td>@item.Unit</td>
                                                 <td>@item.BillToCompanyName</td>
-                                                <td><span class="badge bg-secondary">@item.BatchNumber</span></td>
+                                                @* <td><span class="badge bg-secondary">@item.BatchNumber</span></td> *@
                                                 <td>
                                                     @if (item.IsActive)
                                                     {
@@ -438,10 +438,21 @@
         }
         try
         {
-          //  var exportData = null//await OutwardReportService.ExportReportAsync(filter);
-           // await JS.InvokeVoidAsync("downloadFile", exportData.FileName, exportData.ContentType, exportData.Data);
-            alertMessage = "Report exported successfully.";
-            alertType = "success";
+            var excelData = await OutwardReportService.ExportToExcelAsync(filter);
+            var fileName = $"Outward_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            var filePath = Path.Combine(Environment.CurrentDirectory, "wwwroot", "exports");
+
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
+
+            var fullPath = Path.Combine(filePath, fileName);
+            await File.WriteAllBytesAsync(fullPath, excelData);
+
+            // Browser downloads static file directly
+            var downloadUrl = $"/exports/{fileName}";
+            NavigationManager.NavigateTo(downloadUrl, forceLoad: true);
+
+            ShowAlert("success", "Report exported successfully. Check your Downloads folder.");
         }
         catch (Exception ex)
         {
@@ -455,5 +466,19 @@
         if (reportResult is null) return;
         filter.PageNumber = page;
         await GenerateReport();
+    }
+
+    private void ShowAlert(string type, string message)
+    {
+        alertType = type;
+        alertMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+
+    private async Task AutoHideAlertAsync()
+    {
+        await Task.Delay(3000);
+        alertMessage = null;
+        await InvokeAsync(StateHasChanged);
     }
 }

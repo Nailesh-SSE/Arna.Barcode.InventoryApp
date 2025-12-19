@@ -22,9 +22,9 @@
                 <button class="btn btn-outline-primary" @onclick="RefreshReport">
                     <Icon Name="IconName.ArrowClockwise" /> Refresh
                 </button>
-               @*  <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
+                <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
                     <Icon Name="IconName.Download" /> Export
-                </button> *@
+                </button>
             </div>
         </div>
     </div>
@@ -98,9 +98,9 @@
                                 <InputSelect class="form-select" @bind-Value="filter.SortBy">
                                     <option value="ReturnDate">Date</option>
                                     <option value="ReturnNo">Return Number</option>
-                                    <option value="BillToCompany">Supplier</option>
-                                    <option value="Quantity">Quantity</option>
-                                    <option value="TotalCost">Total Cost</option>
+                                    <option value="ShipmentCompany">Supplier</option>
+                                    @* <option value="Quantity">Quantity</option>
+                                    <option value="TotalCost">Total Cost</option> *@
                                 </InputSelect>
                             </div>
                             <div class="col-6">
@@ -171,7 +171,7 @@
             else if (reportResult is not null)
             {
                 <!-- Report Summary -->
-                <div class="row mb-4">
+                @* <div class="row mb-4">
                     <div class="col-md-6">
                         <div class="card bg-primary text-white">
                             <div class="card-body">
@@ -188,7 +188,7 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> *@
 
                 <!-- Data Table -->
                 @if (!filter.SummaryOnly && reportResult.Items.Any())
@@ -215,7 +215,7 @@
                                             <th class="text-end">Quantity</th>
                                             <th>Unit</th>
                                             <th>Supplier</th>
-                                            <th>Batch</th>
+                                            @* <th>Batch</th> *@
                                             <th>Status</th>
                                         </tr>
                                     </thead>
@@ -232,7 +232,7 @@
                                                 <td class="text-end">@item.Quantity.ToString("N2")</td>
                                                 <td>@item.Unit</td>
                                                 <td>@item.BillToCompanyName</td>
-                                                <td><span class="badge bg-secondary">@item.BatchNumber</span></td>
+                                                @* <td><span class="badge bg-secondary">@item.BatchNumber</span></td> *@
                                                 <td>
                                                     @if (item.IsActive)
                                                     {
@@ -430,12 +430,21 @@
         }
         try
         {
-            // Export functionality would be implemented here
-            // var exportData = await SaleReturnReportService.ExportReportAsync(filter);
-            // await JS.InvokeVoidAsync("downloadFile", exportData.FileName, exportData.ContentType, exportData.Data);
-            
-            alertMessage = "Export functionality to be implemented.";
-            alertType = "info";
+            var excelData = await SaleReturnReportService.ExportToExcelAsync(filter);
+            var fileName = $"SaleReturn_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            var filePath = Path.Combine(Environment.CurrentDirectory, "wwwroot", "exports");
+
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
+
+            var fullPath = Path.Combine(filePath, fileName);
+            await File.WriteAllBytesAsync(fullPath, excelData);
+
+            // Browser downloads static file directly
+            var downloadUrl = $"/exports/{fileName}";
+            NavigationManager.NavigateTo(downloadUrl, forceLoad: true);
+
+            ShowAlert("success", "Report exported successfully. Check your Downloads folder.");
         }
         catch (Exception ex)
         {
@@ -449,5 +458,19 @@
         if (reportResult is null) return;
         filter.PageNumber = page;
         await GenerateReport();
+    }
+
+    private void ShowAlert(string type, string message)
+    {
+        alertType = type;
+        alertMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+
+    private async Task AutoHideAlertAsync()
+    {
+        await Task.Delay(3000);
+        alertMessage = null;
+        await InvokeAsync(StateHasChanged);
     }
 }
