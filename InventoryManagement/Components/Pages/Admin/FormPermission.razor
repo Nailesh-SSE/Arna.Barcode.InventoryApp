@@ -218,9 +218,10 @@ else
 
     private async Task LoadData()
     {
+        var userRoleId = Convert.ToInt32(CurrentUserRoleId);
         list = await Service.GetAllAsync();
         forms = await FormService.GetAllAsync();
-        roles = await RoleService.GetAllRolesAsync();
+        roles = await RoleService.GetAllRolesAsync(userRoleId);
         InitializeEditContextAsync();
     }
 

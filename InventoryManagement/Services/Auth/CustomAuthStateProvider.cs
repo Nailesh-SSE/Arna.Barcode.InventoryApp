@@ -79,6 +79,7 @@ namespace InventoryManagement.Services.Auth
                 new Claim(ClaimTypes.NameIdentifier, user.UserId),
                 new Claim(ClaimTypes.Name, user.UserName),
                 new Claim("FullName", user.UserFullName),
+                new Claim("UserRoleId", user.UserRoleId),
                 new Claim("LoginTime", user.LoginTime.ToString("O"))
             }, "LocalStorageAuth");
 
@@ -205,6 +206,7 @@ namespace InventoryManagement.Services.Auth
         public string UserId { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;
         public string UserFullName { get; set; } = string.Empty;
+        public string UserRoleId { get; set; } = string.Empty;
         public DateTime LoginTime { get; set; }
     }
 }

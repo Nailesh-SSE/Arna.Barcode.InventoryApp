@@ -145,7 +145,8 @@ else
 
     private async Task LoadRole()
     {
-        roleList = await roleService.GetAllRolesAsync();
+        var userRoleId = Convert.ToInt32(CurrentUserRoleId);
+        roleList = await roleService.GetAllRolesAsync(userRoleId);
     }
 
     public void InitializeEditContextAsync()

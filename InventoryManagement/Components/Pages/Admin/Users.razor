@@ -245,7 +245,8 @@ else
                  IsActive = u.IsActive,
                  RoleId = u.RoleId
              }).ToList();
-        roles = (await RoleService.GetAllRolesAsync()).ToList();
+        var userRoleId = Convert.ToInt32(CurrentUserRoleId);
+        roles = (await RoleService.GetAllRolesAsync(userRoleId)).ToList();
         isLoading = false;
     }
 

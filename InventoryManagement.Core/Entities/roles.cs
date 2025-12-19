@@ -10,4 +10,6 @@ public class Roles : Common
     [Required]
     [StringLength(50)]
     public string Name { get; set; } = string.Empty;
+
+    public int RoleLevel { get; set; }
 }
