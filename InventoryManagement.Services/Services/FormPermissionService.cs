@@ -15,7 +15,7 @@ public class FormPermissionService : IFormPermissionService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<List<FormPermissionModel>> GetAllAsync()
+    public async Task<List<FormPermissionModel>> GetAllAsync(int userRoleId)
     {
         try
         {
@@ -26,7 +26,20 @@ public class FormPermissionService : IFormPermissionService
             var permissions = (await repo.FindAsync(x => !x.IsDeleted)).ToList();
             var forms = (await formRepo.FindAsync(x => !x.IsDeleted)).ToList();
             var roles = (await roleRepo.FindAsync(x => !x.IsDeleted)).ToList();
+            var currentRoleLevel = roles
+                .FirstOrDefault(r => r.Id == userRoleId)?
+                .RoleLevel ?? int.MaxValue;
+            if (currentRoleLevel >= 5)
+            {
+                var allowedRoleIds = roles
+                    .Where(r => r.RoleLevel >= 5)
+                    .Select(r => r.Id)
+                    .ToHashSet();
 
+                permissions = permissions
+                    .Where(p => allowedRoleIds.Contains(p.RoleId))
+                    .ToList();
+            }
             return permissions.Select(p => new FormPermissionModel
             {
                 Id = p.Id,

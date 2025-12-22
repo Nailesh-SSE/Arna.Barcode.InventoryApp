@@ -9,7 +9,7 @@ public interface IUserService
     Task<bool> CreateUserAsync(UserModel user);
     Task<bool> UpdateUserAsync(UserModel user);
     Task<bool> DeleteUserAsync(int id);
-    Task<IEnumerable<Users>> GetAllUsersAsync();
+    Task<IEnumerable<Users>> GetAllUsersAsync(int userRoleId);
 
     Task<bool> IsUsernameUniqueAsync(string username, int? id = null);
     Task<bool> IsEmailUniqueAsync(string email, int? id = null);

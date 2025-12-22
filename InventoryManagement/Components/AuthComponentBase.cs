@@ -85,6 +85,12 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
         return permission != null && permission.CanView && permission.CanCreate &&
                permission.CanEdit && permission.CanDelete;
     }
+    public bool IsFactoryAdmin()
+    {
+        var permission = PermissionState.Permissions.FirstOrDefault(p => p.Route == "*");
+        return permission != null && permission.CanView && permission.CanCreate &&
+               permission.CanEdit && permission.CanDelete;
+    }
 
     public void Dispose()
         => AuthProvider.AuthenticationStateChanged -= OnAuthChanged;

@@ -46,11 +46,11 @@ else
         else
         {
             <Grid TItem="UserModel"
-            Data="@users"
-            Class="table table-hover table-bordered table-striped"
-            AllowPaging="true"
-            PageSize="10"
-            @ref="userGrid">
+                  Data="@users"
+                  Class="table table-hover table-bordered table-striped"
+                  AllowPaging="true"
+                  PageSize="10"
+                  @ref="userGrid">
 
                 <GridColumn TItem="UserModel" HeaderText="No">
                     @(users.IndexOf(context) + 1)
@@ -85,11 +85,11 @@ else
 
                 <GridColumn TItem="UserModel" HeaderText="Actions">
                     <Button Color="ButtonColor.Warning" Size="ButtonSize.Small"
-                    @onclick="() => ShowEditModal(context)">
+                            @onclick="() => ShowEditModal(context)">
                         <Icon Name="IconName.PencilSquare" /> Edit
                     </Button>
                     <Button Color="ButtonColor.Danger" Size="ButtonSize.Small"
-                    @onclick="() => DeleteUser(context.Id)">
+                            @onclick="() => DeleteUser(context.Id)">
                         <Icon Name="IconName.Trash" /> Delete
                     </Button>
                 </GridColumn>
@@ -110,53 +110,53 @@ else
                     <div class="col-md-6 mb-3">
                         <label class="form-label">First Name *</label>
                         <InputText class="form-control"
-                        @bind-Value="userModel.FirstName"
-                        @oninput="HandleFirstNameChange" />
+                                   @bind-Value="userModel.FirstName"
+                                   @oninput="HandleFirstNameChange" />
                         <ValidationMessage For="@(() => userModel.FirstName)" />
                     </div>
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Last Name *</label>
                         <InputText class="form-control"
-                        @bind-Value="userModel.LastName"
-                        @oninput="HandleLastNameChange" />
+                                   @bind-Value="userModel.LastName"
+                                   @oninput="HandleLastNameChange" />
                         <ValidationMessage For="@(() => userModel.LastName)" />
                     </div>
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Username *</label>
                         <InputText class="form-control"
-                        autocomplete="off"
-                        @bind-Value="userModel.UserName"
-                        @oninput="HandleUsernameChange" />
+                                   autocomplete="off"
+                                   @bind-Value="userModel.UserName"
+                                   @oninput="HandleUsernameChange" />
                         <ValidationMessage For="@(() => userModel.UserName)" />
                     </div>
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Email *</label>
                         <InputText class="form-control"
-                        @bind-Value="userModel.Email"
-                        @oninput="HandleEmailChange" />
+                                   @bind-Value="userModel.Email"
+                                   @oninput="HandleEmailChange" />
                         <ValidationMessage For="@(() => userModel.Email)" />
                     </div>
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Phone *</label>
                         <InputText class="form-control"
-                        @bind-Value="userModel.ContactNo"
-                        @oninput="HandlePhoneChange" />
+                                   @bind-Value="userModel.ContactNo"
+                                   @oninput="HandlePhoneChange" />
                         <ValidationMessage For="@(() => userModel.ContactNo)" />
                     </div>
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Role *</label>
                         <DropDown TItem="RoleModel"
-                        Items="@roles"
-                        SelectedId="@userModel.RoleId"
-                        ValueSelector="x => x.Id"
-                        TextSelector="x => x.Name"
-                        Placeholder="-- Select Role --"
-                        OnValueChanged="OnRoleSelected" />
+                                  Items="@roles"
+                                  SelectedId="@userModel.RoleId"
+                                  ValueSelector="x => x.Id"
+                                  TextSelector="x => x.Name"
+                                  Placeholder="-- Select Role --"
+                                  OnValueChanged="OnRoleSelected" />
                         <ValidationMessage For="@(() => userModel.RoleId)" />
                     </div>
 
@@ -168,10 +168,10 @@ else
                         </label>
 
                         <InputText type="password"
-                        class="form-control"
-                        autocomplete="off"
-                        @bind-Value="userModel.Password"
-                        @oninput="HandlePasswordChange" />
+                                   class="form-control"
+                                   autocomplete="off"
+                                   @bind-Value="userModel.Password"
+                                   @oninput="HandlePasswordChange" />
 
                         <ValidationMessage For="@(() => userModel.Password)" />
                     </div>
@@ -183,9 +183,9 @@ else
                         </label>
 
                         <InputText type="password"
-                        class="form-control"
-                        @bind-Value="confirmPassword"
-                        @oninput="HandleConfirmPasswordChange" />
+                                   class="form-control"
+                                   @bind-Value="confirmPassword"
+                                   @oninput="HandleConfirmPasswordChange" />
 
                         <ValidationMessage For="@(() => confirmPassword)" />
                     </div>
@@ -231,21 +231,21 @@ else
     private async Task LoadData()
     {
         isLoading = true;
-        users = (await UserService.GetAllUsersAsync())
+        var userRoleId = CurrentUserRoleId;
+        users = (await UserService.GetAllUsersAsync(userRoleId))
          .Select(u => new UserModel
-             {
-                 Id = u.Id,
-                 FirstName = u.FirstName,
-                 LastName = u.LastName,
-                 UserName = u.UserName,
-                 Email = u.EmailId,
-                 ContactNo = u.ContactNo,
-                 CreatedBy= u.CreatedBy,
-                 UpdatedBy= u.UpdatedBy,
-                 IsActive = u.IsActive,
-                 RoleId = u.RoleId
-             }).ToList();
-        var userRoleId = Convert.ToInt32(CurrentUserRoleId);
+         {
+             Id = u.Id,
+             FirstName = u.FirstName,
+             LastName = u.LastName,
+             UserName = u.UserName,
+             Email = u.EmailId,
+             ContactNo = u.ContactNo,
+             CreatedBy = u.CreatedBy,
+             UpdatedBy = u.UpdatedBy,
+             IsActive = u.IsActive,
+             RoleId = u.RoleId
+         }).ToList();
         roles = (await RoleService.GetAllRolesAsync(userRoleId)).ToList();
         isLoading = false;
     }
@@ -261,10 +261,10 @@ else
     {
         modalTitle = "Add User";
         userModel = new UserModel
-            {
-                IsActive = true,
-                CreatedBy = Convert.ToInt32(CurrentUserId)
-            };
+        {
+            IsActive = true,
+            CreatedBy = Convert.ToInt32(CurrentUserId)
+        };
 
         InitializeEditContext();
         await modal.ShowAsync();
@@ -275,18 +275,18 @@ else
         modalTitle = "Edit User";
 
         userModel = new UserModel
-            {
-                Id = user.Id,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                UserName = user.UserName,
-                Email = user.Email,
-                ContactNo = user.ContactNo,
-                CreatedBy= user.CreatedBy,
-                RoleId = user.RoleId,
-                IsActive = user.IsActive,
-                UpdatedBy = Convert.ToInt32(CurrentUserId)
-            };
+        {
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            UserName = user.UserName,
+            Email = user.Email,
+            ContactNo = user.ContactNo,
+            CreatedBy = user.CreatedBy,
+            RoleId = user.RoleId,
+            IsActive = user.IsActive,
+            UpdatedBy = Convert.ToInt32(CurrentUserId)
+        };
 
         InitializeEditContext();
         await modal.ShowAsync();
@@ -357,14 +357,14 @@ else
         messageStore.Clear(() => userModel.UserName);
         if (string.IsNullOrWhiteSpace(userModel.UserName))
             messageStore.Add(() => userModel.UserName, "Username is required.");
-        }
+    }
 
     private void ValidateEmail()
-        {
+    {
         messageStore.Clear(() => userModel.Email);
         if (string.IsNullOrWhiteSpace(userModel.Email))
             messageStore.Add(() => userModel.Email, "Email is required.");
-        }
+    }
 
     private void ValidatePhone()
     {
