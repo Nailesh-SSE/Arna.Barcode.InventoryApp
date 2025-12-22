@@ -17,6 +17,8 @@ public class Inward : Common
     [Required]
     public int ShipMentCompanyId { get; set; }
 
+    public bool IsSalesReturn { get; set; } = false;    
+
     [StringLength(500)]
     public string? Remarks { get; set; }
     public int? CategoryId { get; set; }

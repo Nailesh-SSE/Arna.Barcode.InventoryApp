@@ -1,8 +1,9 @@
-﻿using InventoryManagement.Core.Entities;
-using InventoryManagement.Infrastructure.Repositories;
+﻿using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models.ReportModels;
 using Microsoft.EntityFrameworkCore;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 
 namespace InventoryManagement.Services.Reports.Services
 {
@@ -52,25 +53,81 @@ namespace InventoryManagement.Services.Reports.Services
             }
         }
 
+        public async Task<byte[]> ExportToExcelAsync(SaleReturnFilter filter)
+        {
+            // Remove paging for export
+            filter.PageSize = int.MaxValue;
+            filter.PageNumber = 1;
+
+            var report = await GenerateSaleReturnReportAsync(filter);
+
+            IWorkbook workbook = new XSSFWorkbook();
+            ISheet sheet = workbook.CreateSheet("SaleReturn Report");
+
+            // Header row
+            IRow headerRow = sheet.CreateRow(0);
+            string[] headers = new string[]
+            {
+                "SaleReturn Number", "Date", "Product", "SKU", "Category",
+                "Quantity", "Unit", "Supplier", "Status"
+            };
+
+            for (int i = 0; i < headers.Length; i++)
+            {
+                headerRow.CreateCell(i).SetCellValue(headers[i]);
+            }
+
+            // Data rows
+            for (int i = 0; i < report.Items.Count; i++)
+            {
+                var item = report.Items[i];
+                IRow row = sheet.CreateRow(i + 1);
+
+                row.CreateCell(0).SetCellValue(item.ReturnNo);
+                row.CreateCell(1).SetCellValue(item.ReturnDate.ToString("dd/MM/yyyy"));
+                row.CreateCell(2).SetCellValue(item.ProductName);
+                row.CreateCell(3).SetCellValue(item.SKU);
+                row.CreateCell(4).SetCellValue(item.CategoryName);
+                row.CreateCell(5).SetCellValue((double)item.Quantity);
+                row.CreateCell(6).SetCellValue(item.Unit);
+                row.CreateCell(7).SetCellValue(item.BillToCompanyName);
+                //row.CreateCell(8).SetCellValue(item.BatchNumber);
+                row.CreateCell(8).SetCellValue(item.IsActive ? "Active" : "Inactive");
+            }
+
+            // Autosize all columns
+            for (int i = 0; i < headers.Length; i++)
+            {
+                sheet.AutoSizeColumn(i);
+            }
+
+            // Write to memory stream and return as byte array
+            using (var exportData = new MemoryStream())
+            {
+                workbook.Write(exportData);
+                return exportData.ToArray();
+            }
+        }
+
         // Similar to Outward, build the query, apply filters, and execute
         private IQueryable<SaleReturn> BuildBaseQuery(SaleReturnFilter filter)
         {
             var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
             var query = saleReturnRepo.GetQueryable()
+                .Include(o => o.SaleReturnItems)
+                    .ThenInclude(od => od.Product)
+                        .ThenInclude(p => p.Category)
                 .Where(sr => !sr.IsDeleted);
 
             // Apply filters
-            if (!string.IsNullOrEmpty(filter.ReturnNumbers))
-                query = query.Where(sr => filter.ReturnNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries).Contains(sr.ReturnNo));
+            if (filter.StartDate.HasValue)
+                query = query.Where(i => i.SaleReturnDate.Date >= filter.StartDate.Value.Date);
+
+            if (filter.EndDate.HasValue)
+                query = query.Where(i => i.SaleReturnDate.Date <= filter.EndDate.Value.Date);
 
             if (filter.BillToCompanyId.HasValue)
                 query = query.Where(sr => sr.BillToCompanyId == filter.BillToCompanyId);
-
-            if (filter.MinQuantity.HasValue)
-                query = query.Where(sr => sr.Quantity >= filter.MinQuantity);
-
-            if (filter.MaxQuantity.HasValue)
-                query = query.Where(sr => sr.Quantity <= filter.MaxQuantity);
 
             if (!filter.IncludeInactive)
                 query = query.Where(sr => sr.IsActive);
@@ -83,27 +140,39 @@ namespace InventoryManagement.Services.Reports.Services
 
         private async Task<List<SaleReturnReportItem>> ExecuteQuery(IQueryable<SaleReturn> query, SaleReturnFilter filter)
         {
+            List<string>? returnNos = null;
             var saleReturns = await query.ToListAsync();
             var items = new List<SaleReturnReportItem>();
 
+            if (!string.IsNullOrWhiteSpace(filter.ReturnNumbers))
+            {
+                returnNos = filter.ReturnNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList();
+            }
+
             foreach (var saleReturn in saleReturns)
             {
-                items.Add(new SaleReturnReportItem
+                foreach(var item in saleReturn.SaleReturnItems)
                 {
-                    SaleReturnId = saleReturn.Id,
-                    ReturnNo = saleReturn.ReturnNo,
-                    ReturnDate = saleReturn.ReturnDate,
-                    ProductName = saleReturn.Product?.Name ?? "Unknown",
-                    SKU = saleReturn.Product?.SKU ?? "",
-                    CategoryName = saleReturn.Product?.Category?.Name ?? "",
-                    Quantity = saleReturn.Quantity,
-                    Unit = "PCS",
-                    BillToCompanyId = saleReturn.BillToCompanyId,
-                    BillToCompanyName = saleReturn.BillToCompany?.Name ?? "N/A",
-                    IsActive = saleReturn.IsActive,
-                    CreatedBy = saleReturn.CreatedBy,
-                    CreatedOn = saleReturn.CreatedOn
-                });
+                    if (returnNos != null && returnNos.Any() && !returnNos.Contains(saleReturn.SaleReturnNo)) continue;
+                    if (filter.CategoryId.HasValue && item.Product?.CategoryId != filter.CategoryId) continue;
+
+                    items.Add(new SaleReturnReportItem
+                    {
+                        SaleReturnId = saleReturn.Id,
+                        ReturnNo = saleReturn.SaleReturnNo,
+                        ReturnDate = saleReturn.SaleReturnDate,
+                        Unit = "PCS",
+                        ProductName = item.Product?.Name ?? "Unknown",
+                        SKU = item.Product?.SKU ?? "",
+                        CategoryName = item.Product?.Category?.Name ?? "",
+                        Quantity = item.ReturnQuantity,
+                        BillToCompanyId = saleReturn.BillToCompanyId,
+                        BillToCompanyName = saleReturn.BillToCompany?.Name ?? "N/A",
+                        IsActive = saleReturn.IsActive,
+                        CreatedBy = saleReturn.CreatedBy,
+                        CreatedOn = saleReturn.CreatedOn
+                    });
+                }
             }
 
             return items;
@@ -113,10 +182,10 @@ namespace InventoryManagement.Services.Reports.Services
         {
             return filter.SortBy?.ToLower() switch
             {
-                "returndate" => filter.SortDescending ? query.OrderByDescending(sr => sr.ReturnDate) : query.OrderBy(sr => sr.ReturnDate),
-                "returnno" => filter.SortDescending ? query.OrderByDescending(sr => sr.ReturnNo) : query.OrderBy(sr => sr.ReturnNo),
-                "company" => filter.SortDescending ? query.OrderByDescending(sr => sr.BillToCompany.Name) : query.OrderBy(sr => sr.BillToCompany.Name),
-                _ => query.OrderByDescending(sr => sr.ReturnDate)
+                "returndate" => filter.SortDescending ? query.OrderByDescending(sr => sr.SaleReturnDate) : query.OrderBy(sr => sr.SaleReturnDate),
+                "returnno" => filter.SortDescending ? query.OrderByDescending(sr => sr.SaleReturnNo) : query.OrderBy(sr => sr.SaleReturnNo),
+                "shipmentcompany" => filter.SortDescending ? query.OrderByDescending(sr => sr.BillToCompany.Name) : query.OrderBy(sr => sr.BillToCompany.Name),
+                _ => query.OrderByDescending(sr => sr.SaleReturnDate)
             };
         }
 
@@ -128,15 +197,16 @@ namespace InventoryManagement.Services.Reports.Services
             var items = new List<SaleReturnReportItem>();
             foreach (var saleReturn in saleReturns)
             {
-                items.Add(new SaleReturnReportItem
+                foreach (var item in saleReturn.SaleReturnItems)
                 {
-                    Quantity = saleReturn.Quantity,
-                    Unit = "PCS",
-                    BillToCompanyId = saleReturn.BillToCompanyId,
-                    BillToCompanyName = saleReturn.BillToCompany?.Name ?? "",
-                    ProductName = saleReturn.Product?.Name ?? "",
-                    CategoryName = saleReturn.Product?.Category?.Name ?? ""
-                });
+                    items.Add(new SaleReturnReportItem
+                    {
+                        Unit = "PCS",
+                        BillToCompanyId = saleReturn.BillToCompanyId,
+                        BillToCompanyName = saleReturn.BillToCompany?.Name ?? "",
+                        Quantity = item.ReturnQuantity
+                    });
+                }
             }
 
             return new SaleReturnReportSummary
@@ -153,4 +223,3 @@ namespace InventoryManagement.Services.Reports.Services
         }
     }
 }
-
