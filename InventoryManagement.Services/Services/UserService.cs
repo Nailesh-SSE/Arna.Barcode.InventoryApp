@@ -73,10 +73,36 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<IEnumerable<Users>> GetAllUsersAsync()
+    public async Task<IEnumerable<Users>> GetAllUsersAsync(int userRoleId)
     {
+        var roleRepository = _unitOfWork.GetRepository<Roles>();
         var userRepository = _unitOfWork.GetRepository<Users>();
-        return await userRepository.FindAsync(u => !u.IsDeleted);
+
+        var roles = (await roleRepository.FindAsync(r =>
+                        !r.IsDeleted && r.IsActive))
+                        .ToList();
+
+        var users = (await userRepository.FindAsync(u =>
+                        !u.IsDeleted && u.IsActive))
+                        .ToList();
+
+        var currentRoleLevel = roles
+            .FirstOrDefault(r => r.Id == userRoleId)?
+            .RoleLevel ?? int.MaxValue;
+
+        if (currentRoleLevel >= 1 && currentRoleLevel <= 4)
+        {
+            return users;
+        }
+
+        var allowedRoleIds = roles
+            .Where(r => r.RoleLevel >= 5)
+            .Select(r => r.Id)
+            .ToHashSet();
+
+        return users
+            .Where(u => allowedRoleIds.Contains(u.RoleId))
+            .ToList();
     }
 
 

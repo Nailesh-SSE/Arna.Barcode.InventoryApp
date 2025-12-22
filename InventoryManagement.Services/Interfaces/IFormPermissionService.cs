@@ -5,7 +5,7 @@ namespace InventoryManagement.Services.Interfaces;
 
 public interface IFormPermissionService
 {
-    Task<List<FormPermissionModel>> GetAllAsync();
+    Task<List<FormPermissionModel>> GetAllAsync(int userRoleId);
     Task<List<FormMaster>> GetAllFormsAsync();
     Task<List<Roles>> GetAllRolesAsync();
 

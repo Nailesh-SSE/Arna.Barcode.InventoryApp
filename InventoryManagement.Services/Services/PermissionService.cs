@@ -1,4 +1,5 @@
 ﻿using InventoryManagement.Core.Entities;
+using InventoryManagement.Core.Enums;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
@@ -44,10 +45,10 @@ public class PermissionService : IPermissionService
 
             // 🔹 3. Store in cache
             _cache.Set(cacheKey,permissions,new MemoryCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
-                    SlidingExpiration = TimeSpan.FromMinutes(10)
-                });
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
+                SlidingExpiration = TimeSpan.FromMinutes(10)
+            });
 
             return permissions;
         }
@@ -78,8 +79,10 @@ public class PermissionService : IPermissionService
         if (role == null)
             return permissions;
 
+        var admin = "Admin";
+        var factoryAdmin = "FactoryAdmin";
         // 🔹 Admin shortcut
-        if (role.Name == "Admin")
+        if (role.Name.ToLower() == admin.ToLower())
         {
             permissions.Add(new UserFormPermissionModel
             {
@@ -90,6 +93,19 @@ public class PermissionService : IPermissionService
                 CanDelete = true
             });
 
+            return permissions;
+        }
+
+        if (role.Name.ToLower() == factoryAdmin.ToLower())
+        {
+            permissions.Add(new UserFormPermissionModel
+            {
+                Route = "*",
+                CanView = true,
+                CanCreate = true,
+                CanEdit = true,
+                CanDelete = true
+            });
             return permissions;
         }
 

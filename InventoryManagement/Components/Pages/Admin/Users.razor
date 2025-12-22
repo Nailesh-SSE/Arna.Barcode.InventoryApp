@@ -288,7 +288,8 @@ else
     private async Task LoadData()
     {
         isLoading = true;
-        users = (await UserService.GetAllUsersAsync())
+        var userRoleId = CurrentUserRoleId;
+        users = (await UserService.GetAllUsersAsync(userRoleId))
          .Select(u => new UserModel
          {
              Id = u.Id,
@@ -302,7 +303,7 @@ else
              IsActive = u.IsActive,
              RoleId = u.RoleId
          }).ToList();
-        roles = (await RoleService.GetAllRolesAsync()).ToList();
+        roles = (await RoleService.GetAllRolesAsync(userRoleId)).ToList();
         isLoading = false;
     }
 
