@@ -60,6 +60,14 @@ else
                 <GridColumn TItem="RoleModel" HeaderText="Name" PropertyName="Name">
                     @context.Name
                 </GridColumn>
+                @if (isShowRoleLevel)
+                {
+                    <GridColumn TItem="RoleModel" HeaderText="Role Level">
+                        <span style="color:@(context.RoleLevel < 5 ? "red" : "")">
+                            @context.RoleLevel
+                        </span>
+                    </GridColumn>
+                }
                 <GridColumn TItem="RoleModel" HeaderText="Status" PropertyName="IsActive">
                     @if (context.IsActive)
                     {
@@ -90,31 +98,40 @@ else
         </div>
     }
 
-<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Small">
-    <BodyTemplate>
-        <EditForm EditContext="@editContext" OnValidSubmit="SaveRole">
-            <DataAnnotationsValidator />
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Regular" UseStaticBackdrop>
+        <BodyTemplate>
+            <EditForm EditContext="@editContext" OnValidSubmit="SaveRole">
+                <DataAnnotationsValidator />
 
-            <div class="row">
-                <div class="col-12 mb-3">
-                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="roleModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
-                    <ValidationMessage For="@(() => roleModel.Name)" />
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="roleModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
+                        <ValidationMessage For="@(() => roleModel.Name)" />
+                    </div>
                 </div>
-            </div>
-            @if (roleModel.Id > 0)
-            {
-                <div class="mb-3">
-                    <InputCheckbox @bind-Value="roleModel.IsActive" /> Active
+                @if (isShowRoleLevel)
+                {
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Role Level <span class="text-danger">*</span></label>
+                            <InputNumber class="form-control" @bind-Value="roleModel.RoleLevel" min="0" />
+                        </div>
+                    </div>
+                }
+                @if (roleModel.Id > 0)
+                {
+                    <div class="mb-3">
+                        <InputCheckbox @bind-Value="roleModel.IsActive" /> Active
+                    </div>
+                }
+                <div class="text-end">
+                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
                 </div>
-            }
-            <div class="text-end">
-                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
-            </div>
-        </EditForm>
-    </BodyTemplate>
-</Modal>
+            </EditForm>
+        </BodyTemplate>
+    </Modal>
 }
 @code {
     private Modal modal { get; set; }
@@ -127,6 +144,7 @@ else
     private string Route = "/role";
     private EditContext editContext { get; set; }
     private ValidationMessageStore validationMessage;
+    private bool isShowRoleLevel = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -145,6 +163,9 @@ else
 
     private async Task LoadRole()
     {
+        var roles = await roleService.GetRoleByIdAync(CurrentUserRoleId);
+        if (roles != null && roles.RoleLevel <= 4)
+            isShowRoleLevel = true;
         var userRoleId = Convert.ToInt32(CurrentUserRoleId);
         roleList = await roleService.GetAllRolesAsync(userRoleId);
     }
@@ -155,7 +176,7 @@ else
         validationMessage = new ValidationMessageStore(editContext);
     }
 
-    private void ShowAddModal()
+    private async Task ShowAddModal()
     {
         modalTitle = "Add Role";
         isEditMode = false;
@@ -163,17 +184,24 @@ else
         {
             CreatedBy = Convert.ToInt32(CurrentUserId),
         };
+        var roles = await roleService.GetRoleByIdAync(CurrentUserRoleId);
+        if (roles != null && roles.RoleLevel <= 4)
+            isShowRoleLevel = true;
         InitializeEditContextAsync();
         modal.ShowAsync();
     }
-    private void ShowEditModal(RoleModel editRole)
+    private async Task ShowEditModal(RoleModel editRole)
     {
         modalTitle = "Edit Role";
         isEditMode = true;
+        var roles = await roleService.GetRoleByIdAync(CurrentUserRoleId);
+        if (roles != null && roles.RoleLevel <= 4)
+            isShowRoleLevel = true;
         roleModel = new RoleModel
         {
             Id = editRole.Id,
             Name = editRole.Name,
+            RoleLevel = editRole.RoleLevel,
             IsActive = editRole.IsActive,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
         };

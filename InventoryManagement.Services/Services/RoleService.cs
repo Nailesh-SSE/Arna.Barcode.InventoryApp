@@ -36,6 +36,7 @@ public class RoleService : IRoleService
         {
             Id = r.Id,
             Name = r.Name,
+            RoleLevel = r.RoleLevel,
             IsActive = r.IsActive,
             CreatedBy = r.CreatedBy,
             CreatedOn = r.CreatedOn,
@@ -45,18 +46,37 @@ public class RoleService : IRoleService
         }).ToList();
     }
 
+    public async Task<RoleModel> GetRoleByIdAync(int userRoleId)
+    {
+        var roleRepository = _unitOfWork.GetRepository<Roles>();
+        var role = await roleRepository.GetByIdAsync(userRoleId);
+        if (role == null) return null;
+        return new RoleModel
+        {
+            Id = role.Id,
+            Name = role.Name,
+            RoleLevel = role.RoleLevel,
+            IsActive = role.IsActive,
+            CreatedBy = role.CreatedBy,
+            CreatedOn = role.CreatedOn,
+            UpdatedBy = role.UpdatedBy,
+            UpdatedOn = role.UpdatedOn,
+            IsDeleted = role.IsDeleted
+        };
+    }
+
     public async Task<bool> CreateRoleAsync(RoleModel roleModel)
     {
         var RoleRepository = _unitOfWork.GetRepository<Roles>();
         var roleList = await RoleRepository.GetAllAsync();
         int maxRoleLevel = roleList.Any() ? roleList.Max(x => x.RoleLevel) : 0;
-        int nextRoleLevel = maxRoleLevel >= 5 ? maxRoleLevel + 1 : 5;
+        int nextRoleLevel = maxRoleLevel >= 5 ? maxRoleLevel + 1 : roleModel.RoleLevel;
 
         var Role = new Roles
         {
             Id = roleModel.Id,
             Name = roleModel.Name,
-            RoleLevel = nextRoleLevel,
+            RoleLevel = roleModel.RoleLevel > 0 ? roleModel.RoleLevel : nextRoleLevel,
             IsActive = true,
             IsDeleted = false,
             CreatedBy = roleModel.CreatedBy,
@@ -73,6 +93,7 @@ public class RoleService : IRoleService
 
         Role.Id = roleModel.Id;
         Role.Name = roleModel.Name;
+        Role.RoleLevel = roleModel.RoleLevel;
         Role.IsActive = roleModel.IsActive;
         Role.IsDeleted = roleModel.IsDeleted;
         Role.UpdatedBy = roleModel.UpdatedBy;
