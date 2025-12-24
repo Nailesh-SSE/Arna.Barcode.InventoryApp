@@ -19,11 +19,15 @@ public class FormMasterService : IFormMasterService
         var repo = _unitOfWork.GetRepository<FormMaster>();
         var forms = await repo.FindAsync(x => !x.IsDeleted);
 
-        return forms.Select(f => new FormMasterModel
+        return forms.OrderBy(f => f.ParentId).ThenBy(f => f.DisplayIndex).Select(f => new FormMasterModel
         {
             Id = f.Id,
             FormName = f.FormName,
             Route = f.Route,
+            DisplayIndex = f.DisplayIndex,
+            Icon = f.Icon,
+            ParentId = f.ParentId,
+            ParentName = f.ParentName,
             IsActive = f.IsActive
         }).ToList();
     }
@@ -53,31 +57,54 @@ public class FormMasterService : IFormMasterService
         {
             FormName = model.FormName.ToUpper(),
             Route = model.Route,
+            DisplayIndex = model.DisplayIndex,
+            Icon = model.Icon,
+            ParentId = model.ParentId,
+            ParentName = model.ParentName,
             IsActive = true,
             IsDeleted = false,
             CreatedBy = model.CreatedBy,
             CreatedOn = DateTime.UtcNow
         };
-
+        try
+        {
         await repo.AddAsync(entity);
         await _unitOfWork.SaveChangesAsync();
+
+        }catch(Exception ex)
+        {
+        }
         return true;
     }
 
     public async Task<bool> UpdateAsync(FormMasterModel model)
     {
-        var repo = _unitOfWork.GetRepository<FormMaster>();
-        var entity = await repo.GetByIdAsync(model.Id);
-        if (entity == null) return false;
+        try
+        {
 
-        entity.FormName = model.FormName.ToUpper();
-        entity.Route = model.Route;
-        entity.IsActive = model.IsActive;
-        entity.UpdatedBy = model.UpdatedBy;
-        entity.UpdatedOn = DateTime.UtcNow;
+            var repo = _unitOfWork.GetRepository<FormMaster>();
+            var entity = await repo.GetByIdAsync(model.Id);
+            if (entity == null) return false;
 
-        await _unitOfWork.SaveChangesAsync();
-        return true;
+            entity.FormName = model.FormName.ToUpper();
+            entity.Route = model.Route;
+            entity.DisplayIndex = model.DisplayIndex;
+            entity.Icon = model.Icon;
+            entity.ParentId = model.ParentId;
+            entity.ParentName = model.ParentName;
+            entity.IsActive = model.IsActive;
+            entity.UpdatedBy = model.UpdatedBy;
+            entity.UpdatedOn = DateTime.UtcNow;
+
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+
+        }
+        catch (Exception ex)
+        {
+
+            throw;
+        }
     }
 
     public async Task<bool> DeleteAsync(int id, int userId)
@@ -121,5 +148,37 @@ public class FormMasterService : IFormMasterService
             forms = forms.Where(x => x.Id != id);
 
         return !forms.Any();
+    }
+    public async Task<bool> IsDisplayIndexInUseAsync(int index,int? parentid, int id = 0)
+    {
+        var repo = _unitOfWork.GetRepository<FormMaster>();
+
+        var forms = await repo.FindAsync(x =>
+            !x.IsDeleted &&
+            x.ParentId == parentid &&
+            x.DisplayIndex == index);
+
+        if (id > 0)
+            forms = forms.Where(x => x.Id != id);
+
+        return !forms.Any();
+    }
+
+
+    public async Task<List<FormMasterModel>> GetParentFormsAsync()
+    {
+        var repo = _unitOfWork.GetRepository<FormMaster>();
+        var forms = await repo.FindAsync(x => x.IsActive && !x.IsDeleted && x.Route == "#");
+        return forms.Select(f => new FormMasterModel
+        {
+            Id = f.Id,
+            FormName = f.FormName,
+            Route = f.Route,
+            DisplayIndex = f.DisplayIndex,
+            Icon = f.Icon,
+            ParentId = f.ParentId,
+            ParentName = f.ParentName,
+            IsActive = f.IsActive
+        }).ToList();
     }
 }

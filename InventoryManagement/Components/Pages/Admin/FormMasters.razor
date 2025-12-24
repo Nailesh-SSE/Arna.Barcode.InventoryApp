@@ -73,15 +73,12 @@ else
                     @context.Route
                 </GridColumn>
 
-                <GridColumn TItem="FormMasterModel" HeaderText="Status" PropertyName="IsActive">
-                    @if (context.IsActive)
-                    {
-                        <Badge Color="BadgeColor.Success">Active</Badge>
-                    }
-                    else
-                    {
-                        <Badge Color="BadgeColor.Danger">Inactive</Badge>
-                    }
+                <GridColumn TItem="FormMasterModel" HeaderText="ParentForm" PropertyName="ParentId">
+                    @context.ParentName
+                </GridColumn>
+                
+                <GridColumn TItem="FormMasterModel" HeaderText="DisplayIndex" PropertyName="DisplayIndex">
+                    @context.DisplayIndex
                 </GridColumn>
 
                 <GridColumn TItem="FormMasterModel" HeaderText="Actions">
@@ -94,14 +91,14 @@ else
                                 <Icon Name="IconName.PencilSquare" /> Edit
                             </Button>
                         }
-                    @if (CanDelete("/form"))
-                    {
-                        <Button Color="ButtonColor.Danger"
-                                Size="ButtonSize.Small"
-                                @onclick="() => DeleteForm(context.Id)">
-                            <Icon Name="IconName.Trash" /> Delete
-                        </Button>
-                    }
+                        @if (CanDelete("/form"))
+                        {
+                            <Button Color="ButtonColor.Danger"
+                                    Size="ButtonSize.Small"
+                                    @onclick="() => DeleteForm(context.Id)">
+                                <Icon Name="IconName.Trash" /> Delete
+                            </Button>
+                        }
                     </div>
                 </GridColumn>
             </Grid>
@@ -137,6 +134,38 @@ else
                     <ValidationMessage For="@(() => formModel.Route)" />
                 </div>
             </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Parent Form</label>
+                    <InputSelect class="form-select" @bind-Value="formModel.ParentId">
+                        <option value="0">-- Select Parent Form --</option>
+                        @foreach (var form in parentformList)
+                        {
+                            <option value="@form.Id">@form.FormName</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => formModel.ParentId)" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">
+                        DisplayIndex <span class="text-danger">*</span>
+                    </label>
+                    <InputNumber class="form-control"
+                                 @bind-Value="formModel.DisplayIndex" min="1"
+                                 @oninput="HandleDisplayIndexChangeAsync" />
+                    <ValidationMessage For="@(() => formModel.DisplayIndex)" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">
+                        Icon <span class="text-danger">*</span>
+                    </label>
+                    <InputText class="form-control"
+                               @bind-Value="formModel.Icon" />
+                    <ValidationMessage For="@(() => formModel.Icon)" />
+                </div>
+            </div>
 
             @if (formModel.Id > 0)
             {
@@ -166,6 +195,7 @@ else
 
     private FormMasterModel formModel = new();
     private List<FormMasterModel> formList = new();
+    private List<FormMasterModel> parentformList = new();
 
     private Grid<FormMasterModel> FormGrid;
 
@@ -182,6 +212,7 @@ else
     {
         isLoading = true;
         formList = await FormService.GetAllAsync();
+        parentformList = await FormService.GetParentFormsAsync();
         isLoading = false;
     }
 
@@ -215,6 +246,10 @@ else
             Id = model.Id,
             FormName = model.FormName,
             Route = model.Route,
+            DisplayIndex = model.DisplayIndex,
+            Icon = model.Icon,
+            ParentId = model.ParentId,
+            ParentName = model.ParentName,
             IsActive = model.IsActive,
             UpdatedBy = UserId
         };
@@ -232,6 +267,11 @@ else
         if (editContext.GetValidationMessages().Any())
             return;
 
+        await ValidateIsDisplayIndexInUseAsync();
+        if (editContext.GetValidationMessages().Any())
+            return;
+
+        formModel.ParentName = formList.FirstOrDefault(f => f.Id == formModel.ParentId)?.FormName ?? string.Empty;
         if (isEditMode)
             await FormService.UpdateAsync(formModel);
         else
@@ -265,7 +305,6 @@ else
         {
             var isUnique = await FormService.IsFormNameUniqueAsync(
                 formModel.FormName, formModel.Id);
-
             if (!isUnique)
                 validationMessage.Add(() => formModel.FormName, "Form name already exists");
 
@@ -273,14 +312,48 @@ else
         }
     }
 
+    private async Task ValidateDisplayIndexAsync()
+    {
+        validationMessage.Clear(() => formModel.DisplayIndex);
+        if (formModel.DisplayIndex == 0)
+        {
+            validationMessage.Add(() => formModel.DisplayIndex, "Please select DisplayIndex");
+        }
+        editContext.NotifyValidationStateChanged();
+    }
+    private async Task ValidateIsDisplayIndexInUseAsync()
+    {
+        validationMessage.Clear(() => formModel.DisplayIndex);
+        var isUnique = await FormService.IsDisplayIndexInUseAsync(
+            formModel.DisplayIndex,
+            formModel.ParentId,
+            formModel.Id);
+
+        if (!isUnique)
+        {
+            validationMessage.Add(
+                () => formModel.DisplayIndex,
+                "Display Index already exists for the selected Parent Form");
+        }
+        editContext.NotifyValidationStateChanged();
+    }
+
     private async Task HandleNameChangeAsync(string value)
     {
         formModel.FormName = value;
         await ValidateDuplicateNameAsync();
     }
+    private async Task HandleDisplayIndexChangeAsync(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int index))
+        {
+            formModel.DisplayIndex = index;
+            await ValidateDisplayIndexAsync();
+        }
+    }
     private void GoHome()
     {
         NavigationManager.NavigateTo("/");
-    }
+    }  
 
 }
