@@ -1,6 +1,9 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using InventoryManagement.Components.Auth
 @inherits AuthComponentBase
+@inject IRoleService RoleService
+@inject IFormPermissionService Service
+@inject IFormMasterService FormService
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -8,118 +11,129 @@
     </div>
 </div>
 
-
-
 <div class="nav-scrollable">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <Icon Name="IconName.HouseDoorFill" />&nbsp; Home
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <div class="nav-link text-white fw-bold">
-                <Icon Name="IconName.Building" />&nbsp; Master Data
-            </div>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="categories">
-                <Icon Name="IconName.Tags" />&nbsp; Categories
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="platforms">
-                <Icon Name="IconName.Stack" />&nbsp; Platforms
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="products">
-                <Icon Name="IconName.Box" />&nbsp; Products
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="companies/make-to">
-                <Icon Name="IconName.Tags" />&nbsp; Brands
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="companies/ship-to">
-                <Icon Name="IconName.Truck" />&nbsp; Ship To Companies
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="companies/bill-to">
-                <Icon Name="IconName.Receipt" />&nbsp; Bill To Companies
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="colour">
-                <Icon Name="IconName.Palette" />&nbsp; Colours
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <div class="nav-link text-white fw-bold">
-                <Icon Name="IconName.ClipboardData" />&nbsp; Inventory Management
-            </div>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="inward">
-                <Icon Name="IconName.ArrowDownCircle" />&nbsp; Inward
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="outward">
-                <Icon Name="IconName.ArrowUpCircle" />&nbsp; Outward
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 ms-3">
-            <NavLink class="nav-link" href="sale-returns">
-                <Icon Name="IconName.ArrowReturnLeft" />&nbsp; Sales Return
-            </NavLink>
-        </div>
-
-        @if (IsAdmin() || IsFactoryAdmin())
+    @if (isLoading)
+    {
+        <div class="px-3 text-white">Loading menu...</div>
+    }
+    else if (formList?.Any() == true)
+    {
+        @foreach (var parent in parentformList)
         {
+            <!-- HEADER -->
             <div class="nav-item px-3">
                 <div class="nav-link text-white fw-bold">
-                    <Icon Name="IconName.Gear" />&nbsp; Administration
+                    @if (GetIcon(parent.Icon) is IconName parentIcon)
+                    {
+                        <Icon Name="@parentIcon" class="me-2" />
+                    }
+                    &nbsp; @FormatName(parent.FormName)
                 </div>
             </div>
 
-            <div class="nav-item px-3 ms-3">
-                <NavLink class="nav-link" href="form">
-                    <Icon Name="IconName.FileEarmarkText" />&nbsp; Form Master
-                </NavLink>
-            </div>
-
-            <div class="nav-item px-3 ms-3">
-                <NavLink class="nav-link" href="form-permission">
-                    <Icon Name="IconName.ShieldLock" />&nbsp; Form Permission
-                </NavLink>
-            </div>
-
-            <div class="nav-item px-3 ms-3">
-                <NavLink class="nav-link" href="users">
-                    <Icon Name="IconName.People" />&nbsp; Users
-                </NavLink>
-            </div>
-            <div class="nav-item px-3 ms-3">
-                <NavLink class="nav-link" href="role">
-                    <Icon Name="IconName.FilePerson" />&nbsp; Roles
-                </NavLink>
-            </div>
+            <!-- CHILD MENU -->
+            @if (childForms.TryGetValue(parent.Id, out var children))
+            {
+                @foreach (var form in children)
+                {
+                    <div class="nav-item px-3 ms-3">
+                        <NavLink class="nav-link" href="@form.Route">
+                            @if (GetIcon(form.Icon) is IconName childIcon)
+                            {
+                                <Icon Name="@childIcon" class="me-2" />
+                            }
+                            &nbsp; @FormatName(form.FormName)
+                        </NavLink>
+                    </div>
+                }
+            }
         }
-    </nav>
+    }
 </div>
+
+@code
+{
+    private bool isLoading = true;
+
+    private List<FormMasterModel> formList = new();
+    private List<FormMasterModel> parentformList = new();
+    private List<FormPermissionModel> permissionList = new();
+    private Dictionary<int, List<FormMasterModel>> childForms = new();
+
+    private List<RoleModel> roles = new();
+
+    private int UserRoleId;
+    private int UserLevel;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await LoadForms();
+    }
+
+    private IconName? GetIcon(string icon)
+    {
+        if (string.IsNullOrWhiteSpace(icon))
+            return null;
+
+        return Enum.TryParse<IconName>(icon, out var result)
+            ? result
+            : null;
+    }
+
+    private async Task LoadForms()
+    {
+        isLoading = true;
+        parentformList = await FormService.GetParentFormsAsync();
+        formList = await FormService.GetAllAsync();
+
+        UserRoleId = Convert.ToInt32(CurrentUserRoleId);
+        if (UserRoleId == 0)
+        {
+            BuildDictionary();
+            isLoading = false;
+            return;
+        }
+
+        roles = await RoleService.GetAllRolesAsync(UserRoleId);
+        UserLevel = roles.First(r => r.Id == UserRoleId).RoleLevel;
+
+        permissionList = await Service.GetAllAsync(UserRoleId);
+
+        if (UserLevel > 5)
+        {
+            var permittedFormIds = permissionList
+                .Where(p => p.RoleId == UserRoleId)
+                .Select(p => p.FormId)
+                .ToList();
+
+            formList = formList
+                .Where(f => permittedFormIds.Contains(f.Id))
+                .ToList();
+
+            var parentIdsInUse = formList
+            .Where(f => f.ParentId != null)
+            .Select(f => f.ParentId.Value)
+            .Distinct()
+            .ToList();
+
+            parentformList = parentformList
+                .Where(p => parentIdsInUse.Contains(p.Id))
+                .ToList();
+        }
+        BuildDictionary();
+        isLoading = false;
+    }
+    private void BuildDictionary()
+    {
+        childForms = formList
+            .Where(f => f.ParentId != null)
+            .GroupBy(f => f.ParentId!.Value)
+            .ToDictionary(g => g.Key, g => g.ToList());
+    }
+
+    private static string FormatName(string name)
+    {
+        return char.ToUpper(name[0]) + name[1..].ToLower();
+    }
+}

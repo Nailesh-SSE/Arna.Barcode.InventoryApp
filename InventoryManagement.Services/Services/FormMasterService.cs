@@ -169,7 +169,7 @@ public class FormMasterService : IFormMasterService
     {
         var repo = _unitOfWork.GetRepository<FormMaster>();
         var forms = await repo.FindAsync(x => x.IsActive && !x.IsDeleted && x.Route == "#");
-        return forms.Select(f => new FormMasterModel
+        return forms.OrderBy(f => f.DisplayIndex).Select(f => new FormMasterModel
         {
             Id = f.Id,
             FormName = f.FormName,
