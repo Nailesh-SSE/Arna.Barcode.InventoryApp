@@ -91,14 +91,14 @@ else
 
     private async Task LoadData()
     {
-        StateHasChanged();
+        isLoading = true;
         inwards = (await InwardService.GetAllAsync()).ToList();
         shipCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
         MakeCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo)).ToList();
         categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
         products = (await ProductService.GetAllProductsAsync()).Where(e => e.IsActive == true).ToList();
-
-        StateHasChanged();
+        isLoading = false;
+        
     }
 
     private void ShowAddModal()
@@ -170,7 +170,7 @@ else
                 inward.Id = inwardId;
                 await OpenAddItemModal(inward);
             }
-        }
+        }       
     }
 
     private async Task DeleteInward(int id)

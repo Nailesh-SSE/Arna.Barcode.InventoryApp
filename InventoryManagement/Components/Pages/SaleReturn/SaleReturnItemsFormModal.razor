@@ -133,12 +133,14 @@
 
                                         <!-- TAKE TO STOCK -->
                                         <td>
-                                            <InputSelect class="form-select" @bind-Value="@item.IsTakeInStock">
-                                                @foreach (var take in TakeToStock)
-                                                {
-                                                    <option value="@take.Id">@take.Name</option>
-                                                }
-                                            </InputSelect>
+                                        <InputSelect TValue="bool"
+                                                     class="form-select"
+                                                     @bind-Value="item.IsTakeInStock">
+
+                                            <option value="true">Yes</option>
+                                            <option value="false">No</option>
+
+                                        </InputSelect>
                                         </td>
 
                                         <!-- REASON -->
@@ -219,7 +221,7 @@
     [Parameter] public List<OutwardModel?> OutwardList { get; set; } = new();
 
     public List<UnitModel> Units => CommonUtils.UnitList;
-    public List<TakeToStockModel> TakeToStock => CommonUtils.TaskeToList;
+
 
     [Parameter] public EventCallback<SaleReturnItemsModel> OnSave { get; set; }
     [Parameter] public EventCallback<OperationResponse> OnSaveResponse { get; set; }

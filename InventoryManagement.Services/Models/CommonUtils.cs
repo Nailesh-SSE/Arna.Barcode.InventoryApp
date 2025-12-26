@@ -7,11 +7,4 @@ public static class CommonUtils
         new UnitModel { Id = 1, Name = "PCS" },
         new UnitModel { Id = 2, Name = "BOX" }
     };
-
-    public static List<TakeToStockModel> TaskeToList = new()
-    {
-        new TakeToStockModel{Id=0, Name="Other"},
-        new TakeToStockModel{ Id=1,Name="TakeToStock"}
-
-    };
 }
