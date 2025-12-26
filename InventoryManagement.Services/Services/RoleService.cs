@@ -53,7 +53,35 @@ public class RoleService : IRoleService
 
             throw;
         }
-    
+     
+    }
+
+    public async Task<RoleModel?> GetRoleByIdAync(int userRoleId)
+    {
+        try
+        {
+            var roleRepository = _unitOfWork.GetRepository<Roles>();
+            var role = await roleRepository.GetByIdAsync(userRoleId);
+            if (role == null) return null;
+            return new RoleModel
+            {
+                Id = role.Id,
+                Name = role.Name,
+                RoleLevel = role.RoleLevel,
+                IsActive = role.IsActive,
+                CreatedBy = role.CreatedBy,
+                CreatedOn = role.CreatedOn,
+                UpdatedBy = role.UpdatedBy,
+                UpdatedOn = role.UpdatedOn,
+                IsDeleted = role.IsDeleted
+            };
+        }
+        catch (Exception ex)
+        {
+
+            throw;
+        }
+     
     }
 
     public async Task<bool> CreateRoleAsync(RoleModel roleModel)
@@ -61,13 +89,13 @@ public class RoleService : IRoleService
         var RoleRepository = _unitOfWork.GetRepository<Roles>();
         var roleList = await RoleRepository.GetAllAsync();
         int maxRoleLevel = roleList.Any() ? roleList.Max(x => x.RoleLevel) : 0;
-        int nextRoleLevel = maxRoleLevel >= 5 ? maxRoleLevel + 1 : 5;
+        int nextRoleLevel = maxRoleLevel >= 5 ? maxRoleLevel + 1 : roleModel.RoleLevel;
 
         var Role = new Roles
         {
             Id = roleModel.Id,
             Name = roleModel.Name,
-            RoleLevel = nextRoleLevel,
+            RoleLevel = roleModel.RoleLevel > 0 ? roleModel.RoleLevel : nextRoleLevel,
             Remark = roleModel.Description,
             IsActive = true,
             IsDeleted = false,
@@ -83,9 +111,13 @@ public class RoleService : IRoleService
         var roleRepository = _unitOfWork.GetRepository<Roles>();
         var Role = await roleRepository.GetByIdAsync(roleModel.Id);
 
+        if (Role == null)
+            return false;
+
         Role.Id = roleModel.Id;
         Role.Name = roleModel.Name;
-        Role.Remark= roleModel.Description;
+        Role.RoleLevel = roleModel.RoleLevel;
+        Role.Remark = roleModel.Description;
         Role.IsActive = roleModel.IsActive;
         Role.IsDeleted = roleModel.IsDeleted;
         Role.UpdatedBy = roleModel.UpdatedBy;
@@ -110,7 +142,7 @@ public class RoleService : IRoleService
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
-        catch (Exception ex)
+        catch
         {
             return false;
         }

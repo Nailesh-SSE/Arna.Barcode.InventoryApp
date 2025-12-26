@@ -44,7 +44,7 @@ public class PermissionService : IPermissionService
             var permissions = await LoadPermissionsFromDbAsync(userId);
 
             // 🔹 3. Store in cache
-            _cache.Set(cacheKey,permissions,new MemoryCacheEntryOptions
+            _cache.Set(cacheKey, permissions, new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
                 SlidingExpiration = TimeSpan.FromMinutes(10)
@@ -112,21 +112,23 @@ public class PermissionService : IPermissionService
         var forms = await formRepo.FindAsync(x => !x.IsDeleted && x.IsActive);
         var rolePerms = await rolePermRepo.FindAsync(x =>
             x.RoleId == role.Id && !x.IsDeleted);
-
-        foreach (var form in forms)
+        if (forms.Any())
         {
-            var rolePerm = rolePerms.FirstOrDefault(x => x.FormId == form.Id);
-
-            if (rolePerm != null)
+            foreach (var form in forms)
             {
-                permissions.Add(new UserFormPermissionModel
+                var rolePerm = rolePerms.FirstOrDefault(x => x.FormId == form.Id);
+
+                if (rolePerm != null)
                 {
-                    Route = form.Route,
-                    CanView = rolePerm.CanView,
-                    CanCreate = rolePerm.CanCreate,
-                    CanEdit = rolePerm.CanEdit,
-                    CanDelete = rolePerm.CanDelete
-                });
+                    permissions.Add(new UserFormPermissionModel
+                    {
+                        Route = form.Route,
+                        CanView = rolePerm.CanView,
+                        CanCreate = rolePerm.CanCreate,
+                        CanEdit = rolePerm.CanEdit,
+                        CanDelete = rolePerm.CanDelete
+                    });
+                }
             }
         }
 

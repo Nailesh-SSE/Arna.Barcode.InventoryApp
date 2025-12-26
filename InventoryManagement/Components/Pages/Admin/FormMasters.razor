@@ -214,7 +214,8 @@ else
         {
             isLoading = true;
             formList = await FormService.GetAllAsync();
-            parentformList = await FormService.GetParentFormsAsync();
+                if (formList.Any())
+                    parentformList = formList.Where(a => a.Route == "#").ToList();
             isLoading = false;
         }
         catch (Exception ex)

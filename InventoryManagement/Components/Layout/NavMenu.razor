@@ -88,46 +88,51 @@
     {
         try
         {
-              isLoading = true;
-              parentformList = await FormService.GetParentFormsAsync();
-              formList = await FormService.GetAllAsync();
+            isLoading = true;
+            formList = await FormService.GetAllAsync();
 
-             UserRoleId = Convert.ToInt32(CurrentUserRoleId);
-             if (UserRoleId == 0)
-             {
-                 BuildDictionary();
-                 isLoading = false;
-                 return;
-             }
+            if(formList.Any())      
+                parentformList = formList.Where(a=>a.Route=="#").ToList();
 
-        roles = await RoleService.GetAllRolesAsync(UserRoleId);
-        UserLevel = roles.First(r => r.Id == UserRoleId).RoleLevel;
+            UserRoleId = Convert.ToInt32(CurrentUserRoleId);
+            if (UserRoleId == 0)
+            {
+                BuildDictionary();
+                isLoading = false;
+                return;
+            }
+           await Task.Delay(500);
+            roles = await RoleService.GetAllRolesAsync(UserRoleId);
+            UserLevel = roles.First(r => r.Id == UserRoleId).RoleLevel;
 
-        permissionList = await Service.GetAllAsync(UserRoleId);
+              await Task.Delay(500);
+            permissionList = await Service.GetAllAsync(UserRoleId);
+            if (permissionList.Any())
+            {
+                if (UserLevel > 5)
+                {
+                    var permittedFormIds = permissionList
+                        .Where(p => p.RoleId == UserRoleId)
+                        .Select(p => p.FormId)
+                        .ToList();
 
-        if (UserLevel > 5)
-        {
-            var permittedFormIds = permissionList
-                .Where(p => p.RoleId == UserRoleId)
-                .Select(p => p.FormId)
-                .ToList();
+                    formList = formList
+                        .Where(f => permittedFormIds.Contains(f.Id))
+                        .ToList();
 
-            formList = formList
-                .Where(f => permittedFormIds.Contains(f.Id))
-                .ToList();
+                    var parentIdsInUse = formList
+                    .Where(f => f.ParentId != null)
+                    .Select(f => f.ParentId.Value)
+                    .Distinct()
+                    .ToList();
 
-            var parentIdsInUse = formList
-            .Where(f => f.ParentId != null)
-            .Select(f => f.ParentId.Value)
-            .Distinct()
-            .ToList();
-
-            parentformList = parentformList
-                .Where(p => parentIdsInUse.Contains(p.Id))
-                .ToList();
-        }
-        BuildDictionary();
-        isLoading = false;
+                    parentformList = parentformList
+                        .Where(p => parentIdsInUse.Contains(p.Id))
+                        .ToList();
+                }
+            }
+            BuildDictionary();
+           isLoading = false;
         }
         catch (Exception ex)
         {
