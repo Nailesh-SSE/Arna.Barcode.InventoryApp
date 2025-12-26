@@ -6,7 +6,8 @@ namespace InventoryManagement.Services.Models
     {
         public int Id { get; set; }
 
-        [StringLength(50)]
+        [StringLength(20)]
         public string Name { get; set; }
+        public int RoleLevel { get; set; }
     }
 }

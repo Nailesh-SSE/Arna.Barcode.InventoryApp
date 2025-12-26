@@ -36,6 +36,7 @@ public class RoleService : IRoleService
         {
             Id = r.Id,
             Name = r.Name,
+            RoleLevel = r.RoleLevel,
             IsActive = r.IsActive,
             CreatedBy = r.CreatedBy,
             CreatedOn = r.CreatedOn,
