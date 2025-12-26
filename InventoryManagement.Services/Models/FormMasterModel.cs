@@ -13,7 +13,10 @@ public class FormMasterModel
     [Required(ErrorMessage = "Route is required")]
     [StringLength(200)]
     public string Route { get; set; } = string.Empty;
-
+    public int DisplayIndex { get; set; }
+    public string Icon { get; set; } = string.Empty;
+    public int? ParentId { get; set; }
+    public string? ParentName { get; set; }
     public bool IsActive { get; set; } = true;
 
     public int CreatedBy { get; set; }

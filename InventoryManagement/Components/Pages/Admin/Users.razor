@@ -53,6 +53,7 @@ else
                   Class="table table-hover table-bordered table-striped"
                   AllowPaging="true"
                   PageSize="10"
+                  Responsive=true
                   @ref="userGrid">
 
                 <GridColumn TItem="UserModel" HeaderText="No">
@@ -111,6 +112,16 @@ else
     <!-- MODAL -->
     <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
         <BodyTemplate>
+            <div>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+                        <button type="button" class="btn-close" @onclick="@(() => errorMessage = "")"></button>
+                    </div>
+                }
+
+            </div>
             <EditForm EditContext="@editContext" OnValidSubmit="SaveUser" autocomplete="off">
                 <!-- Browser autofill trap fields -->
                 <input type="text" style="display:none" autocomplete="username" />
@@ -119,24 +130,28 @@ else
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">First Name *</label>
+                        <label class="form-label">First Name<span class="text-danger">*</span></label>
                         <InputText class="form-control"
+                                   placeholder="Enter first name"
                                    @bind-Value="userModel.FirstName"
                                    @oninput="HandleFirstNameChange" />
+                                  
                         <ValidationMessage For="@(() => userModel.FirstName)" />
                     </div>
 
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Last Name *</label>
+                        <label class="form-label">Last Name<span class="text-danger">*</span></label>
                         <InputText class="form-control"
+                                   placeholder="Enter last name"    
                                    @bind-Value="userModel.LastName"
                                    @oninput="HandleLastNameChange" />
                         <ValidationMessage For="@(() => userModel.LastName)" />
                     </div>
 
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Username *</label>
+                        <label class="form-label">Username<span class="text-danger">*</span></label>
                         <InputText class="form-control"
+                                   placeholder="Enter username"
                                    autocomplete="off"
                                    @bind-Value="userModel.UserName"
                                    @oninput="HandleUsernameChange" />
@@ -144,62 +159,82 @@ else
                     </div>
 
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Email *</label>
+                        <label class="form-label">Email<span class="text-danger">*</span></label>
                         <InputText class="form-control"
+                                   placeholder="Enter email address"
                                    @bind-Value="userModel.Email"
                                    @oninput="HandleEmailChange" />
                         <ValidationMessage For="@(() => userModel.Email)" />
                     </div>
 
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Phone *</label>
+                        <label class="form-label">Phone<span class="text-danger">*</span></label>
                         <InputText class="form-control"
+                                   placeholder="Enter  phone number"
                                    @bind-Value="userModel.ContactNo"
                                    @oninput="HandlePhoneChange" />
                         <ValidationMessage For="@(() => userModel.ContactNo)" />
                     </div>
 
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Role *</label>
+                        <label class="form-label">Role<span class="text-danger">*</span></label>
                         <DropDown TItem="RoleModel"
                                   Items="@roles"
                                   SelectedId="@userModel.RoleId"
                                   ValueSelector="x => x.Id"
                                   TextSelector="x => x.Name"
                                   Placeholder="-- Select Role --"
-                                  OnValueChanged="OnRoleSelected" />
+                                  OnValueChanged="HandleRole" />
                         <ValidationMessage For="@(() => userModel.RoleId)" />
                     </div>
-
-                    <!-- PASSWORD -->
-                    <div class="col-md-6 mb-3">
+                                      
+                          <!-- PASSWORD -->
+                        <div class="col-md-6 mb-3">
                         <label class="form-label">
                             Password
                             <span class="text-danger">*</span>
                         </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <Icon Name="IconName.Lock" />
+                            </span>
+                            <InputText @bind-Value="userModel.Password"
+                                       class="form-control"
+                                       placeholder="Password"
+                                       type="@passwordInputType"
+                                       @oninput="HandlePasswordChange" />
 
-                        <InputText type="password"
-                                   class="form-control"
-                                   autocomplete="off"
-                                   @bind-Value="userModel.Password"
-                                   @oninput="HandlePasswordChange" />
+                            <button class="btn btn-outline-secondary"
+                                    type="button"
+                                    @onclick="TogglePasswordVisibility">
+                                <i class="@passwordToggleIcon"></i>
+                            </button>
+                        </div>
 
-                        <ValidationMessage For="@(() => userModel.Password)" />
+                        <ValidationMessage For="@(() => userModel.Password)" class="text-danger small" />
                     </div>
-
+                   
                     <div class="col-md-6 mb-3">
                         <label class="form-label">
                             Confirm Password
                             <span class="text-danger">*</span>
                         </label>
-
-                        <InputText type="password"
-                                   class="form-control"
-                                   @bind-Value="confirmPassword"
-                                   @oninput="HandleConfirmPasswordChange" />
-
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <Icon Name="IconName.Lock" />
+                            </span>
+                            <InputText @bind-Value="confirmPassword"
+                                       class="form-control"
+                                       type="@conformPasswordInputType"
+                                       @oninput="HandleConfirmPasswordChange" />
+                            <button class="btn btn-outline-secondary"
+                                    type="button"
+                                    @onclick="ToggleConformPasswordVisibility">
+                                <i class="@conformPasswordToggleIcon"></i>
+                            </button>
+                        </div>
                         <ValidationMessage For="@(() => confirmPassword)" />
-                    </div>
+                    </div>               
                 </div>
 
                 @if (userModel.Id > 0)
@@ -222,6 +257,16 @@ else
 
     private Modal modal = default!;
     private string modalTitle = "Add User";
+    private string errorMessage = string.Empty;
+    private bool showPassword = false;
+    private bool showConformPassword = false;
+
+
+    private string passwordInputType => showPassword ? "text" : "password";
+    private string conformPasswordInputType => showConformPassword ? "text" : "password";
+
+    private string passwordToggleIcon => showPassword ? "bi bi-eye-slash" : "bi bi-eye";
+    private string conformPasswordToggleIcon => showConformPassword ? "bi bi-eye-slash" : "bi bi-eye";
 
     private Grid<UserModel> userGrid = default!;
     private List<UserModel> users = new();
@@ -243,7 +288,8 @@ else
     private async Task LoadData()
     {
         isLoading = true;
-        users = (await UserService.GetAllUsersAsync())
+        var userRoleId = CurrentUserRoleId;
+        users = (await UserService.GetAllUsersAsync(userRoleId))
          .Select(u => new UserModel
          {
              Id = u.Id,
@@ -257,7 +303,7 @@ else
              IsActive = u.IsActive,
              RoleId = u.RoleId
          }).ToList();
-        roles = (await RoleService.GetAllRolesAsync()).ToList();
+        roles = (await RoleService.GetAllRolesAsync(userRoleId)).ToList();
         isLoading = false;
     }
 
@@ -271,9 +317,10 @@ else
     private async Task ShowAddModal()
     {
         modalTitle = "Add User";
+        errorMessage = string.Empty;
         userModel = new UserModel
         {
-            IsActive = true,
+            IsActive = true,          
             CreatedBy = Convert.ToInt32(CurrentUserId)
         };
 
@@ -284,7 +331,7 @@ else
     private async Task ShowEditModal(UserModel user)
     {
         modalTitle = "Edit User";
-
+        errorMessage = string.Empty;
         userModel = new UserModel
         {
             Id = user.Id,
@@ -296,9 +343,10 @@ else
             CreatedBy = user.CreatedBy,
             RoleId = user.RoleId,
             IsActive = user.IsActive,
+            Password= user.Password,
             UpdatedBy = Convert.ToInt32(CurrentUserId)
         };
-
+        confirmPassword = user.Password;
         InitializeEditContext();
         await modal.ShowAsync();
     }
@@ -312,6 +360,8 @@ else
         if (editContext.GetValidationMessages().Any())
             return;
 
+        var result = await ValidateDuplicate(userModel.Id, userModel.UserName, userModel.ContactNo, userModel.Email);
+        if (!result) return;
         if (userModel.Id > 0)
             await UserService.UpdateUserAsync(userModel);
         else
@@ -337,76 +387,125 @@ else
 
     private async Task ValidateAllFieldsAsync()
     {
-        ValidateFirstName();
-        ValidateLastName();
-        ValidateUsername();
-        ValidateEmail();
-        ValidatePhone();
-        ValidateRole();
-        ValidatePassword();
-        ValidateConfirmPassword();
-
-        editContext.NotifyValidationStateChanged();
+        await ValidateFirstName();
+        await ValidateLastName();
+        await ValidateUsername();
+        await ValidateEmail();
+        await ValidatePhone();
+        await ValidateRole();
+        await ValidatePassword();
+        await ValidateConfirmPassword();
+        await ValidateArePasswordsSame();
     }
 
-    private void ValidateFirstName()
+    private async Task ValidateFirstName()
     {
         messageStore.Clear(() => userModel.FirstName);
-        if (string.IsNullOrWhiteSpace(userModel.FirstName))
+        var firstName = userModel.FirstName?.Trim();
+
+        if (string.IsNullOrWhiteSpace(firstName))
+        {
             messageStore.Add(() => userModel.FirstName, "First name is required.");
+        }
+        else if (!firstName.All(char.IsAsciiLetter))
+        {
+            messageStore.Add(() => userModel.FirstName, "First name only allow Character.");
+        }
+        editContext.NotifyValidationStateChanged();
+
     }
 
-    private void ValidateLastName()
+    private async Task ValidateLastName()
     {
         messageStore.Clear(() => userModel.LastName);
-        if (string.IsNullOrWhiteSpace(userModel.LastName))
+        var lastName = userModel.LastName?.Trim();
+        if (string.IsNullOrWhiteSpace(lastName))
+        {
             messageStore.Add(() => userModel.LastName, "Last name is required.");
+        }
+        else if (!lastName.All(char.IsAsciiLetter))
+        {
+            messageStore.Add(() => userModel.LastName, "Last name only allow Character.");
+        }
+      
+        editContext.NotifyValidationStateChanged();
+
     }
 
-    private void ValidateUsername()
+    private async Task ValidateUsername()
     {
         messageStore.Clear(() => userModel.UserName);
         if (string.IsNullOrWhiteSpace(userModel.UserName))
             messageStore.Add(() => userModel.UserName, "Username is required.");
+        editContext.NotifyValidationStateChanged();
+
     }
 
-    private void ValidateEmail()
+    private async Task ValidateEmail()
     {
         messageStore.Clear(() => userModel.Email);
         if (string.IsNullOrWhiteSpace(userModel.Email))
             messageStore.Add(() => userModel.Email, "Email is required.");
+        editContext.NotifyValidationStateChanged();
+
     }
 
-    private void ValidatePhone()
+    private async Task ValidatePhone()
     {
         messageStore.Clear(() => userModel.ContactNo);
         if (string.IsNullOrWhiteSpace(userModel.ContactNo))
+        {
             messageStore.Add(() => userModel.ContactNo, "Phone is required.");
+        }
+        else if (!userModel.ContactNo.All(char.IsDigit))
+        {
+            messageStore.Add(() => userModel.ContactNo, "Phone only allow digits.");
+        }
+        else if (userModel.ContactNo?.Length != 10)
+        {
+            messageStore.Add(() => userModel.ContactNo, "Phone Number must be 10 digit");
+        }
+        editContext.NotifyValidationStateChanged();
+
     }
 
-    private void ValidateRole()
+    private async Task ValidateRole()
     {
         messageStore.Clear(() => userModel.RoleId);
         if (userModel.RoleId == 0)
             messageStore.Add(() => userModel.RoleId, "Please select role.");
+        editContext.NotifyValidationStateChanged();
+
     }
 
-    private void ValidatePassword()
+    private async Task ValidatePassword()
     {
         messageStore.Clear(() => userModel.Password);
         if (string.IsNullOrWhiteSpace(userModel.Password))
             messageStore.Add(() => userModel.Password, "Password is required.");
-    }
+        editContext.NotifyValidationStateChanged();
 
-    private void ValidateConfirmPassword()
+    }
+    private async Task ValidateArePasswordsSame()
+    {
+        messageStore.Clear(() => confirmPassword);
+
+        if (!string.IsNullOrWhiteSpace(userModel.Password) &&
+            userModel.Password != confirmPassword)        
+            messageStore.Add(() => confirmPassword, "Passwords do not match.");                 
+        
+        editContext.NotifyValidationStateChanged();
+        
+    }
+    private async Task ValidateConfirmPassword()
     {
         messageStore.Clear(() => confirmPassword);
 
         if (string.IsNullOrWhiteSpace(confirmPassword))
             messageStore.Add(() => confirmPassword, "Confirm password is required.");
-        else if (!string.IsNullOrWhiteSpace(userModel.Password)
-                 && userModel.Password != confirmPassword)
-            messageStore.Add(() => confirmPassword, "Passwords do not match.");
+
+        editContext.NotifyValidationStateChanged();
+
     }
     private bool IsValidEmailFormat(string email)
     {
@@ -420,18 +519,77 @@ else
             return false;
         }
     }
+    private async Task<bool> ValidateDuplicate(int? id, string userName, string phone, string email)
+    {
+        errorMessage = string.Empty;
+        var result = await UserService.CheckDuplicate(id, userName, phone, email);
 
-    private void HandleFirstNameChange(ChangeEventArgs e) => userModel.FirstName = e.Value?.ToString() ?? "";
-    private void HandleLastNameChange(ChangeEventArgs e) => userModel.LastName = e.Value?.ToString() ?? "";
-    private void HandleUsernameChange(ChangeEventArgs e) => userModel.UserName = e.Value?.ToString() ?? "";
-    private void HandleEmailChange(ChangeEventArgs e) => userModel.Email = e.Value?.ToString() ?? "";
-    private void HandlePhoneChange(ChangeEventArgs e) => userModel.ContactNo = e.Value?.ToString() ?? "";
-    private void HandlePasswordChange(ChangeEventArgs e) => userModel.Password = e.Value?.ToString() ?? "";
-    private void HandleConfirmPasswordChange(ChangeEventArgs e) => confirmPassword = e.Value?.ToString() ?? "";
+        string userNameError = (result.UserNameExists) ? "Username " : string.Empty;
+        string phoneError = (result.PhoneExists) ? "Phone " : string.Empty;
+        string emailError = (result.EmailExists) ? "Email " : string.Empty;
+        if (userNameError != string.Empty || phoneError != string.Empty || emailError != string.Empty)
+        {
+            errorMessage = userNameError + " " + phoneError + " " + emailError + " Already Exist";
+            return false;
+        }
+        return true;
+    }
+    private async Task TogglePasswordVisibility()
+    {
+        showPassword = !showPassword;
+    }
+    private async Task ToggleConformPasswordVisibility()
+    {
+        showConformPassword = !showConformPassword;
+    }
 
-    private void OnRoleSelected((int? Id, string Name) selected)
-        => userModel.RoleId = selected.Id ?? 0;
+    private async Task HandleFirstNameChange(ChangeEventArgs e)
+    {
+        userModel.FirstName = e.Value?.ToString() ?? "";
+        await ValidateFirstName();
 
+    }
+    private async Task HandleLastNameChange(ChangeEventArgs e)
+    {
+        userModel.LastName = e.Value?.ToString() ?? "";
+        await ValidateLastName();
+
+    }
+    private async Task HandleUsernameChange(ChangeEventArgs e)
+    {
+        userModel.UserName = e.Value?.ToString() ?? "";
+        await ValidateUsername();
+
+    }
+    private async Task HandleEmailChange(ChangeEventArgs e)
+    {
+        userModel.Email = e.Value?.ToString() ?? "";
+        await ValidateEmail();
+
+    }
+    private async Task HandlePhoneChange(ChangeEventArgs e)
+    {
+        userModel.ContactNo = e.Value?.ToString() ?? "";
+        await ValidatePhone();
+
+    }
+    private async Task HandleRole((int? roleId, string name) selecteded)
+    {
+        userModel.RoleId = selecteded.roleId ?? 0;
+        await ValidateRole();
+    }
+    private async Task HandlePasswordChange(ChangeEventArgs e)
+    {
+        userModel.Password = e.Value?.ToString() ?? "";
+        await ValidatePassword();
+
+    }
+    private async Task HandleConfirmPasswordChange(ChangeEventArgs e)
+    {
+        confirmPassword = e.Value?.ToString() ?? "";
+        await ValidateConfirmPassword();
+
+    }
     private void GoHome()
     {
         NavigationManager.NavigateTo("/");

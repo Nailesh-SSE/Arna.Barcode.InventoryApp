@@ -16,6 +16,7 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
     protected ClaimsPrincipal User { get; private set; } = new(new ClaimsIdentity());
     protected int UserId => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
     protected string CurrentUserId => UserId.ToString();
+    protected int CurrentUserRoleId => int.TryParse(User.FindFirst("UserRoleId")?.Value, out var roleId) ? roleId : 0;
     protected bool IsAuthenticated => User.Identity?.IsAuthenticated ?? false;
 
     protected override async Task OnInitializedAsync()
@@ -79,6 +80,12 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
     }
 
     public bool IsAdmin()
+    {
+        var permission = PermissionState.Permissions.FirstOrDefault(p => p.Route == "*");
+        return permission != null && permission.CanView && permission.CanCreate &&
+               permission.CanEdit && permission.CanDelete;
+    }
+    public bool IsFactoryAdmin()
     {
         var permission = PermissionState.Permissions.FirstOrDefault(p => p.Route == "*");
         return permission != null && permission.CanView && permission.CanCreate &&

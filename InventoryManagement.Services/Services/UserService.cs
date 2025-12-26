@@ -17,7 +17,7 @@ public class UserService : IUserService
     public async Task<bool> AuthenticateAsync(string username, string password)
     {
         var userRepository = _unitOfWork.GetRepository<Users>();
-        var user = (await userRepository.FindAsync(u => u.UserName == username && u.IsActive && !u.IsDeleted)).FirstOrDefault();
+        var user = (await userRepository.FindAsync(u => u.UserName.ToLower() == username.ToLower() && u.IsActive && !u.IsDeleted)).FirstOrDefault();
 
         if (user == null) return false;
 
@@ -38,15 +38,15 @@ public class UserService : IUserService
         var user = await repo.GetByIdAsync(model.Id);
         if (user == null) return false;
 
-        user.FirstName = model.FirstName;
-        user.LastName = model.LastName;
-        user.UserName = model.UserName;
-        user.EmailId = model.Email;
-        user.ContactNo = model.ContactNo;
+        user.FirstName = model.FirstName.Trim();
+        user.LastName = model.LastName.Trim();
+        user.UserName = model.UserName.Trim();
+        user.EmailId = model.Email.Trim();
+        user.ContactNo = model.ContactNo.Trim();
         user.IsActive = model.IsActive;
         user.UpdatedBy = model.UpdatedBy;
         user.UpdatedOn = DateTime.UtcNow;
-        user.Password = model.Password;
+        user.Password = model.Password.Trim();
         user.RoleId = model.RoleId;
         await _unitOfWork.SaveChangesAsync();
         return true;
@@ -73,44 +73,58 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<IEnumerable<Users>> GetAllUsersAsync()
+    public async Task<IEnumerable<Users>> GetAllUsersAsync(int userRoleId)
     {
+        var roleRepository = _unitOfWork.GetRepository<Roles>();
         var userRepository = _unitOfWork.GetRepository<Users>();
-        return await userRepository.FindAsync(u => !u.IsDeleted);
+
+        var roles = (await roleRepository.FindAsync(r =>
+                        !r.IsDeleted && r.IsActive))
+                        .ToList();
+
+        var users = (await userRepository.FindAsync(u =>
+                        !u.IsDeleted && u.IsActive))
+                        .ToList();
+
+        var currentRoleLevel = roles
+            .FirstOrDefault(r => r.Id == userRoleId)?
+            .RoleLevel ?? int.MaxValue;
+
+        if (currentRoleLevel >= 1 && currentRoleLevel <= 4)
+        {
+            return users;
+        }
+
+        var allowedRoleIds = roles
+            .Where(r => r.RoleLevel >= 5)
+            .Select(r => r.Id)
+            .ToHashSet();
+
+        return users
+            .Where(u => allowedRoleIds.Contains(u.RoleId))
+            .ToList();
     }
 
-    public async Task<bool> IsUsernameUniqueAsync(string username, int? id = null)
+
+    public async Task<(bool UserNameExists, bool PhoneExists, bool EmailExists)> CheckDuplicate(int? id,string userName,string phone,string email) 
     {
         var repo = _unitOfWork.GetRepository<Users>();
         var users = await repo.FindAsync(x =>
-            x.UserName.ToLower() == username.ToLower() && !x.IsDeleted);
+               !x.IsDeleted &&
+               (
+                   x.ContactNo.ToLower() == phone.ToLower() ||
+                   x.EmailId.ToLower() == email.ToLower() ||
+                   x.UserName.ToLower() == userName.ToLower()
+               )
+               && (!id.HasValue || x.Id != id.Value) 
+         );
+        bool userNameExists = users.Any(x => x.UserName.ToLower() == userName.ToLower());
+        bool phoneExists = users.Any(x => x.ContactNo.ToLower() == phone.ToLower());
+        bool emailExists = users.Any(x => x.EmailId.ToLower() == email.ToLower());
 
-        if (id.HasValue)
-            users = users.Where(x => x.Id != id.Value);
-
-        return !users.Any();
+        
+        return (userNameExists, phoneExists, emailExists);
     }
-
-    public async Task<bool> IsEmailUniqueAsync(string email, int? id = null)
-    {
-        var repo = _unitOfWork.GetRepository<Users>();
-        var users = await repo.FindAsync(x =>
-            x.EmailId.ToLower() == email.ToLower() && !x.IsDeleted);
-        if (id.HasValue)
-            users = users.Where(x => x.Id != id.Value);
-        return !users.Any();
-    }
-
-    public async Task<bool> IsPhoneUniqueAsync(string phone, int? id = null)
-    {
-        var repo = _unitOfWork.GetRepository<Users>();
-        var users = await repo.FindAsync(x =>
-            x.ContactNo.ToLower() == phone.ToLower() && !x.IsDeleted);
-        if (id.HasValue)
-            users = users.Where(x => x.Id != id.Value);
-        return !users.Any();
-    }
-
     public async Task<bool> CreateUserAsync(UserModel model)
     {
         try
@@ -120,16 +134,16 @@ public class UserService : IUserService
 
             var user = new Users
             {
-                FirstName = model.FirstName,
-                LastName = model.LastName,
-                UserName = model.UserName,
-                EmailId = model.Email,
-                ContactNo = model.ContactNo,
+                FirstName = model.FirstName.Trim(),
+                LastName = model.LastName.Trim(),
+                UserName = model.UserName.Trim(),
+                EmailId = model.Email.Trim(),
+                ContactNo = model.ContactNo.Trim(),
                 IsActive = true,
                 IsDeleted = false,
                 CreatedBy = model.CreatedBy,
                 CreatedOn = DateTime.UtcNow,
-                Password = model.Password,
+                Password = model.Password.Trim(),
                 RoleId=model.RoleId
             };
 

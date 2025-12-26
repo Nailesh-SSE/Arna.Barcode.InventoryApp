@@ -2,7 +2,7 @@
 
 namespace InventoryManagement.Services.Models;
 
-public class UserModel
+public class UserModel:CommonModel
 {
     public int Id { get; set; }
 
@@ -22,6 +22,5 @@ public class UserModel
 
     public string RoleName { get; set; }
     public int RoleId { get; set; }
-    public int CreatedBy { get; set; }
-    public int UpdatedBy { get; set; }
+ 
 }

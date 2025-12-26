@@ -60,6 +60,9 @@ else
                 <GridColumn TItem="RoleModel" HeaderText="Name" PropertyName="Name">
                     @context.Name
                 </GridColumn>
+                <GridColumn TItem="RoleModel" HeaderText="Description" PropertyName="Description">
+                    @context.Description
+                </GridColumn>
                 <GridColumn TItem="RoleModel" HeaderText="Status" PropertyName="IsActive">
                     @if (context.IsActive)
                     {
@@ -92,7 +95,7 @@ else
         </div>
     }
 
-    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Small">
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Regular">
         <BodyTemplate>
             <EditForm EditContext="@editContext" OnValidSubmit="SaveRole">
                 <DataAnnotationsValidator />
@@ -103,6 +106,12 @@ else
                         <InputText class="form-control" @bind-Value="roleModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
                         <ValidationMessage For="@(() => roleModel.Name)" />
                     </div>
+                </div>
+                <div class="row">
+                    <div class="mb-3">
+                    <label class="form-label">Description</label>
+                        <InputTextArea class="form-control" rows="3" @bind-Value="roleModel.Description" />
+                </div>
                 </div>
                 @if (roleModel.Id > 0)
                 {
@@ -147,7 +156,8 @@ else
 
     private async Task LoadRole()
     {
-        roleList = await roleService.GetAllRolesAsync();
+        var userRoleId = Convert.ToInt32(CurrentUserRoleId);
+        roleList = await roleService.GetAllRolesAsync(userRoleId);
     }
 
     public void InitializeEditContextAsync()
@@ -175,6 +185,7 @@ else
         {
             Id = editRole.Id,
             Name = editRole.Name,
+            Description = editRole.Description,
             IsActive = editRole.IsActive,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
         };

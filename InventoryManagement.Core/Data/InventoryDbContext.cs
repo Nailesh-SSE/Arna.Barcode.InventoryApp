@@ -134,12 +134,6 @@ public class InventoryDbContext : DbContext
         modelBuilder.Entity<OutwardDetail>()
             .HasIndex(od => od.BarcodeNo);
 
-     
-        modelBuilder.Entity<FormMaster>()
-            .HasIndex(f => f.Route)
-            .IsUnique()
-            .HasFilter("[IsDeleted] = 0");
-
         modelBuilder.Entity<Roles>()
             .HasIndex(r => r.Name)
             .IsUnique()
