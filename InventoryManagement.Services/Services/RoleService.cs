@@ -37,6 +37,7 @@ public class RoleService : IRoleService
             Id = r.Id,
             Name = r.Name,
             RoleLevel = r.RoleLevel,
+            Description = r.Remark,
             IsActive = r.IsActive,
             CreatedBy = r.CreatedBy,
             CreatedOn = r.CreatedOn,
@@ -58,6 +59,7 @@ public class RoleService : IRoleService
             Id = roleModel.Id,
             Name = roleModel.Name,
             RoleLevel = nextRoleLevel,
+            Remark = roleModel.Description,
             IsActive = true,
             IsDeleted = false,
             CreatedBy = roleModel.CreatedBy,
@@ -74,6 +76,7 @@ public class RoleService : IRoleService
 
         Role.Id = roleModel.Id;
         Role.Name = roleModel.Name;
+        Role.Remark= roleModel.Description;
         Role.IsActive = roleModel.IsActive;
         Role.IsDeleted = roleModel.IsDeleted;
         Role.UpdatedBy = roleModel.UpdatedBy;
