@@ -15,36 +15,45 @@ public class RoleService : IRoleService
 
     public async Task<List<RoleModel>> GetAllRolesAsync(int userRoleId)
     {
-        var roleRepository = _unitOfWork.GetRepository<Roles>();
-
-        var userRole = await roleRepository.GetByIdAsync(userRoleId);
-        var isAdmin = userRole != null && userRole.RoleLevel < 5;
-
-        IEnumerable<Roles> rolesEnumerable;
-        if (isAdmin)
+        try
         {
-            rolesEnumerable = await roleRepository.FindAsync(r => !r.IsDeleted && r.IsActive);
+            var roleRepository = _unitOfWork.GetRepository<Roles>();
+
+            var userRole = await roleRepository.GetByIdAsync(userRoleId);
+            var isAdmin = userRole != null && userRole.RoleLevel < 5;
+
+            IEnumerable<Roles> rolesEnumerable;
+            if (isAdmin)
+            {
+                rolesEnumerable = await roleRepository.FindAsync(r => !r.IsDeleted && r.IsActive);
+            }
+            else
+            {
+                rolesEnumerable = await roleRepository.FindAsync(r => !r.IsDeleted && r.IsActive && r.RoleLevel >= 5);
+            }
+
+            var roles = rolesEnumerable.ToList();
+
+            return roles.Select(r => new RoleModel
+            {
+                Id = r.Id,
+                Name = r.Name,
+                RoleLevel = r.RoleLevel,
+                Description = r.Remark,
+                IsActive = r.IsActive,
+                CreatedBy = r.CreatedBy,
+                CreatedOn = r.CreatedOn,
+                UpdatedBy = r.UpdatedBy,
+                UpdatedOn = r.UpdatedOn,
+                IsDeleted = r.IsDeleted
+            }).ToList();
         }
-        else
+        catch (Exception ex)
         {
-            rolesEnumerable = await roleRepository.FindAsync(r => !r.IsDeleted && r.IsActive && r.RoleLevel >= 5);
+
+            throw;
         }
-
-        var roles = rolesEnumerable.ToList();
-
-        return roles.Select(r => new RoleModel
-        {
-            Id = r.Id,
-            Name = r.Name,
-            RoleLevel = r.RoleLevel,
-            Description = r.Remark,
-            IsActive = r.IsActive,
-            CreatedBy = r.CreatedBy,
-            CreatedOn = r.CreatedOn,
-            UpdatedBy = r.UpdatedBy,
-            UpdatedOn = r.UpdatedOn,
-            IsDeleted = r.IsDeleted
-        }).ToList();
+    
     }
 
     public async Task<bool> CreateRoleAsync(RoleModel roleModel)

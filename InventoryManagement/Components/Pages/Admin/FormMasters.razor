@@ -52,56 +52,58 @@ else
                 </div>
             </div>
 
+            @if (formList.Any())
+            {
+                <Grid TItem="FormMasterModel"
+                      Class="table table-hover table-bordered table-striped"
+                      Data="formList"
+                      AllowPaging="true"
+                      PageSize="10"
+                      Responsive="true"
+                      @ref="FormGrid">
 
-            <Grid TItem="FormMasterModel"
-                  Class="table table-hover table-bordered table-striped"
-                  Data="formList"
-                  AllowPaging="true"
-                  PageSize="10"
-                  Responsive="true"
-                  @ref="FormGrid">
+                    <GridColumn TItem="FormMasterModel" HeaderText="No">
+                        @(formList.IndexOf(context) + 1)
+                    </GridColumn>
 
-                <GridColumn TItem="FormMasterModel" HeaderText="No">
-                    @(formList.IndexOf(context) + 1)
-                </GridColumn>
+                    <GridColumn TItem="FormMasterModel" HeaderText="Form Name" PropertyName="FormName">
+                        @context.FormName
+                    </GridColumn>
 
-                <GridColumn TItem="FormMasterModel" HeaderText="Form Name" PropertyName="FormName">
-                    @context.FormName
-                </GridColumn>
+                    <GridColumn TItem="FormMasterModel" HeaderText="Route" PropertyName="Route">
+                        @context.Route
+                    </GridColumn>
 
-                <GridColumn TItem="FormMasterModel" HeaderText="Route" PropertyName="Route">
-                    @context.Route
-                </GridColumn>
+                    <GridColumn TItem="FormMasterModel" HeaderText="ParentForm" PropertyName="ParentId">
+                        @context.ParentName
+                    </GridColumn>
 
-                <GridColumn TItem="FormMasterModel" HeaderText="ParentForm" PropertyName="ParentId">
-                    @context.ParentName
-                </GridColumn>
-                
-                <GridColumn TItem="FormMasterModel" HeaderText="DisplayIndex" PropertyName="DisplayIndex">
-                    @context.DisplayIndex
-                </GridColumn>
+                    <GridColumn TItem="FormMasterModel" HeaderText="DisplayIndex" PropertyName="DisplayIndex">
+                        @context.DisplayIndex
+                    </GridColumn>
 
-                <GridColumn TItem="FormMasterModel" HeaderText="Actions">
-                    <div class="d-flex gap-1 justify-content-start">
-                        @if (CanEdit("/form"))
-                        {
-                            <Button Color="ButtonColor.Warning"
-                                    Size="ButtonSize.Small"
-                                    @onclick="() => ShowEditModal(context)">
-                                <Icon Name="IconName.PencilSquare" /> Edit
-                            </Button>
-                        }
-                        @if (CanDelete("/form"))
-                        {
-                            <Button Color="ButtonColor.Danger"
-                                    Size="ButtonSize.Small"
-                                    @onclick="() => DeleteForm(context.Id)">
-                                <Icon Name="IconName.Trash" /> Delete
-                            </Button>
-                        }
-                    </div>
-                </GridColumn>
-            </Grid>
+                    <GridColumn TItem="FormMasterModel" HeaderText="Actions">
+                        <div class="d-flex gap-1 justify-content-start">
+                            @if (CanEdit("/form"))
+                            {
+                                <Button Color="ButtonColor.Warning"
+                                        Size="ButtonSize.Small"
+                                        @onclick="() => ShowEditModal(context)">
+                                    <Icon Name="IconName.PencilSquare" /> Edit
+                                </Button>
+                            }
+                            @if (CanDelete("/form"))
+                            {
+                                <Button Color="ButtonColor.Danger"
+                                        Size="ButtonSize.Small"
+                                        @onclick="() => DeleteForm(context.Id)">
+                                    <Icon Name="IconName.Trash" /> Delete
+                                </Button>
+                            }
+                        </div>
+                    </GridColumn>
+                </Grid>
+            }
         </div>
     }
 
@@ -208,10 +210,19 @@ else
 
     private async Task LoadForms()
     {
-        isLoading = true;
-        formList = await FormService.GetAllAsync();
-        parentformList = await FormService.GetParentFormsAsync();
-        isLoading = false;
+        try
+        {
+            isLoading = true;
+            formList = await FormService.GetAllAsync();
+            parentformList = await FormService.GetParentFormsAsync();
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+
+            throw;
+        }
+
     }
 
     private void InitializeEditContext()
@@ -352,6 +363,6 @@ else
     private void GoHome()
     {
         NavigationManager.NavigateTo("/");
-    }  
+    }
 
 }

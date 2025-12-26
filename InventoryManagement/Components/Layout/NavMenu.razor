@@ -16,8 +16,10 @@
     {
         <div class="px-3 text-white">Loading menu...</div>
     }
-    else if (formList?.Any() == true)
+    else if (formList.Any())
     {
+        if(parentformList.Any() && childForms.Any())
+        {
         @foreach (var parent in parentformList)
         {
             <!-- HEADER -->
@@ -46,6 +48,7 @@
                         </NavLink>
                     </div>
                 }
+            }
             }
         }
     }
@@ -83,17 +86,19 @@
 
     private async Task LoadForms()
     {
-        isLoading = true;
-        parentformList = await FormService.GetParentFormsAsync();
-        formList = await FormService.GetAllAsync();
-
-        UserRoleId = Convert.ToInt32(CurrentUserRoleId);
-        if (UserRoleId == 0)
+        try
         {
-            BuildDictionary();
-            isLoading = false;
-            return;
-        }
+              isLoading = true;
+              parentformList = await FormService.GetParentFormsAsync();
+              formList = await FormService.GetAllAsync();
+
+             UserRoleId = Convert.ToInt32(CurrentUserRoleId);
+             if (UserRoleId == 0)
+             {
+                 BuildDictionary();
+                 isLoading = false;
+                 return;
+             }
 
         roles = await RoleService.GetAllRolesAsync(UserRoleId);
         UserLevel = roles.First(r => r.Id == UserRoleId).RoleLevel;
@@ -123,6 +128,13 @@
         }
         BuildDictionary();
         isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            
+            throw;
+        }
+      
     }
     private void BuildDictionary()
     {
