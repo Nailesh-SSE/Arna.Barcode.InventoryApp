@@ -220,9 +220,10 @@ else
 
     private async Task LoadData()
     {
-        list = await Service.GetAllAsync();
+        var userRoleId = CurrentUserRoleId;
+        list = await Service.GetAllAsync(userRoleId);
         forms = await FormService.GetAllAsync();
-        roles = await RoleService.GetAllRolesAsync();
+        roles = await RoleService.GetAllRolesAsync(userRoleId);
         InitializeEditContextAsync();
     }
 

@@ -14,4 +14,14 @@ public class FormMaster : Common
     [Required]
     [StringLength(200)]
     public string Route { get; set; } = string.Empty;
-}
+
+    [Required]
+    public int DisplayIndex { get; set; }
+
+    public string? Icon { get; set; } = string.Empty;
+
+    public int? ParentId { get; set; }
+
+    public string? ParentName { get; set; }
+
+    }
