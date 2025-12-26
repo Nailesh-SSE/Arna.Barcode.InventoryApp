@@ -1,0 +1,597 @@
+﻿@page "/users"
+@using InventoryManagement.Components.Auth
+@inject IUserService UserService
+@inject IRoleService RoleService
+@inject IJSRuntime JS
+@inherits AuthComponentBase
+
+<PageTitle>Users</PageTitle>
+
+@if (!IsAdmin())
+{
+    <div class="container-fluid mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="alert alert-danger text-center">
+                    <h4>Access Denied</h4>
+                    <p>You don't have permission to access this page.</p>
+                    <Button Color="ButtonColor.Primary" @onclick="GoHome">
+                        Go to Home
+                    </Button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col">
+                <h3><Icon Name="IconName.People" /> Users</h3>
+            </div>
+            @if (CanCreate(Route))
+            {
+                <div class="col-auto">
+                    <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                        <Icon Name="IconName.Plus" /> Add User
+                    </Button>
+                </div>
+            }
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center">
+                <Spinner Type="SpinnerType.Border" />
+            </div>
+        }
+        else
+        {
+            <Grid TItem="UserModel"
+                  Data="@users"
+                  Class="table table-hover table-bordered table-striped"
+                  AllowPaging="true"
+                  PageSize="10"
+                  Responsive=true
+                  @ref="userGrid">
+
+                <GridColumn TItem="UserModel" HeaderText="No">
+                    @(users.IndexOf(context) + 1)
+                </GridColumn>
+
+                <GridColumn TItem="UserModel" HeaderText="Name">
+                    @($"{context.FirstName} {context.LastName}")
+                </GridColumn>
+
+                <GridColumn TItem="UserModel" HeaderText="Username" PropertyName="UserName">
+                    @context.UserName
+                </GridColumn>
+
+                <GridColumn TItem="UserModel" HeaderText="Email" PropertyName="Email">
+                    @context.Email
+                </GridColumn>
+
+                <GridColumn TItem="UserModel" HeaderText="Phone" PropertyName="ContactNo">
+                    @context.ContactNo
+                </GridColumn>
+
+                <GridColumn TItem="UserModel" HeaderText="Status" PropertyName="IsActive">
+                    @if (context.IsActive)
+                    {
+                        <Badge Color="BadgeColor.Success">Active</Badge>
+                    }
+                    else
+                    {
+                        <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                    }
+                </GridColumn>
+
+                <GridColumn TItem="UserModel" HeaderText="Actions">
+                    <div class="d-flex gap-1 justify-content-start">
+                        @if (CanEdit(Route))
+                        {
+                        <Button Color="ButtonColor.Warning" Size="ButtonSize.Small"
+                                @onclick="() => ShowEditModal(context)">
+                            <Icon Name="IconName.PencilSquare" /> Edit
+                        </Button>
+                        }
+                        @if (CanDelete(Route))
+                        {
+                        <Button Color="ButtonColor.Danger" Size="ButtonSize.Small"
+                                @onclick="() => DeleteUser(context.Id)">
+                            <Icon Name="IconName.Trash" /> Delete
+                        </Button>
+                        }
+                    </div>
+                </GridColumn>
+            </Grid>
+        }
+    </div>
+
+    <!-- MODAL -->
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+        <BodyTemplate>
+            <div>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+                        <button type="button" class="btn-close" @onclick="@(() => errorMessage = "")"></button>
+                    </div>
+                }
+
+            </div>
+            <EditForm EditContext="@editContext" OnValidSubmit="SaveUser" autocomplete="off">
+                <!-- Browser autofill trap fields -->
+                <input type="text" style="display:none" autocomplete="username" />
+                <input type="password" style="display:none" autocomplete="new-password" />
+                <DataAnnotationsValidator />
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">First Name<span class="text-danger">*</span></label>
+                        <InputText class="form-control"
+                                   placeholder="Enter first name"
+                                   @bind-Value="userModel.FirstName"
+                                   @oninput="HandleFirstNameChange" />
+                                  
+                        <ValidationMessage For="@(() => userModel.FirstName)" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Last Name<span class="text-danger">*</span></label>
+                        <InputText class="form-control"
+                                   placeholder="Enter last name"    
+                                   @bind-Value="userModel.LastName"
+                                   @oninput="HandleLastNameChange" />
+                        <ValidationMessage For="@(() => userModel.LastName)" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Username<span class="text-danger">*</span></label>
+                        <InputText class="form-control"
+                                   placeholder="Enter username"
+                                   autocomplete="off"
+                                   @bind-Value="userModel.UserName"
+                                   @oninput="HandleUsernameChange" />
+                        <ValidationMessage For="@(() => userModel.UserName)" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Email<span class="text-danger">*</span></label>
+                        <InputText class="form-control"
+                                   placeholder="Enter email address"
+                                   @bind-Value="userModel.Email"
+                                   @oninput="HandleEmailChange" />
+                        <ValidationMessage For="@(() => userModel.Email)" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Phone<span class="text-danger">*</span></label>
+                        <InputText class="form-control"
+                                   placeholder="Enter  phone number"
+                                   @bind-Value="userModel.ContactNo"
+                                   @oninput="HandlePhoneChange" />
+                        <ValidationMessage For="@(() => userModel.ContactNo)" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Role<span class="text-danger">*</span></label>
+                        <DropDown TItem="RoleModel"
+                                  Items="@roles"
+                                  SelectedId="@userModel.RoleId"
+                                  ValueSelector="x => x.Id"
+                                  TextSelector="x => x.Name"
+                                  Placeholder="-- Select Role --"
+                                  OnValueChanged="HandleRole" />
+                        <ValidationMessage For="@(() => userModel.RoleId)" />
+                    </div>
+                                      
+                          <!-- PASSWORD -->
+                        <div class="col-md-6 mb-3">
+                        <label class="form-label">
+                            Password
+                            <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <Icon Name="IconName.Lock" />
+                            </span>
+                            <InputText @bind-Value="userModel.Password"
+                                       class="form-control"
+                                       placeholder="Password"
+                                       type="@passwordInputType"
+                                       @oninput="HandlePasswordChange" />
+
+                            <button class="btn btn-outline-secondary"
+                                    type="button"
+                                    @onclick="TogglePasswordVisibility">
+                                <i class="@passwordToggleIcon"></i>
+                            </button>
+                        </div>
+
+                        <ValidationMessage For="@(() => userModel.Password)" class="text-danger small" />
+                    </div>
+                   
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">
+                            Confirm Password
+                            <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <Icon Name="IconName.Lock" />
+                            </span>
+                            <InputText @bind-Value="confirmPassword"
+                                       class="form-control"
+                                       type="@conformPasswordInputType"
+                                       @oninput="HandleConfirmPasswordChange" />
+                            <button class="btn btn-outline-secondary"
+                                    type="button"
+                                    @onclick="ToggleConformPasswordVisibility">
+                                <i class="@conformPasswordToggleIcon"></i>
+                            </button>
+                        </div>
+                        <ValidationMessage For="@(() => confirmPassword)" />
+                    </div>               
+                </div>
+
+                @if (userModel.Id > 0)
+                {
+                    <div class="mb-3">
+                        <InputCheckbox @bind-Value="userModel.IsActive" /> Active
+                    </div>
+                }
+
+                <div class="text-end">
+                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+                </div>
+            </EditForm>
+        </BodyTemplate>
+    </Modal>
+}
+@code {
+    private bool isLoading = true;
+
+    private Modal modal = default!;
+    private string modalTitle = "Add User";
+    private string errorMessage = string.Empty;
+    private bool showPassword = false;
+    private bool showConformPassword = false;
+
+
+    private string passwordInputType => showPassword ? "text" : "password";
+    private string conformPasswordInputType => showConformPassword ? "text" : "password";
+
+    private string passwordToggleIcon => showPassword ? "bi bi-eye-slash" : "bi bi-eye";
+    private string conformPasswordToggleIcon => showConformPassword ? "bi bi-eye-slash" : "bi bi-eye";
+
+    private Grid<UserModel> userGrid = default!;
+    private List<UserModel> users = new();
+    private List<RoleModel> roles = new();
+
+    private UserModel userModel = new();
+    private string confirmPassword = string.Empty;
+
+    private EditContext editContext = default!;
+    private ValidationMessageStore messageStore = default!;
+    private string Route = "/users";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        var userRoleId = CurrentUserRoleId;
+        users = (await UserService.GetAllUsersAsync(userRoleId))
+         .Select(u => new UserModel
+         {
+             Id = u.Id,
+             FirstName = u.FirstName,
+             LastName = u.LastName,
+             UserName = u.UserName,
+             Email = u.EmailId,
+             ContactNo = u.ContactNo,
+             CreatedBy = u.CreatedBy,
+             UpdatedBy = u.UpdatedBy,
+             IsActive = u.IsActive,
+             RoleId = u.RoleId
+         }).ToList();
+        roles = (await RoleService.GetAllRolesAsync(userRoleId)).ToList();
+        isLoading = false;
+    }
+
+    private void InitializeEditContext()
+    {
+        editContext = new EditContext(userModel);
+        messageStore = new ValidationMessageStore(editContext);
+        confirmPassword = string.Empty;
+    }
+
+    private async Task ShowAddModal()
+    {
+        modalTitle = "Add User";
+        errorMessage = string.Empty;
+        userModel = new UserModel
+        {
+            IsActive = true,          
+            CreatedBy = Convert.ToInt32(CurrentUserId)
+        };
+
+        InitializeEditContext();
+        await modal.ShowAsync();
+    }
+
+    private async Task ShowEditModal(UserModel user)
+    {
+        modalTitle = "Edit User";
+        errorMessage = string.Empty;
+        userModel = new UserModel
+        {
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            UserName = user.UserName,
+            Email = user.Email,
+            ContactNo = user.ContactNo,
+            CreatedBy = user.CreatedBy,
+            RoleId = user.RoleId,
+            IsActive = user.IsActive,
+            Password= user.Password,
+            UpdatedBy = Convert.ToInt32(CurrentUserId)
+        };
+        confirmPassword = user.Password;
+        InitializeEditContext();
+        await modal.ShowAsync();
+    }
+
+    private async Task SaveUser()
+    {
+        if (!editContext.Validate())
+            return;
+
+        await ValidateAllFieldsAsync();
+        if (editContext.GetValidationMessages().Any())
+            return;
+
+        var result = await ValidateDuplicate(userModel.Id, userModel.UserName, userModel.ContactNo, userModel.Email);
+        if (!result) return;
+        if (userModel.Id > 0)
+            await UserService.UpdateUserAsync(userModel);
+        else
+            await UserService.CreateUserAsync(userModel);
+
+        await HideModal();
+        await LoadData();
+        await userGrid.RefreshDataAsync();
+    }
+
+    private async Task DeleteUser(int id)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", "Delete this user?"))
+            return;
+
+        await UserService.DeleteUserAsync(id);
+        await LoadData();
+        await userGrid.RefreshDataAsync();
+    }
+
+    private async Task HideModal() => await modal.HideAsync();
+
+
+    private async Task ValidateAllFieldsAsync()
+    {
+        await ValidateFirstName();
+        await ValidateLastName();
+        await ValidateUsername();
+        await ValidateEmail();
+        await ValidatePhone();
+        await ValidateRole();
+        await ValidatePassword();
+        await ValidateConfirmPassword();
+        await ValidateArePasswordsSame();
+    }
+
+    private async Task ValidateFirstName()
+    {
+        messageStore.Clear(() => userModel.FirstName);
+        var firstName = userModel.FirstName?.Trim();
+
+        if (string.IsNullOrWhiteSpace(firstName))
+        {
+            messageStore.Add(() => userModel.FirstName, "First name is required.");
+        }
+        else if (!firstName.All(char.IsAsciiLetter))
+        {
+            messageStore.Add(() => userModel.FirstName, "First name only allow Character.");
+        }
+        editContext.NotifyValidationStateChanged();
+
+    }
+
+    private async Task ValidateLastName()
+    {
+        messageStore.Clear(() => userModel.LastName);
+        var lastName = userModel.LastName?.Trim();
+        if (string.IsNullOrWhiteSpace(lastName))
+        {
+            messageStore.Add(() => userModel.LastName, "Last name is required.");
+        }
+        else if (!lastName.All(char.IsAsciiLetter))
+        {
+            messageStore.Add(() => userModel.LastName, "Last name only allow Character.");
+        }
+      
+        editContext.NotifyValidationStateChanged();
+
+    }
+
+    private async Task ValidateUsername()
+    {
+        messageStore.Clear(() => userModel.UserName);
+        if (string.IsNullOrWhiteSpace(userModel.UserName))
+            messageStore.Add(() => userModel.UserName, "Username is required.");
+        editContext.NotifyValidationStateChanged();
+
+    }
+
+    private async Task ValidateEmail()
+    {
+        messageStore.Clear(() => userModel.Email);
+        if (string.IsNullOrWhiteSpace(userModel.Email))
+            messageStore.Add(() => userModel.Email, "Email is required.");
+        editContext.NotifyValidationStateChanged();
+
+    }
+
+    private async Task ValidatePhone()
+    {
+        messageStore.Clear(() => userModel.ContactNo);
+        if (string.IsNullOrWhiteSpace(userModel.ContactNo))
+        {
+            messageStore.Add(() => userModel.ContactNo, "Phone is required.");
+        }
+        else if (!userModel.ContactNo.All(char.IsDigit))
+        {
+            messageStore.Add(() => userModel.ContactNo, "Phone only allow digits.");
+        }
+        else if (userModel.ContactNo?.Length != 10)
+        {
+            messageStore.Add(() => userModel.ContactNo, "Phone Number must be 10 digit");
+        }
+        editContext.NotifyValidationStateChanged();
+
+    }
+
+    private async Task ValidateRole()
+    {
+        messageStore.Clear(() => userModel.RoleId);
+        if (userModel.RoleId == 0)
+            messageStore.Add(() => userModel.RoleId, "Please select role.");
+        editContext.NotifyValidationStateChanged();
+
+    }
+
+    private async Task ValidatePassword()
+    {
+        messageStore.Clear(() => userModel.Password);
+        if (string.IsNullOrWhiteSpace(userModel.Password))
+            messageStore.Add(() => userModel.Password, "Password is required.");
+        editContext.NotifyValidationStateChanged();
+
+    }
+    private async Task ValidateArePasswordsSame()
+    {
+        messageStore.Clear(() => confirmPassword);
+
+        if (!string.IsNullOrWhiteSpace(userModel.Password) &&
+            userModel.Password != confirmPassword)        
+            messageStore.Add(() => confirmPassword, "Passwords do not match.");                 
+        
+        editContext.NotifyValidationStateChanged();
+        
+    }
+    private async Task ValidateConfirmPassword()
+    {
+        messageStore.Clear(() => confirmPassword);
+
+        if (string.IsNullOrWhiteSpace(confirmPassword))
+            messageStore.Add(() => confirmPassword, "Confirm password is required.");
+
+        editContext.NotifyValidationStateChanged();
+
+    }
+    private bool IsValidEmailFormat(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    private async Task<bool> ValidateDuplicate(int? id, string userName, string phone, string email)
+    {
+        errorMessage = string.Empty;
+        var result = await UserService.CheckDuplicate(id, userName, phone, email);
+
+        string userNameError = (result.UserNameExists) ? "Username " : string.Empty;
+        string phoneError = (result.PhoneExists) ? "Phone " : string.Empty;
+        string emailError = (result.EmailExists) ? "Email " : string.Empty;
+        if (userNameError != string.Empty || phoneError != string.Empty || emailError != string.Empty)
+        {
+            errorMessage = userNameError + " " + phoneError + " " + emailError + " Already Exist";
+            return false;
+        }
+        return true;
+    }
+    private async Task TogglePasswordVisibility()
+    {
+        showPassword = !showPassword;
+    }
+    private async Task ToggleConformPasswordVisibility()
+    {
+        showConformPassword = !showConformPassword;
+    }
+
+    private async Task HandleFirstNameChange(ChangeEventArgs e)
+    {
+        userModel.FirstName = e.Value?.ToString() ?? "";
+        await ValidateFirstName();
+
+    }
+    private async Task HandleLastNameChange(ChangeEventArgs e)
+    {
+        userModel.LastName = e.Value?.ToString() ?? "";
+        await ValidateLastName();
+
+    }
+    private async Task HandleUsernameChange(ChangeEventArgs e)
+    {
+        userModel.UserName = e.Value?.ToString() ?? "";
+        await ValidateUsername();
+
+    }
+    private async Task HandleEmailChange(ChangeEventArgs e)
+    {
+        userModel.Email = e.Value?.ToString() ?? "";
+        await ValidateEmail();
+
+    }
+    private async Task HandlePhoneChange(ChangeEventArgs e)
+    {
+        userModel.ContactNo = e.Value?.ToString() ?? "";
+        await ValidatePhone();
+
+    }
+    private async Task HandleRole((int? roleId, string name) selecteded)
+    {
+        userModel.RoleId = selecteded.roleId ?? 0;
+        await ValidateRole();
+    }
+    private async Task HandlePasswordChange(ChangeEventArgs e)
+    {
+        userModel.Password = e.Value?.ToString() ?? "";
+        await ValidatePassword();
+
+    }
+    private async Task HandleConfirmPasswordChange(ChangeEventArgs e)
+    {
+        confirmPassword = e.Value?.ToString() ?? "";
+        await ValidateConfirmPassword();
+
+    }
+    private void GoHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

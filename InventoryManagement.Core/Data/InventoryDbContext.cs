@@ -1,4 +1,4 @@
-using InventoryManagement.Core.Entities;
+﻿using InventoryManagement.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagement.Core.Data;
@@ -11,6 +11,9 @@ public class InventoryDbContext : DbContext
 
     public DbSet<Users> Users { get; set; }
     public DbSet<UsersInRole> UsersInRoles { get; set; }
+    public DbSet<Roles> Roles { get; set; }             
+    public DbSet<FormMaster> FormMasters { get; set; }   
+    public DbSet<RoleFormPermission> RoleFormPermissions { get; set; }
     public DbSet<Company> Companies { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<Product> Products { get; set; }
@@ -130,5 +133,11 @@ public class InventoryDbContext : DbContext
 
         modelBuilder.Entity<OutwardDetail>()
             .HasIndex(od => od.BarcodeNo);
+
+        modelBuilder.Entity<Roles>()
+            .HasIndex(r => r.Name)
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0");
+
     }
 }

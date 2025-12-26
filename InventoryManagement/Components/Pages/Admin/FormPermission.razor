@@ -1,0 +1,353 @@
+﻿@page "/form-permission"
+@using InventoryManagement.Components.Auth
+@inherits AuthComponentBase
+@inject IRoleService RoleService
+@inject IFormPermissionService Service
+@inject IFormMasterService FormService
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+
+<PageTitle>Form Permission</PageTitle>
+
+
+@if (!IsAdmin())
+{
+    <div class="container-fluid mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="alert alert-danger text-center">
+                    <h4>Access Denied</h4>
+                    <p>You don't have permission to access this page.</p>
+                    <Button Color="ButtonColor.Primary" @onclick="GoHome">
+                        Go to Home
+                    </Button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col">
+                <h3>
+                    <Icon Name="IconName.Lock" /> Form Permission
+                </h3>
+            </div>
+            <div class="col-auto">
+                @if (CanCreate(Route))
+                {
+                    <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                        <Icon Name="IconName.Plus" /> Add
+                    </Button>
+                }
+            </div>
+        </div>
+        <div>
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>@successMessage
+                    <button type="button" class="btn-close" @onclick="@(() => successMessage = "")"></button>
+                </div>
+            }
+        </div>
+        <Grid TItem="FormPermissionModel"
+              Class="table table-hover table-bordered table-striped"
+              Data="list"
+              AllowPaging="true"
+              PageSize="10"
+              Responsive="true"
+              @ref="grid">
+
+            <GridColumn TItem="FormPermissionModel" HeaderText="No">
+                @(list.IndexOf(context) + 1)
+            </GridColumn>
+
+            <GridColumn TItem="FormPermissionModel" HeaderText="Role">
+                @context.RoleName
+            </GridColumn>
+            <GridColumn TItem="FormPermissionModel" HeaderText="Form">
+                @context.FormName
+            </GridColumn>
+            <GridColumn TItem="FormPermissionModel" HeaderText="View">
+                @context.CanView
+            </GridColumn>
+            <GridColumn TItem="FormPermissionModel" HeaderText="Create">
+                @context.CanCreate
+            </GridColumn>
+            <GridColumn TItem="FormPermissionModel" HeaderText="Edit">
+                @context.CanEdit
+            </GridColumn>
+            <GridColumn TItem="FormPermissionModel" HeaderText="Delete">
+                @context.CanDelete
+            </GridColumn>
+            <GridColumn TItem="FormPermissionModel" HeaderText="Action">
+                <div class="d-flex gap-1 justify-content-start">
+                    @if (CanEdit(Route))
+                    {
+                        <Button Color="ButtonColor.Warning"
+                                Size="ButtonSize.Small"
+                                @onclick="() => Edit(context)">
+                            <Icon Name="IconName.PencilSquare" /> Edit
+                        </Button>
+                    }
+                    @if (CanDelete(Route))
+                    {
+                        <Button Color="ButtonColor.Danger"
+                                Size="ButtonSize.Small"
+                                @onclick="() => Delete(context.Id)">
+                            <Icon Name="IconName.Trash" /> Delete
+                        </Button>
+                    }
+                </div>
+            </GridColumn>
+        </Grid>
+    </div>
+
+}
+
+
+<Modal @ref="modal" Title="@title">
+    <BodyTemplate>
+
+        <div>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+                    <button type="button" class="btn-close" @onclick="@(() => errorMessage = "")"></button>
+                </div>
+            }
+
+        </div>
+
+        <EditForm EditContext="@editContext" OnValidSubmit="Save">
+            <DataAnnotationsValidator />
+            <div class="mb-2">
+                <label class="form-label">Role</label>
+                <DropDown TItem="RoleModel"
+                          Items="@roles"
+                          SelectedId="@model.RoleId"
+                          ValueSelector="x => x.Id"
+                          TextSelector="x => x.Name"
+                          Placeholder="-- Select Role--"
+                          OnValueChanged="HandleRole" />
+                <ValidationMessage For="@(() => model.RoleId)" />
+            </div>
+
+
+            <div class="mb-2">
+                <label class="form-label">Form</label>
+                <DropDown TItem="FormMasterModel"
+                          Items="@forms"
+                          SelectedId="@model.FormId"
+                          ValueSelector="x => x.Id"
+                          TextSelector="x => x.FormName"
+                          Placeholder="-- Select Page--"
+                          OnValueChanged="HandleForm" />
+                <ValidationMessage For="@(() => model.FormId)" />
+            </div>
+
+            <div class="d-flex gap-4 mt-4">
+                <div class="form-check">
+                    <InputCheckbox class="form-check-input" @bind-Value="model.CanView" />
+                    <label class="form-check-label">View</label>
+                </div>
+
+                <div class="form-check">
+                    <InputCheckbox class="form-check-input" @bind-Value="model.CanCreate" />
+                    <label class="form-check-label">Create</label>
+                </div>
+
+                <div class="form-check">
+                    <InputCheckbox class="form-check-input" @bind-Value="model.CanEdit" />
+                    <label class="form-check-label">Edit</label>
+                </div>
+
+                <div class="form-check">
+                    <InputCheckbox class="form-check-input" @bind-Value="model.CanDelete" />
+                    <label class="form-check-label">Delete</label>
+                </div>
+            </div>
+            <div class="text-end mt-3">
+                <Button Color=ButtonColor.Secondary Type="ButtonType.Button" @onclick="HandleClose">Close</Button>
+                <Button Color=ButtonColor.Primary Type="ButtonType.Submit">Save</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+
+</Modal>
+
+
+
+@code {
+    List<FormPermissionModel> list = new();
+    List<FormMasterModel> forms = new();
+    private string errorMessage { get; set; } = string.Empty;
+    private string successMessage { get; set; } = string.Empty;
+    public List<RoleModel> roles = new();
+
+    private EditContext editContext { get; set; }
+    private ValidationMessageStore validationMessage;
+
+    public FormPermissionModel model = new();
+    Modal? modal;
+    Grid<FormPermissionModel>? grid;
+    string? title;
+    private const string Route = "/form-permission";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        if (!CanView(Route))
+        {
+            NavigationManager.NavigateTo("/access-denied", true);
+            return;
+        }
+
+        await LoadData();
+    }
+
+    public void InitializeEditContextAsync()
+    {
+        editContext = new EditContext(model);
+        validationMessage = new ValidationMessageStore(editContext);
+    }
+
+    private async Task LoadData()
+    {
+        var userRoleId = CurrentUserRoleId;
+        list = await Service.GetAllAsync(userRoleId);
+        forms = await FormService.GetAllAsync();
+        roles = await RoleService.GetAllRolesAsync(userRoleId);
+        InitializeEditContextAsync();
+    }
+
+    void ShowAddModal()
+    {
+        errorMessage = string.Empty;
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            title = "Add Permission";
+            model = new()
+            {
+                CreatedBy = UserId
+            };
+            InitializeEditContextAsync();
+            _ = modal?.ShowAsync();
+        }
+    }
+
+    void Edit(FormPermissionModel m)
+    {
+        errorMessage = string.Empty;
+        title = "Edit Permission";
+        m.UpdatedBy = Convert.ToInt32(CurrentUserId);
+        model = new FormPermissionModel
+        {
+            Id = m.Id,
+            RoleId = m.RoleId,
+            RoleName = m.RoleName,
+            FormId = m.FormId,
+            FormName = m.FormName,
+            CanView = m.CanView,
+            CanCreate = m.CanCreate,
+            CanEdit = m.CanEdit,
+            CanDelete = m.CanDelete,
+            CreatedBy = m.CreatedBy,
+            UpdatedBy = Convert.ToInt32(CurrentUserId)
+        };
+        InitializeEditContextAsync();
+        _ = modal?.ShowAsync();
+    }
+
+    async Task Save()
+    {
+        await ValidateRole();
+        await ValidateForm();
+        if (editContext.GetValidationMessages().Any()) return;
+
+        var result = await ValidateDuplicate(model.RoleId, model.FormId, model.Id);
+        if (result) return;
+
+
+        if (model.Id > 0)
+            await Service.UpdateAsync(model);
+        else
+            await Service.CreateAsync(model);
+
+        if (modal is not null)
+            await modal.HideAsync();
+
+        await LoadData();
+        if (grid is not null)
+            await grid.RefreshDataAsync();
+    }
+
+    async Task Delete(int id)
+    {
+        if (User.Identity?.IsAuthenticated != true)
+            return;
+
+        if (await JS.InvokeAsync<bool>("confirm", "Delete?"))
+        {
+            await Service.DeleteAsync(id, UserId);
+            await LoadData();
+            await grid!.RefreshDataAsync();
+        }
+    }
+    private async Task HandleRole((int? id, string name) selected)
+    {
+        model.RoleId = selected.id ?? 0;
+        await ValidateRole();
+    }
+    private async Task HandleForm((int? formId, string FormName) selected)
+    {
+        model.FormId = selected.formId ?? 0;
+        await ValidateForm();
+
+    }
+    private async Task ValidateRole()
+    {
+        validationMessage.Clear(() => model.RoleId);
+        if (model.RoleId <= 0)
+        {
+            validationMessage.Add(() => model.RoleId, "Role  is required");
+        }
+        editContext.NotifyValidationStateChanged();
+
+    }
+    private async Task ValidateForm()
+    {
+        validationMessage.Clear(() => model.FormId);
+        if (model.FormId <= 0)
+        {
+            validationMessage.Add(() => model.FormId, "Page is required");
+        }
+        editContext.NotifyValidationStateChanged();
+
+    }
+    private async Task<bool> ValidateDuplicate(int roleId, int formId, int? id)
+    {
+        var result = await Service.CheckDuplicate(roleId, formId, id);
+        if (result)
+        {
+            errorMessage = "Permission already exists for the selected Role and Form.";
+        }
+        StateHasChanged();
+        return result;
+
+    }
+    private async Task HandleClose()
+    {
+        await modal.HideAsync();
+    }
+    private void GoHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}
