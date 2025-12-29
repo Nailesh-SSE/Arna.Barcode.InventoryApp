@@ -11,7 +11,7 @@
 <PageTitle>Form Permission</PageTitle>
 
 
-@if (!IsAdmin())
+@if (!CanView(Route))
 {
     <div class="container-fluid mt-5">
         <div class="row justify-content-center">
@@ -222,7 +222,7 @@ else
     {
         var userRoleId = CurrentUserRoleId;
         list = await Service.GetAllAsync(userRoleId);
-        forms = await FormService.GetAllAsync();
+        forms = await FormService.GetAllAsync(userRoleId);
         roles = await RoleService.GetAllRolesAsync(userRoleId);
         InitializeEditContextAsync();
     }
