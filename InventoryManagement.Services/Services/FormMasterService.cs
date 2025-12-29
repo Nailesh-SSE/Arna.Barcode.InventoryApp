@@ -16,20 +16,41 @@ public class FormMasterService : IFormMasterService
 
     public async Task<List<FormMasterModel>> GetAllAsync()
     {
-        var repo = _unitOfWork.GetRepository<FormMaster>();
-        var forms = await repo.FindAsync(x => !x.IsDeleted);
-
-        return forms.OrderBy(f => f.ParentId).ThenBy(f => f.DisplayIndex).Select(f => new FormMasterModel
+        try
         {
-            Id = f.Id,
-            FormName = f.FormName,
-            Route = f.Route,
-            DisplayIndex = f.DisplayIndex,
-            Icon = f.Icon,
-            ParentId = f.ParentId,
-            ParentName = f.ParentName,
-            IsActive = f.IsActive
-        }).ToList();
+            var repo = _unitOfWork.GetRepository<FormMaster>();
+            var forms = await repo.FindAsync(x => !x.IsDeleted);
+
+            var result = forms
+                .OrderBy(f => f.ParentId)
+                .ThenBy(f => f.DisplayIndex)
+                .Select(f => new FormMasterModel
+                {
+                    Id = f.Id,
+                    FormName = f.FormName,
+                    Route = f.Route,
+                    DisplayIndex = f.DisplayIndex,
+                    Icon = f.Icon,
+                    ParentId = f.ParentId,
+                    ParentName = f.ParentName,
+                    IsActive = f.IsActive
+                })
+                .ToList();
+
+            if (result.Any())
+            {
+                return result;
+            }
+
+            return new();
+
+        }
+        catch (Exception ex)
+        {
+
+            throw;
+        }
+
     }
 
     public async Task<FormMasterModel?> GetByIdAsync(int id)
@@ -68,10 +89,11 @@ public class FormMasterService : IFormMasterService
         };
         try
         {
-        await repo.AddAsync(entity);
-        await _unitOfWork.SaveChangesAsync();
+            await repo.AddAsync(entity);
+            await _unitOfWork.SaveChangesAsync();
 
-        }catch(Exception ex)
+        }
+        catch (Exception ex)
         {
         }
         return true;
@@ -118,16 +140,16 @@ public class FormMasterService : IFormMasterService
         entity.UpdatedBy = userId;
         entity.UpdatedOn = DateTime.UtcNow;
 
-        await DeleteFormPermissionAsync(id,userId);
+        await DeleteFormPermissionAsync(id, userId);
         await _unitOfWork.SaveChangesAsync();
         return true;
     }
 
-    private async Task DeleteFormPermissionAsync(int formId,int userId) 
+    private async Task DeleteFormPermissionAsync(int formId, int userId)
     {
         var permissionRepo = _unitOfWork.GetRepository<RoleFormPermission>();
         var entities = await permissionRepo.FindAsync(p => p.FormId == formId);
-        foreach(var entity in entities) 
+        foreach (var entity in entities)
         {
             entity.IsDeleted = true;
             entity.IsActive = false;
@@ -149,7 +171,7 @@ public class FormMasterService : IFormMasterService
 
         return !forms.Any();
     }
-    public async Task<bool> IsDisplayIndexInUseAsync(int index,int? parentid, int id = 0)
+    public async Task<bool> IsDisplayIndexInUseAsync(int index, int? parentid, int id = 0)
     {
         var repo = _unitOfWork.GetRepository<FormMaster>();
 
@@ -167,18 +189,37 @@ public class FormMasterService : IFormMasterService
 
     public async Task<List<FormMasterModel>> GetParentFormsAsync()
     {
-        var repo = _unitOfWork.GetRepository<FormMaster>();
-        var forms = await repo.FindAsync(x => x.IsActive && !x.IsDeleted && x.Route == "#");
-        return forms.OrderBy(f => f.DisplayIndex).Select(f => new FormMasterModel
+        try
         {
-            Id = f.Id,
-            FormName = f.FormName,
-            Route = f.Route,
-            DisplayIndex = f.DisplayIndex,
-            Icon = f.Icon,
-            ParentId = f.ParentId,
-            ParentName = f.ParentName,
-            IsActive = f.IsActive
-        }).ToList();
+            var repo = _unitOfWork.GetRepository<FormMaster>();
+            var forms = await repo.FindAsync(x => x.IsActive && !x.IsDeleted && x.Route == "#");
+
+            var result = forms
+                .OrderBy(f => f.DisplayIndex)
+                .Select(f => new FormMasterModel
+                {
+                    Id = f.Id,
+                    FormName = f.FormName,
+                    Route = f.Route,
+                    DisplayIndex = f.DisplayIndex,
+                    Icon = f.Icon,
+                    ParentId = f.ParentId,
+                    ParentName = f.ParentName,
+                    IsActive = f.IsActive
+                })
+                .ToList();
+
+            if (result.Any())
+            {
+                return result;
+            }
+
+            return new();
+        }
+        catch (Exception ex)
+        {
+
+            throw;
+        }
     }
 }
