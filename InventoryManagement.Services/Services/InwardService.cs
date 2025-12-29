@@ -4,9 +4,8 @@ using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.DTO;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
-using iTextSharp.text;
-using iTextSharp.text.pdf;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 
 namespace InventoryManagement.Services;
 
@@ -306,130 +305,100 @@ public class InwardService : IInwardService
         }
     }
 
-    public async Task<byte[]> GenerateItemBarcodePdfAsync(int inwardItemId)
+    public async Task<byte[]> GenerateItemBarcodePrnAsync(int inwardItemId)
     {
         var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+        var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
+
         var barcodeItems = (await barcodeRepo.FindAsync(
                 b => b.InwardItemId == inwardItemId && !b.IsDeleted && b.IsActive))
-            .OrderBy(b => b.BarcodeNo)           // ensure consistent order (1,2,3,4,…)
+            .OrderBy(b => b.BarcodeNo)
             .ToList();
 
-        if (!barcodeItems.Any()) return null;
+        if (!barcodeItems.Any())
+            return null;
 
-        // ==========================================================
-        // LABEL SIZE : 50 mm x 25 mm  (5.0 cm x 2.5 cm)
-        // ==========================================================
-        float widthInCm = 8.0f;   // 50 mm
-        float heightInCm = 2.5f;  // 25 mm
+        var item = await inwardItemRepo.GetQueryable()
+            .Include(i => i.Product)
+            .FirstOrDefaultAsync(i => i.Id == inwardItemId);
 
-        float widthPoints = widthInCm * 28.35f;   // cm -> points
-        float heightPoints = heightInCm * 28.35f;
+        if (item == null)
+            return null;
 
-        var pageSize = new Rectangle(widthPoints, heightPoints);
+        var productName = item.Product?.SKU ?? "N/A";
 
-        using var fs = new MemoryStream();
-        Document doc = new Document(pageSize, 2f, 2f, 2f, 2f);  // small margins
+        var sb = new StringBuilder();
 
-        try
+        AppendPrnHeader(sb);
+
+        for (int i = 0; i < barcodeItems.Count; i += 2)
         {
-            PdfWriter writer = PdfWriter.GetInstance(doc, fs);
-            doc.Open();
+            sb.AppendLine("CLS");
 
-            PdfContentByte cb = writer.DirectContent;
-            BaseFont bf = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
+            AddBarcodeLabel(sb, barcodeItems[i], productName, BarcodePositionType.Left);
 
-            // width of each column (left/right)
-            float cellWidth = doc.PageSize.Width / 2f;
-
-            // ==========================================================
-            // LOOP: 2 barcodes per page -> (1,2), (3,4), (5,6), ...
-            // ==========================================================
-            for (int i = 0; i < barcodeItems.Count; i += 2)
+            if (i + 1 < barcodeItems.Count)
             {
-                doc.NewPage();
-
-                // LEFT BARCODE
-                AddBarcodeToCell(doc, cb, bf, barcodeItems[i],
-                                 cellIndex: 0, cellWidth: cellWidth);
-
-                // RIGHT BARCODE (if exists)
-                if (i + 1 < barcodeItems.Count)
-                {
-                    AddBarcodeToCell(doc, cb, bf, barcodeItems[i + 1],
-                                     cellIndex: 1, cellWidth: cellWidth);
-                }
+                AddBarcodeLabel(sb, barcodeItems[i + 1], productName, BarcodePositionType.Right);
             }
-        }
-        finally
-        {
-            doc.Close();
+
+            sb.AppendLine("PRINT 1,1");
         }
 
-        return fs.ToArray();
+        return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
-    // Helper method: puts one barcode into left (0) or right (1) cell.
-    private void AddBarcodeToCell(Document doc, PdfContentByte cb, BaseFont bf,
-                                  InwardBarcodeItem item, int cellIndex, float cellWidth)
+    private static void AppendPrnHeader(StringBuilder sb)
     {
-        Barcode128 bc = new Barcode128
+        sb.AppendLine("SIZE 108 mm, 25 mm");
+        sb.AppendLine("DIRECTION 0,0");
+        sb.AppendLine("REFERENCE 0,0");
+        sb.AppendLine("OFFSET 0 mm");
+        sb.AppendLine("SET PEEL OFF");
+        sb.AppendLine("SET CUTTER OFF");
+        sb.AppendLine("SET PARTIAL_CUTTER OFF");
+        sb.AppendLine("SET TEAR ON");
+    }
+
+    private static class BarcodeLayout
+    {
+        public static readonly BarcodeLayoutDto Left = new BarcodeLayoutDto
         {
-            Code = item.BarcodeNo,
-            CodeType = Barcode128.CODE128,
-            StartStopText = false,
-            Font = null,
-            BarHeight = 15f,   // adjust if you need shorter/taller bars
-            X = 0.6f           // bar thickness
+            BarcodeX = 820,
+            BarcodeTextX = 728,
+            ProductTextX = 820,
+            DateTextX = 656
         };
 
-        Image img = bc.CreateImageWithBarcode(cb, BaseColor.BLACK, BaseColor.BLACK);
-
-        // Make sure barcode fits in its half of the label
-        float maxImgWidth = cellWidth - 4f;                // small padding
-        float maxImgHeight = doc.PageSize.Height - 10f;    // leave room for text
-        img.ScaleToFit(maxImgWidth, maxImgHeight);
-
-        // X: center inside the cell (0 = left cell, 1 = right cell)
-        float cellLeft = cellIndex * cellWidth;
-        float imgX = cellLeft + (cellWidth - img.ScaledWidth) / 2f;
-
-        // Y: center vertically a bit higher so text can be below
-        float imgY = (doc.PageSize.Height - img.ScaledHeight) / 2f + 3f;
-
-        img.SetAbsolutePosition(imgX, imgY);
-        doc.Add(img);
-
-        // ========== Text under barcode ==========
-        cb.BeginText();
-        float fontSize = 7f;
-        cb.SetFontAndSize(bf, fontSize);
-
-        float textWidth = bf.GetWidthPoint(item.BarcodeNo, fontSize);
-        float textX = cellLeft + (cellWidth - textWidth) / 2f;
-        float textY = imgY - 8f; // below the barcode   
-
-        cb.SetTextMatrix(textX, textY);
-        cb.ShowText(item.BarcodeNo);
-        cb.EndText();
-
-        // Product Name + Color (ADDED – below barcode no)
-        string productName = $"{item.InwardItem?.Product?.SKU}".Trim();
-
-        if (!string.IsNullOrWhiteSpace(productName))
+        public static readonly BarcodeLayoutDto Right = new BarcodeLayoutDto
         {
-            float nameFontSize = 6f;
+            BarcodeX = 420,
+            BarcodeTextX = 305,
+            ProductTextX = 420,
+            DateTextX = 256
+        };
+    }
 
-            cb.BeginText();
-            cb.SetFontAndSize(bf, nameFontSize);
+    /// <summary>
+    /// barcode label with dynamic data to the PRN content
+    /// </summary>
+    private void AddBarcodeLabel(StringBuilder sb, InwardBarcodeItem barcodeItem, string productName, BarcodePositionType position)
+    {
+        var date = DateTime.Now;
 
-            float nameWidth = bf.GetWidthPoint(productName, nameFontSize);
-            float nameX = cellLeft + (cellWidth - nameWidth) / 2f;
-            float nameY = textY - 7f;
+        var layout = position == BarcodePositionType.Left ? BarcodeLayout.Left : BarcodeLayout.Right;
 
-            cb.SetTextMatrix(nameX, nameY);
-            cb.ShowText(productName);
-            cb.EndText();
-        }
+        sb.AppendLine(
+            $"BARCODE {layout.BarcodeX},159,\"128M\",75,0,180,3,6,\"!105{barcodeItem.BarcodeNo}\"");
+
+        sb.AppendLine(
+            $"TEXT {layout.BarcodeTextX},80,\"ROMAN.TTF\",180,1,8,\"{barcodeItem.BarcodeNo}\"");
+
+        sb.AppendLine(
+            $"TEXT {layout.ProductTextX},43,\"ROMAN.TTF\",180,1,8,\"{productName}\"");
+
+        sb.AppendLine(
+            $"TEXT {layout.DateTextX},188,\"0\",180,0,8,\"DT:{date:dd-MM-yyyy hh:mm tt}\"");
     }
     #endregion
 
@@ -498,7 +467,7 @@ public class InwardService : IInwardService
             items.Add(new InwardItem
             {
                 InwardId = inwardId,
-                BrandId=itemModel.BrandId,
+                BrandId = itemModel.BrandId,
                 ProductId = itemModel.ProductId,
                 ItemQuantity = itemModel.ItemQuantity,
                 InwardUnitId = itemModel.InwardUnitId,
@@ -534,7 +503,7 @@ public class InwardService : IInwardService
             CreatedBy = model.CreatedBy,
             CreatedOn = model.CreatedOn,
             BoxQuantity = model.BoxQuantity,
-            BrandId= model.BrandId
+            BrandId = model.BrandId
         };
 
         await itemRepo.AddAsync(entity);
@@ -607,7 +576,6 @@ public class InwardService : IInwardService
 
             if (existingBarcodes != null && existingBarcodes.Any())
             {
-                // Find the highest counter from existing barcodes
                 var maxCounter = existingBarcodes
                .Select(b => int.Parse(b.BarcodeNo[^6..]))
                .Max();
@@ -744,6 +712,4 @@ public class InwardService : IInwardService
     }
 
     #endregion
-
-
 }
