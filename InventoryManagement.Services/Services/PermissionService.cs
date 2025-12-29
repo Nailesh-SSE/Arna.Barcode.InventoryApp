@@ -1,7 +1,7 @@
 ﻿using InventoryManagement.Core.Entities;
-using InventoryManagement.Core.Enums;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
+using InventoryManagement.Services.Mapper;
 using InventoryManagement.Services.Models;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -11,8 +11,6 @@ public class PermissionService : IPermissionService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMemoryCache _cache;
-
-    // 🔹 ADD THIS
     private static readonly SemaphoreSlim _lock = new(1, 1);
 
     public PermissionService(IUnitOfWork unitOfWork, IMemoryCache cache)
@@ -23,32 +21,19 @@ public class PermissionService : IPermissionService
 
     public async Task<List<UserFormPermissionModel>> GetUserPermissionsAsync(int userId)
     {
-        var cacheKey = $"user-permissions-{userId}";
+        var cacheKey = GetPermissionCacheKey(userId);
 
-        // 🔹 1. Return from cache if exists
-        if (_cache.TryGetValue(cacheKey, out List<UserFormPermissionModel>? cachedPermissions))
-        {
-            return cachedPermissions ?? new();
-        }
+        if (TryGetFromCache(cacheKey, out List<UserFormPermissionModel>? cachedPermissions))
+            return cachedPermissions;
 
-        // 🔹 2. Prevent concurrent DB hits
         await _lock.WaitAsync();
         try
         {
-            // Double-check inside lock
-            if (_cache.TryGetValue(cacheKey, out cachedPermissions))
-            {
-                return cachedPermissions ?? new();
-            }
+            if (TryGetFromCache(cacheKey, out cachedPermissions))
+                return cachedPermissions;
 
             var permissions = await LoadPermissionsFromDbAsync(userId);
-
-            // 🔹 3. Store in cache
-            _cache.Set(cacheKey, permissions, new MemoryCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
-                SlidingExpiration = TimeSpan.FromMinutes(10)
-            });
+            SetCache(cacheKey, permissions);
 
             return permissions;
         }
@@ -56,6 +41,60 @@ public class PermissionService : IPermissionService
         {
             _lock.Release();
         }
+    }
+
+    public async Task<List<FormMasterModel>> GetPermittedFormsAsync(int userId)
+    {
+        var cacheKey = GetFormsCacheKey(userId);
+
+        if (TryGetFromCache(cacheKey, out List<FormMasterModel>? cachedForms))
+            return cachedForms;
+
+        await _lock.WaitAsync();
+        try
+        {
+            if (TryGetFromCache(cacheKey, out cachedForms))
+                return cachedForms;
+
+            var permissions = await GetUserPermissionsAsync(userId);
+
+            List<FormMaster> forms = permissions.Any(p => p.Route == "*")
+                ? await GetAllActiveFormsAsync()
+                : await GetPermittedFormsAsync(permissions);
+
+            var result = forms.ToModelList();
+            SetCache(cacheKey, result);
+
+            return result;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    private async Task<List<FormMaster>> GetAllActiveFormsAsync()
+    {
+        return (await _unitOfWork
+            .GetRepository<FormMaster>()
+            .FindAsync(f => !f.IsDeleted && f.IsActive))
+            .ToList();
+    }
+
+    private async Task<List<FormMaster>> GetPermittedFormsAsync(List<UserFormPermissionModel> permissions)
+    {
+        var allowedRoutes = permissions
+            .Where(p => p.CanView)
+            .Select(p => p.Route)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return (await _unitOfWork
+            .GetRepository<FormMaster>()
+            .FindAsync(f =>
+                !f.IsDeleted &&
+                f.IsActive &&
+                allowedRoutes.Contains(f.Route)))
+            .ToList();
     }
 
     private async Task<List<UserFormPermissionModel>> LoadPermissionsFromDbAsync(int userId)
@@ -66,78 +105,83 @@ public class PermissionService : IPermissionService
         var formRepo = _unitOfWork.GetRepository<FormMaster>();
 
         var userRole = (await userRoleRepo.FindAsync(x =>
-            x.UserId == userId && !x.IsDeleted))
-            .FirstOrDefault();
+            x.UserId == userId && !x.IsDeleted)).FirstOrDefault();
 
-        if (userRole == null)
-            return new List<UserFormPermissionModel>();
+        if (userRole is null)
+            return [];
 
         var role = await roleRepo.GetByIdAsync(userRole.RoleId);
 
-        var permissions = new List<UserFormPermissionModel>();
+        if (role is null)
+            return [];
 
-        if (role == null)
-            return permissions;
-
-        var admin = "Admin";
-        var factoryAdmin = "FactoryAdmin";
-        // 🔹 Admin shortcut
-        if (role.Name.ToLower() == admin.ToLower())
+        if (IsAdminRole(role.Name))
         {
-            permissions.Add(new UserFormPermissionModel
+            return [new UserFormPermissionModel
             {
                 Route = "*",
                 CanView = true,
                 CanCreate = true,
                 CanEdit = true,
                 CanDelete = true
-            });
-
-            return permissions;
-        }
-
-        if (role.Name.ToLower() == factoryAdmin.ToLower())
-        {
-            permissions.Add(new UserFormPermissionModel
-            {
-                Route = "*",
-                CanView = true,
-                CanCreate = true,
-                CanEdit = true,
-                CanDelete = true
-            });
-            return permissions;
+            }];
         }
 
         var forms = await formRepo.FindAsync(x => !x.IsDeleted && x.IsActive);
         var rolePerms = await rolePermRepo.FindAsync(x =>
             x.RoleId == role.Id && !x.IsDeleted);
-        if (forms.Any())
-        {
-            foreach (var form in forms)
+
+        var permissions = forms
+            .Select(form =>
             {
                 var rolePerm = rolePerms.FirstOrDefault(x => x.FormId == form.Id);
-
-                if (rolePerm != null)
-                {
-                    permissions.Add(new UserFormPermissionModel
+                return rolePerm is not null
+                    ? new UserFormPermissionModel
                     {
                         Route = form.Route,
                         CanView = rolePerm.CanView,
                         CanCreate = rolePerm.CanCreate,
                         CanEdit = rolePerm.CanEdit,
                         CanDelete = rolePerm.CanDelete
-                    });
-                }
-            }
-        }
+                    }
+                    : null;
+            })
+            .Where(p => p is not null)
+            .ToList()!;
 
         return permissions;
     }
+
     public void ClearUserPermissionCache(int userId)
     {
-        var cacheKey = $"user-permissions-{userId}";
-        _cache.Remove(cacheKey);
+        _cache.Remove(GetPermissionCacheKey(userId));
+        _cache.Remove(GetFormsCacheKey(userId));
     }
 
+    private static bool IsAdminRole(string roleName) =>
+        roleName.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+        roleName.Equals("FactoryAdmin", StringComparison.OrdinalIgnoreCase);
+
+    private static string GetPermissionCacheKey(int userId) => $"user-permissions-{userId}";
+    private static string GetFormsCacheKey(int userId) => $"user-forms-{userId}";
+
+    private bool TryGetFromCache<T>(string cacheKey, out T? value)
+    {
+        if (_cache.TryGetValue(cacheKey, out T? cachedValue) && cachedValue is not null)
+        {
+            value = cachedValue;
+            return true;
+        }
+        value = default;
+        return false;
+    }
+
+    private void SetCache<T>(string cacheKey, T value)
+    {
+        _cache.Set(cacheKey, value, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(120),
+            SlidingExpiration = TimeSpan.FromMinutes(120)
+        });
+    }
 }

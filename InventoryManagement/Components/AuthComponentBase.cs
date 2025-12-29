@@ -24,10 +24,15 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         User = authState.User;
 
-        if (User.Identity?.IsAuthenticated == true && !PermissionState.IsLoaded)
+        if (IsAuthenticated && !PermissionState.IsLoaded)
         {
-            PermissionState.SetPermissions(await PermissionService.GetUserPermissionsAsync(UserId));
+            var permissions = await PermissionService.GetUserPermissionsAsync(UserId);
+            PermissionState.SetPermissions(permissions);
+
+            // 🔹 preload forms into cache
+            await PermissionService.GetPermittedFormsAsync(UserId);
         }
+
 
         AuthProvider.AuthenticationStateChanged += OnAuthChanged;
     }

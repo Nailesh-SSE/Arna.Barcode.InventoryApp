@@ -1,9 +1,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using InventoryManagement.Components.Auth
 @inherits AuthComponentBase
-@inject IRoleService RoleService
-@inject IFormPermissionService Service
-@inject IFormMasterService FormService
+@inject IPermissionService PermissionService
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -68,11 +66,29 @@
     private int UserRoleId;
     private int UserLevel;
 
-    protected override async Task OnInitializedAsync()
+   protected override async Task OnInitializedAsync()
+{
+     await base.OnInitializedAsync();
+      
+    if (!IsAuthenticated)
+        return;
+
+    isLoading = true;
+
+    var forms = await PermissionService.GetPermittedFormsAsync(UserId);
+    if(forms.Any())
     {
-        await base.OnInitializedAsync();
-        await LoadForms();
+    formList = forms;   
+    parentformList = forms.Where(f => f.Route == "#").ToList();
+
+    childForms = forms
+        .Where(f => f.ParentId != null)
+        .GroupBy(f => f.ParentId!.Value)
+        .ToDictionary(g => g.Key, g => g.ToList());
     }
+    isLoading = false;
+}
+
 
     private IconName? GetIcon(string icon)
     {
@@ -84,63 +100,6 @@
             : null;
     }
 
-    private async Task LoadForms()
-    {
-        try
-        {
-            isLoading = true;
-            formList = await FormService.GetAllAsync();
-
-            if(formList.Any())      
-                parentformList = formList.Where(a=>a.Route=="#").ToList();
-
-            UserRoleId = Convert.ToInt32(CurrentUserRoleId);
-            if (UserRoleId == 0)
-            {
-                BuildDictionary();
-                isLoading = false;
-                return;
-            }
-           await Task.Delay(500);
-            roles = await RoleService.GetAllRolesAsync(UserRoleId);
-            UserLevel = roles.First(r => r.Id == UserRoleId).RoleLevel;
-
-              await Task.Delay(500);
-            permissionList = await Service.GetAllAsync(UserRoleId);
-            if (permissionList.Any())
-            {
-                if (UserLevel > 5)
-                {
-                    var permittedFormIds = permissionList
-                        .Where(p => p.RoleId == UserRoleId)
-                        .Select(p => p.FormId)
-                        .ToList();
-
-                    formList = formList
-                        .Where(f => permittedFormIds.Contains(f.Id))
-                        .ToList();
-
-                    var parentIdsInUse = formList
-                    .Where(f => f.ParentId != null)
-                    .Select(f => f.ParentId.Value)
-                    .Distinct()
-                    .ToList();
-
-                    parentformList = parentformList
-                        .Where(p => parentIdsInUse.Contains(p.Id))
-                        .ToList();
-                }
-            }
-            BuildDictionary();
-           isLoading = false;
-        }
-        catch (Exception ex)
-        {
-            
-            throw;
-        }
-      
-    }
     private void BuildDictionary()
     {
         childForms = formList
