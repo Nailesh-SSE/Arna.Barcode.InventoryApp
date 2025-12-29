@@ -12,4 +12,6 @@ public interface IUserService
     Task<IEnumerable<Users>> GetAllUsersAsync(int userRoleId);
     Task<(bool UserNameExists, bool PhoneExists, bool EmailExists)> CheckDuplicate(int? id, string userName, string phone, string email);
     Task<List<Roles>> GetAllRolesAsync();
+    Task<bool> ChangePasswordAsync(int userId, string newPassword);
+    Task<Users?> GetUserByUserIdAsync(int userId);
 }

@@ -11,7 +11,7 @@
 <AuthorizeView>
     <Authorized>
         <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button"
                     id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                 <Icon Name="IconName.PersonCircle" />
                 @context.User.Identity?.Name
@@ -27,6 +27,12 @@
                 <li>
                     <Button class="dropdown-item" Type="ButtonType.Link" To="report">
                         <Icon Name="IconName.BarChart" /> Reports
+                    </Button>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <Button class="dropdown-item" @onclick="HandleChangePassword">
+                        <Icon Name="IconName.PersonLock" /> Change Password
                     </Button>
                 </li>
                 <li><hr class="dropdown-divider"></li>
@@ -83,5 +89,9 @@
             // Always redirect
             NavigationManager.NavigateTo("/login", forceLoad: true);
         }
+    }
+    private void HandleChangePassword()
+    {
+        NavigationManager.NavigateTo("/change-password");
     }
 }
