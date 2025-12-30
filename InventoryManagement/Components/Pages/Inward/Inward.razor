@@ -47,10 +47,10 @@ else
     <InwardFormModal @ref="inwardFormModal" Title="@modalTitle" Inward="inward" ShipCompanies="shipCompanies" Categories="categories"
                      Products="products" OnSave="SaveInward" OnCancel="HideModal" />
 
-    <InwardItemsModal @ref="itemsModal" Title="@itemTitle" SelectedInward="selectedInward" InwardItems="inwardItems" FilteredProducts="filteredProductsbyCategory" Brands="filteredBrandsByCategory"
-                      OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnDownloadPdf="DownloadSingleItemPdf" OnAddItem="AddNewItemRow"
-                      OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" />
-}
+<InwardItemsModal @ref="itemsModal" Title="@itemTitle" SelectedInward="selectedInward" InwardItems="inwardItems" FilteredProducts="filteredProductsbyCategory" Brands="filteredBrandsByCategory"
+                  OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnDownloadPdf="DownloadSingleItemPrn" OnAddItem="AddNewItemRow"
+                  OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" />
+
 @code {
     private List<InwardModel> inwards = new();
     private List<CompanyModel> shipCompanies = new();
@@ -288,16 +288,16 @@ else
         }
     }
 
-    private async Task DownloadSingleItemPdf(InwardItemModel item)
+    private async Task DownloadSingleItemPrn(InwardItemModel item)
     {
         try
         {
-            var pdfBytes = await InwardService.GenerateItemBarcodePdfAsync(item.Id);
+            var prnBytes = await InwardService.GenerateItemBarcodePrnAsync(item.Id);
 
-            if (pdfBytes != null && pdfBytes.Length > 0)
+            if (prnBytes != null && prnBytes.Length > 0)
             {
-                string fileName = $"Item_{item.Id}_Barcodes.pdf";
-                await BlazorDownloadFileService.DownloadFile(fileName, pdfBytes, "application/pdf");
+                string fileName = $"Item_{item.Id}_Barcodes.prn";
+                await BlazorDownloadFileService.DownloadFile(fileName, prnBytes, "application/octet-stream");
             }
             else
             {
@@ -306,8 +306,8 @@ else
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
-            await JS.InvokeVoidAsync("alert", "Error downloading PDF.");
+            Console.WriteLine($"Error downloading PRN file: {ex.Message}");
+            await JS.InvokeVoidAsync("alert", "Error downloading PRN file.");
         }
     }
 }

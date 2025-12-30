@@ -17,5 +17,5 @@ public interface IInwardService
     Task<bool> DeleteInwardItemAsync(int id);
     Task<int> AddReturnedItemToExistingInwardAsync(ReturnItemDto parameter);
     Task RemoveReturnedReturnedItemFromStockAsync(int inwardItemId);
-    Task<byte[]> GenerateItemBarcodePdfAsync(int inwardItemId);
+    Task<byte[]> GenerateItemBarcodePrnAsync(int inwardItemId);
 }
