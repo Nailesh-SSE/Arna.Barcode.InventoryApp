@@ -16,8 +16,8 @@
     }
     else if (formList.Any())
     {
-        if(parentformList.Any() && childForms.Any())
-        {
+      if(parentformList.Any() && childForms.Any())
+      {
         @foreach (var parent in parentformList)
         {
             <!-- HEADER -->
@@ -47,8 +47,8 @@
                     </div>
                 }
             }
-            }
         }
+      }
     }
 </div>
 
@@ -67,27 +67,27 @@
     private int UserLevel;
 
    protected override async Task OnInitializedAsync()
-{
-     await base.OnInitializedAsync();
-      
-    if (!IsAuthenticated)
-        return;
+   {
+        await base.OnInitializedAsync();
+         
+       if (!IsAuthenticated)
+           return;
+   
+       isLoading = true;
+   
+       var forms = await PermissionService.GetPermittedFormsAsync(UserId);
+    
+       if(forms.Any())
+       {
+         formList = forms;   
+         parentformList = forms.Where(f => f.Route == "#").ToList();
+         
+         childForms = forms.Where(f => f.ParentId != null).GroupBy(f => f.ParentId!.Value)
+            .ToDictionary(g => g.Key, g => g.ToList());
+       }
 
-    isLoading = true;
-
-    var forms = await PermissionService.GetPermittedFormsAsync(UserId);
-    if(forms.Any())
-    {
-    formList = forms;   
-    parentformList = forms.Where(f => f.Route == "#").ToList();
-
-    childForms = forms
-        .Where(f => f.ParentId != null)
-        .GroupBy(f => f.ParentId!.Value)
-        .ToDictionary(g => g.Key, g => g.ToList());
-    }
-    isLoading = false;
-}
+       isLoading = false;
+   }
 
 
     private IconName? GetIcon(string icon)

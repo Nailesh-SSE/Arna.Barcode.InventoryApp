@@ -43,9 +43,9 @@ else
             <InwardTable Inwards="inwards" ShipCompanies="shipCompanies" OnEdit="ShowEditModal" OnDelete="DeleteInward" OnAddItems="OpenAddItemModal" />
         }
     </div>
-
-    <InwardFormModal @ref="inwardFormModal" Title="@modalTitle" Inward="inward" ShipCompanies="shipCompanies" Categories="categories"
-                     Products="products" OnSave="SaveInward" OnCancel="HideModal" />
+}
+<InwardFormModal @ref="inwardFormModal" Title="@modalTitle" Inward="inward" ShipCompanies="shipCompanies" Categories="categories"
+                 Products="products" OnSave="SaveInward" OnCancel="HideModal" />
 
 <InwardItemsModal @ref="itemsModal" Title="@itemTitle" SelectedInward="selectedInward" InwardItems="inwardItems" FilteredProducts="filteredProductsbyCategory" Brands="filteredBrandsByCategory"
                   OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnDownloadPdf="DownloadSingleItemPrn" OnAddItem="AddNewItemRow"
@@ -98,7 +98,7 @@ else
         categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
         products = (await ProductService.GetAllProductsAsync()).Where(e => e.IsActive == true).ToList();
         isLoading = false;
-        
+
     }
 
     private void ShowAddModal()
@@ -170,7 +170,7 @@ else
                 inward.Id = inwardId;
                 await OpenAddItemModal(inward);
             }
-        }       
+        }
     }
 
     private async Task DeleteInward(int id)
