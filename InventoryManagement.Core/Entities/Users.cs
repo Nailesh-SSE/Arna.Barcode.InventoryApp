@@ -7,6 +7,7 @@ public partial class Users : Common
 {
     [Key]
     public int Id { get; set; }
+    public int RoleId { get; set; }
 
     [Required(ErrorMessage = "First name is required")]
     [StringLength(50)]
@@ -34,6 +35,7 @@ public partial class Users : Common
     public string ContactNo { get; set; } = string.Empty;
 
     public bool IsLoginAllowed { get; set; } = true;
+
 
     [NotMapped]
     public string Name => $"{FirstName} {LastName}";

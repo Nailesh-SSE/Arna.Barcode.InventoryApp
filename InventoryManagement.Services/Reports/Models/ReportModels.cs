@@ -1,3 +1,5 @@
+using InventoryManagement.Core.Entities.SP_Entities;
+
 namespace InventoryManagement.Services.Models.ReportModels;
 
 #region Base Models
@@ -33,6 +35,7 @@ public class InwardFilter : BaseReportFilter
 {
     public string? InwardNumbers { get; set; }
     public int? ShipmentCompanyId { get; set; }
+    public int? BrandId { get; set; }
     public decimal? MinQuantity { get; set; }
     public decimal? MaxQuantity { get; set; }
     public string? ProductSKUs { get; set; }
@@ -58,6 +61,8 @@ public class InwardReportItem
     public decimal TotalCost { get; set; }
     public string? BatchNumber { get; set; }
     public string? SerialNumber { get; set; }
+    public int? BrandId { get; set; }
+    public string? BrandName { get; set; }
     public int ShipmentCompanyId { get; set; }
     public string ShipmentCompanyName { get; set; } = string.Empty;
     public string? Remarks { get; set; }
@@ -209,4 +214,44 @@ public class SaleReturnReportSummary
 }
 
 
+#endregion
+#region  Inveotry Report Models
+public class InventoryReportResult : BaseReportResult
+{
+    public List<InventoryReportDTO> Items { get; set; } = new();
+    public SaleReturnReportSummary Summary { get; set; } = new();
+    public int PageCount { get; set; }
+    public bool HasNextPage { get; set; }
+    public bool HasPreviousPage { get; set; }
+}
+public class InventoryReportFilter : BaseReportFilter 
+{
+
+    public int? BrandId { get; set; }   
+    public int? CategoryId { get; set; }
+    public int? ColourId { get; set; }
+    public bool? IsActive { get; set; }
+    public bool? IsDeleted { get; set; }
+    public int? MInGoodMinGoodStock { get; set; }
+    public int? MaxGoodStock { get; set; }
+
+}
+//public class InventoryReportModel 
+//{
+//    public int ProductId { get; set; }
+//    public int? CategoryId { get; set; }
+//    public int? BrandId { get; set; }
+//    public string SKU { get; set; }
+//    public string? BrandName { get; set; }
+//    public string? CategoryName { get; set; }
+//    public string? Color { get; set; } 
+//    public decimal Inward { get; set; }
+//    public decimal Outward { get; set; }
+//    public decimal SaleReturn { get; set; }
+//    public decimal TotalSale { get; set; }
+//    public decimal GoodStock { get; set; }
+//    public bool IsActive { get; set; } = true;
+//    public bool IsDelete { get; set; } = false;
+
+//}
 #endregion

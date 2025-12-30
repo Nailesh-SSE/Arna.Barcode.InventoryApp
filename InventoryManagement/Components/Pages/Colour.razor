@@ -5,35 +5,35 @@
 @inject IJSRuntime JS
 
 <PageTitle>Colour</PageTitle>
-
-@if (isLoading)
+@if (!CanView(Route))
 {
-    <div class="text-center">
-        <Spinner Type="SpinnerType.Border" />
-    </div>
+    <AccessDenied />
 }
 else
 {
-    <div class="container-fluid">
-        <div class="row mb-3">
-            <div class="col">
-                <h3><Icon Name="IconName.Palette" />Colour</h3>
-            </div>
-            <div class="col-auto">
-                <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
-                    <Icon Name="IconName.Plus" /> Add New
-                </Button>
-            </div>
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <Spinner Type="SpinnerType.Border" />
         </div>
-
-        @if (isLoading)
-        {
-            <div class="text-center">
-                <Spinner Type="SpinnerType.Border" />
+    }
+    else
+    {
+        <div class="container-fluid">
+            <div class="row mb-3">
+                <div class="col">
+                    <h3><Icon Name="IconName.Palette" />Colour</h3>
+                </div>
+                <div class="col-auto">
+                    @if (CanCreate(Route))
+                    {
+                        <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                            <Icon Name="IconName.Plus" /> Add New
+                        </Button>
+                    }
+                </div>
             </div>
-        }
-        else
-        {
+
             <Grid TItem="ColourModel"
                   Class="table table-hover table-bordered table-striped"
                   Data="colourList"
@@ -64,48 +64,57 @@ else
                 </GridColumn>
 
                 <GridColumn TItem="ColourModel" HeaderText="Actions">
-                    <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                        <Icon Name="IconName.PencilSquare" /> Edit
-                    </Button>
-                    <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteColour(context.Id)">
-                        <Icon Name="IconName.Trash" /> Delete
-                    </Button>
+                    <div class="d-flex gap-1 justify-content-start">
+                        @if (CanEdit(Route))
+                        {
+                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                                <Icon Name="IconName.PencilSquare" /> Edit
+                            </Button>
+                        }
+
+                        @if (CanDelete(Route))
+                        {
+                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteColour(context.Id)">
+                                <Icon Name="IconName.Trash" /> Delete
+                            </Button>
+                        }
+                    </div>
                 </GridColumn>
             </Grid>
-        }
-    </div>
+
+        </div>
+    }
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+        <BodyTemplate>
+            <EditForm EditContext="@editContext" OnValidSubmit="SaveColour">
+                <DataAnnotationsValidator />
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="colourModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
+                        <ValidationMessage For="@(() => colourModel.Name)" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Code <span class="text-danger">*</span> </label>
+                        <InputText class="form-control" @bind-Value="colourModel.Code" @oninput="(e) => HandleCodeChangeAsync(e.Value?.ToString())" />
+                        <ValidationMessage For="@(() => colourModel.Code)" />
+                    </div>
+                </div>
+                @if (colourModel.Id > 0)
+                {
+                    <div class="mb-3">
+                        <InputCheckbox @bind-Value="colourModel.IsActive" /> Active
+                    </div>
+                }
+                <div class="text-end">
+                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+                </div>
+            </EditForm>
+        </BodyTemplate>
+    </Modal>
 }
-<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
-    <BodyTemplate>
-        <EditForm EditContext="@editContext" OnValidSubmit="SaveColour">
-            <DataAnnotationsValidator />
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="colourModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
-                    <ValidationMessage For="@(() => colourModel.Name)" />
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Code <span class="text-danger">*</span> </label>
-                    <InputText class="form-control" @bind-Value="colourModel.Code" @oninput="(e) => HandleCodeChangeAsync(e.Value?.ToString())" />
-                    <ValidationMessage For="@(() => colourModel.Code)" />
-                </div>
-            </div>
-            @if (colourModel.Id > 0)
-            {
-                <div class="mb-3">
-                    <InputCheckbox @bind-Value="colourModel.IsActive" /> Active
-                </div>
-            }
-            <div class="text-end">
-                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
-            </div>
-        </EditForm>
-    </BodyTemplate>
-</Modal>
-
 @code {
     private Modal modal { get; set; }
     private bool isEditMode = false;
@@ -114,28 +123,30 @@ else
     private string modalTitle = "Add Colours";
     private Grid<ColourModel> ColourGrid;
     private List<ColourModel> colourList = new();
-
+    private string Route = "/colour";
     private EditContext editContext { get; set; }
     private ValidationMessageStore validationMessage;
 
     protected override async Task OnInitializedAsync()
     {
+        isLoading = true;
         await base.OnInitializedAsync();
+        await LoadColour();
+        StateHasChanged();
         if (!IsAuthenticated)
         {
             NavigationManager.NavigateTo("/logout", forceLoad: true);
             return;
         }
-        await LoadColour();
-        StateHasChanged();
+        isLoading = false;
+
     }
 
     private async Task LoadColour()
     {
-        isLoading = true;
         colourList = await ColourService.GetAllColourAsync();
-        isLoading = false;
     }
+
     public void InitializeEditContextAsync()
     {
         editContext = new EditContext(colourModel);

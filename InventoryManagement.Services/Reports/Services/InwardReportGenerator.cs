@@ -275,7 +275,8 @@ public class InwardReportGenerator : IInwardReportService
     {
         var inwards = await query.ToListAsync();
         var items = new List<InwardReportItem>();
-
+        var companies = _unitOfWork.GetRepository<Company>();
+        var brands= await companies.GetAllAsync(); 
         foreach (var inward in inwards)
         {
             foreach (var item in inward.InwardItems.Where(ii => !ii.IsDeleted))
@@ -308,6 +309,8 @@ public class InwardReportGenerator : IInwardReportService
                     TotalCost = totalCost,
                     BatchNumber = item.BatchNo,
                     SerialNumber = item.SerialNo,
+                    BrandId = item.BrandId,
+                    BrandName = brands.FirstOrDefault(b => b.Id == item.BrandId)?.Name,
                     ShipmentCompanyId = inward.ShipMentCompanyId,
                     ShipmentCompanyName = inward.ShipMentCompany?.Name ?? "",
                     Remarks = inward.Remarks,

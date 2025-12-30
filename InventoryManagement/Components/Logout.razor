@@ -4,6 +4,8 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ILogger<Logout> Logger
 @inject NavigationManager NavigationManager
+@inject IPermissionService PermissionService
+@inject PermissionState PermissionState
 
 @code {
     protected override async Task OnInitializedAsync()
@@ -13,6 +15,18 @@
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             if (authState.User.Identity?.IsAuthenticated == true)
             {
+                var userIdClaim =
+                 authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+                if (int.TryParse(userIdClaim, out var userId))
+                {
+                    // 🔹 CLEAR IN-MEMORY CACHE
+                    PermissionService.ClearUserPermissionCache(userId);
+                }
+
+                // 🔹 CLEAR UI STATE
+                PermissionState.Clear();
+
                 var username = authState.User.Identity.Name;
                 Logger.LogInformation("User {Username} is logging out", username);
 

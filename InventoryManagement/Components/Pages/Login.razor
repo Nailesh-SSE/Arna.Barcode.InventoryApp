@@ -336,6 +336,7 @@
                         UserId = user.Id.ToString(),
                         UserName = user.UserName ?? loginModel.Username,
                         UserFullName = user.Name ?? loginModel.Username,
+                        UserRoleId = user.RoleId.ToString(),
                         IsAuthenticated = true,
                         LoginTime = DateTime.UtcNow
                     });

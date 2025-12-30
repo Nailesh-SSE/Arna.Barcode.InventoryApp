@@ -3,105 +3,120 @@
 @inject IPlatformService PlatformService
 @using InventoryManagement.Components.Auth
 @inherits AuthComponentBase
-
 <PageTitle>Platform</PageTitle>
 
-
-@if (isLoading)
+@if (!CanView(Route))
 {
-    <div class="text-center">
-        <Spinner Type="SpinnerType.Border" />
-    </div>
+    <AccessDenied />
 }
 else
 {
-    <div class="container-fluid">
-        <div class="row mb-3">
-            <div class="col">
-                <h3><Icon Name="IconName.Stack" /> Platform</h3>
-            </div>
-            <div class="col-auto">
-                <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
-                    <Icon Name="IconName.Plus" /> Add New
-                </Button>
-            </div>
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <Spinner Type="SpinnerType.Border" />
         </div>
-
-        <Grid TItem="PlatformModel"
-              @ref="platformGrid"
-              Class="table table-hover table-bordered table-striped"
-              Data="platformList"
-              AllowPaging="true"
-              PageSize="10"
-              Responsive="true">
-
-
-            <GridColumn TItem="PlatformModel" HeaderText="No">
-                @(platformList.IndexOf(context) + 1)
-            </GridColumn>
-
-            <GridColumn TItem="PlatformModel" HeaderText="Name" PropertyName="Name">
-                @context.Name
-            </GridColumn>
-
-            <GridColumn TItem="PlatformModel" HeaderText="Remark" PropertyName="Remark">
-                @context.Remark
-            </GridColumn>
-
-            <GridColumn TItem="PlatformModel" HeaderText="Status" PropertyName="IsActive">
-                @if (context.IsActive)
-                {
-                    <Badge Color="BadgeColor.Success">Active</Badge>
-                }
-                else
-                {
-                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
-                }
-            </GridColumn>
-
-            <GridColumn TItem="PlatformModel" HeaderText="Actions">
-                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                    <Icon Name="IconName.PencilSquare" /> Edit
-                </Button>
-                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeletePlatform(context.Id)">
-                    <Icon Name="IconName.Trash" /> Delete
-                </Button>
-            </GridColumn>
-        </Grid>
-    </div>
-}
-
-<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
-    <BodyTemplate>
-        <EditForm EditContext="editContext" OnValidSubmit="SavePlatform">
-            <DataAnnotationsValidator />
-
-            <div class="mb-3">
-                <label class="form-label">Name <span class="text-danger">*</span></label>
-                <InputText class="form-control" autocomplete="off" @bind-Value="platformModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
-                <ValidationMessage For="@(() => platformModel.Name)" />
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Remark</label>
-                <InputTextArea class="form-control" rows="3" @bind-Value="platformModel.Remark" />
-            </div>
-
-            @if (platformModel.Id > 0)
-            {
-                <div class="mb-3">
-                    <InputCheckbox @bind-Value="platformModel.IsActive" /> Active
+    }
+    else
+    {
+        <div class="container-fluid">
+            <div class="row mb-3">
+                <div class="col">
+                    <h3><Icon Name="IconName.Stack" /> Platform</h3>
                 </div>
-            }
-
-            <div class="text-end">
-                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+                <div class="col-auto">
+                    @if (CanCreate(Route))
+                    {
+                        <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                            <Icon Name="IconName.Plus" /> Add New
+                        </Button>
+                    }
+                </div>
             </div>
-        </EditForm>
-    </BodyTemplate>
-</Modal>
 
+            <Grid TItem="PlatformModel"
+                  @ref="platformGrid"
+                  Class="table table-hover table-bordered table-striped"
+                  Data="platformList"
+                  AllowPaging="true"
+                  PageSize="10"
+                  Responsive="true">
+
+
+                <GridColumn TItem="PlatformModel" HeaderText="No">
+                    @(platformList.IndexOf(context) + 1)
+                </GridColumn>
+
+                <GridColumn TItem="PlatformModel" HeaderText="Name" PropertyName="Name">
+                    @context.Name
+                </GridColumn>
+
+                <GridColumn TItem="PlatformModel" HeaderText="Remark" PropertyName="Remark">
+                    @context.Remark
+                </GridColumn>
+
+                <GridColumn TItem="PlatformModel" HeaderText="Status" PropertyName="IsActive">
+                    @if (context.IsActive)
+                    {
+                        <Badge Color="BadgeColor.Success">Active</Badge>
+                    }
+                    else
+                    {
+                        <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                    }
+                </GridColumn>
+
+                <GridColumn TItem="PlatformModel" HeaderText="Actions">
+                    <div class="d-flex gap-1 justify-content-start">
+                        @if (CanEdit(Route))
+                        {
+                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                                <Icon Name="IconName.PencilSquare" /> Edit
+                            </Button>
+                        }
+                        @if (CanDelete(Route))
+                        {
+                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeletePlatform(context.Id)">
+                                <Icon Name="IconName.Trash" /> Delete
+                            </Button>
+                        }
+                    </div>
+                </GridColumn>
+            </Grid>
+        </div>
+    }
+
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+        <BodyTemplate>
+            <EditForm EditContext="editContext" OnValidSubmit="SavePlatform">
+                <DataAnnotationsValidator />
+
+                <div class="mb-3">
+                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                    <InputText class="form-control" autocomplete="off" @bind-Value="platformModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
+                    <ValidationMessage For="@(() => platformModel.Name)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Remark</label>
+                    <InputTextArea class="form-control" rows="3" @bind-Value="platformModel.Remark" />
+                </div>
+
+                @if (platformModel.Id > 0)
+                {
+                    <div class="mb-3">
+                        <InputCheckbox @bind-Value="platformModel.IsActive" /> Active
+                    </div>
+                }
+
+                <div class="text-end">
+                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+                </div>
+            </EditForm>
+        </BodyTemplate>
+    </Modal>
+}
 
 @code {
     private Modal modal = default!;
@@ -113,18 +128,17 @@ else
     private List<PlatformModel> platformList = new();
     private EditContext editContext;
     private ValidationMessageStore messageStore;
+    private string Route = "/platforms";
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-
+        await LoadPlatforms();
         if (!IsAuthenticated)
         {
             NavigationManager.NavigateTo("/logout", forceLoad: true);
             return;
         }
-
-        await LoadPlatforms();
     }
 
     private async Task LoadPlatforms()

@@ -1,0 +1,1110 @@
+@page "/sale-returns"
+@inject ISaleReturnService SaleReturnService
+@inject ICompanyService CompanyService
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+@inject IOutwardService OutwardService
+@using InventoryManagement.Services.DTO
+
+@inject IJSRuntime JSRuntime
+
+@inherits InventoryManagement.Components.Auth.AuthComponentBase
+<PageTitle>Sale Return Management</PageTitle>
+
+<div>
+
+    <div class="row mb-3">
+        <div class="col">
+            <h3>Sale Return Management</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowAddModal">
+                <Icon Name="IconName.Plus" />  Add New Sale Return
+            </button>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div>
+        <div class="spinner-border text-light" role="status"></div>
+    </div>
+}
+else
+{
+    <SaleReturnTable SaleReturns="saleReturnList"
+                     BillToCompanies="BillToCompanyList"
+                     OnEditSaleReturn="ShowEditModal"
+                     OnAddItems="OpenItemModel" />
+
+}
+
+<SaleReturnFormModal @ref="saleReturnFormModal"
+                     Title="@modalTitle"
+                     SaleReturnModel="saleReturn"
+                     BillToCompanyList="BillToCompanyList"
+                     OnSave="SaveSaleReturn"
+                     OnCancel="HideModal" />
+
+<SaleReturnItemsFormModal @ref="saleReturnItemsFormModal"
+                          Title="@itemTitle"
+                          SelectedSaleReturn="selectedSaleReturn"
+                          ItemsList="SaleReturnItems"
+                          ItemsModel="itemsModel"
+                          ProductList="ProductList"
+                          CompanyList="ShipToCompanyList"
+                          OutwardList="OutwardList"
+                          OnBarcodeVal="ValidateBarcode"
+                          OnClose="HideItemModal"
+                          OnDelete="DeleteSaleReturnItem"
+                          OnSave="SaveSaleReturnItem"
+                          OnSaveResponse="HandleResponse"
+                          AddItemRow="AddEmptyItemRow"
+                          RemoveItemRow="RemoveItemrow" />
+
+@code
+{
+    private bool isLoading = true;
+    private bool isEditMode = false;
+    private string modalTitle = "Add Sale Return";
+    private string itemTitle = "Sale Return Items";
+
+    private SaleReturnModel saleReturn = new();
+    private SaleReturnModel? selectedSaleReturn;
+    private SaleReturnItemsModel itemsModel { get; set; } = new();
+    private List<SaleReturnModel> saleReturnList = new();
+    private List<SaleReturnItemsModel>? SaleReturnItems { get; set; } = new();
+
+    private List<CompanyModel> BillToCompanyList = new();
+    private List<CompanyModel> ShipToCompanyList = new();
+    private List<ProductModel> ProductList = new();
+    private List<ProductModel> FilteredProducts { get; set; } = new();
+    private List<OutwardModel> OutwardList { get; set; } = new();
+
+    private SaleReturnFormModal? saleReturnFormModal;
+    private SaleReturnItemsFormModal? saleReturnItemsFormModal;
+    private List<UnitModel> Units => CommonUtils.UnitList;
+
+    private string validationMessage = string.Empty;
+    private bool validationIsValid = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+            saleReturnList = (await SaleReturnService.GetAllSaleReturnsAsync()).ToList();
+            BillToCompanyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
+            ShipToCompanyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
+            ProductList = (await ProductService.GetAllProductsAsync()).ToList();
+            OutwardList = (await OutwardService.GetAllOutwardsAsync()).ToList();
+            FilteredProducts = ProductList;
+        }
+        catch
+        {
+            //   ShowError("Connectivity issue happened, operation failed");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    #region FormModal
+    private void ShowAddModal()
+    {
+        modalTitle = "Add New Sale Return";
+        isEditMode = false;
+        saleReturn = new SaleReturnModel
+        {
+            SaleReturnDate = DateTime.Now,
+            IsActive = true,
+            CreatedBy = Convert.ToInt32(CurrentUserId),
+            CreatedOn = DateTime.UtcNow,
+        };
+        saleReturnFormModal?.Show();
+
+    }
+
+    private void ShowEditModal(SaleReturnModel editSaleReturn)
+    {
+        modalTitle = $"Edit Sale Return - {editSaleReturn.SaleReturnNo}";
+        isEditMode = true;
+        saleReturn = new SaleReturnModel
+        {
+            Id = editSaleReturn.Id,
+            SaleReturnDate = editSaleReturn.SaleReturnDate,
+            BillToCompanyId = editSaleReturn.BillToCompanyId,
+            IsActive = editSaleReturn.IsActive,
+            UpdatedBy = Convert.ToInt32(CurrentUserId),
+            UpdatedOn = DateTime.UtcNow
+        };
+        saleReturnFormModal?.Show();
+    }
+
+    private async Task SaveSaleReturn()
+    {
+        isLoading = true;
+
+        if (isEditMode)
+        {
+            saleReturn.UpdatedBy = Convert.ToInt32(CurrentUserId);
+            saleReturn.UpdatedOn = DateTime.UtcNow;
+            await SaleReturnService.UpdateSaleReturnAsync(saleReturn);
+            await HideModal();
+            await LoadData();
+        }
+        else
+        {
+            saleReturn.CreatedBy = Convert.ToInt32(CurrentUserId);
+            saleReturn.CreatedOn = DateTime.UtcNow;
+            var SaleReturnId = await SaleReturnService.CreateSaleReturnAsync(saleReturn);
+
+            await HideModal();
+            await LoadData();
+
+            if (SaleReturnId != 0)
+            {
+                saleReturn.Id = SaleReturnId;
+                //   await OpenAddItemModal(saleReturn);
+            }
+        }
+        isLoading = false;
+
+    }
+    private async Task HideModal()
+    {
+        await saleReturnFormModal.Hide();
+    }
+    #endregion
+    #region ItemModal
+    private async Task OpenItemModel(SaleReturnModel data)
+    {
+
+        selectedSaleReturn = saleReturnList.FirstOrDefault(s => s.Id == data.Id);
+        if (selectedSaleReturn == null) return;
+        itemTitle = $"Manage SaleReturn Items | SaleReturn No: {data?.SaleReturnNo}";
+        modalTitle = "Sale Return  No:" + data.SaleReturnNo;
+        var items = await SaleReturnService.GetSaleReturnItemsByReturnId(data.Id);
+
+        SaleReturnItems = items;
+        saleReturnItemsFormModal.ItemsList = items;
+        saleReturnItemsFormModal.SelectedSaleReturn = selectedSaleReturn;
+
+        StateHasChanged();
+        await saleReturnItemsFormModal.Show();
+
+    }
+    private async Task SaveSaleReturnItem(SaleReturnItemsModel item)
+    {
+        if (selectedSaleReturn == null || selectedSaleReturn.Id == 0)
+        {
+            await SendOperationResponse(false, "Sale Return is not selected");
+            return;
+        }
+
+        item.SaleReturnId = selectedSaleReturn.Id;
+
+        bool isUpdate = item.Id > 0;
+
+        bool success = isUpdate
+            ? await SaleReturnService.UpdateSaleReturnItem(item)
+            : await SaleReturnService.CreateSaleReturnItem(item);
+
+        if (!success)
+        {
+            await SendOperationResponse(false, "Operation failed");
+            return;
+        }
+
+        SaleReturnItems = await SaleReturnService
+            .GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
+
+        await SendOperationResponse(
+            true,
+            isUpdate ? "Updated successfully" : "Saved successfully"
+        );
+    }
+    private async Task SendOperationResponse(bool isSuccess, string message)
+    {
+        var ResponseDto = new OperationResponse()
+        {
+            IsSuccess = isSuccess,
+            Message = message
+        };
+        await HandleResponse(ResponseDto);
+    }
+    private async Task HandleResponse(OperationResponse Dto)
+    {   
+        await saleReturnItemsFormModal.HandleResponse(Dto);
+    }
+
+    private async Task DeleteSaleReturnItem(int itemId)
+    {
+        await SaleReturnService.DeleteSaleReturnItem(itemId);
+        SaleReturnItems = await SaleReturnService.GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
+     
+    }
+    private async Task AddEmptyItemRow()
+    {
+        await AddNewItemRow(null);
+    }
+
+    private async Task AddNewItemRow(SaleReturnValidationResult? data)
+    {
+        SaleReturnItems ??= new List<SaleReturnItemsModel>();
+
+        if (data == null || data.ProductId == null || data.ProductId == 0)
+        {
+            var hasBlankRow = SaleReturnItems.Any(item =>
+                item.Id == 0 && (item.ProductId == 0 || item.ReturnQuantity == 0));
+
+            if (hasBlankRow)
+                return;
+        }
+
+        SaleReturnItems.Add(new SaleReturnItemsModel
+        {
+            ProductId = data?.ProductId ?? 0,
+            ShipToCompanyId = data?.ShipToId ?? 0,
+            UnitId = data?.UnitId ?? 0,
+            OutwardId = data?.OutwardId ?? 0,
+            BarCodeNo = data?.BarcodeNo ?? null,
+            ReturnQuantity = 1
+        });
+
+        StateHasChanged();
+    }
+    private async Task HideItemModal()
+    {
+        await saleReturnItemsFormModal.Hide();
+
+    }
+    private async Task RemoveItemrow(SaleReturnItemsModel item)
+    {
+        SaleReturnItems.Remove(item);
+        StateHasChanged();
+
+    }
+
+    #endregion
+
+    private async Task ValidateBarcode()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(itemsModel.BarCodeNo))
+            {
+                validationMessage = "Please enter a barcode first.";
+                validationIsValid = false;
+                return;
+            }
+
+            if (selectedSaleReturn?.BillToCompanyId == 0)
+            {
+                validationMessage = "Please select a company first.";
+                validationIsValid = false;
+                return;
+            }
+
+            var validationResult = await SaleReturnService.ValidateBarcodeForSaleReturnAsync(
+                itemsModel.BarCodeNo,
+                selectedSaleReturn.BillToCompanyId
+            );
+
+            validationIsValid = validationResult.IsValid;
+            validationMessage = validationResult.IsValid
+               ? $"Valid barcode. Product: {validationResult.ProductName}"
+               : validationResult.ErrorMessage;
+            if (validationResult.IsValid)
+            {
+                await AddNewItemRow(validationResult);
+            }
+            StateHasChanged();
+        }
+        catch
+        {
+            // validationMessage = "Connectivity issue happened, validation failed";
+            // validationIsValid = false;
+            StateHasChanged();
+        }
+    }
+
+
+}
+@*
+<div class="container-fluid">
+    @if (showErrorMessage)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <Icon Name="IconName.ExclamationTriangle" /> @errorMessage
+        </div>
+    }
+
+        <div class="row mb-3">
+            <div class="col">
+                <h3><Icon Name="IconName.ArrowReturnRight" /> Sale Return Management</h3>
+            </div>
+            <div class="col-auto">
+                @if (CanCreate(Route))
+                {
+                    <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                        <Icon Name="IconName.Plus" /> Add New Sale Return
+                    </Button>
+                }
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center">
+                <Spinner Type="SpinnerType.Border" />
+            </div>
+        }
+        else
+        {
+            <Grid TItem="SaleReturnModel" Class="table table-hover table-bordered table-striped"
+                  Data="saleReturns" AllowPaging="true" PageSize="10" AllowSorting="true"
+                  Responsive="true">
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Sr. No." Sortable="false"
+                            HeaderTextAlignment="Alignment.Center" TextAlignment="Alignment.Center">
+                    @(saleReturns.IndexOf(context) + 1)
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Return No" PropertyName="ReturnNo">
+                    @context.ReturnNo
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Return Date" PropertyName="ReturnDate">
+                    @context.ReturnDate.ToString("dd/MM/yyyy")
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Billing Date" PropertyName="BillingDate">
+                    @(context.BillingDate.HasValue? context.BillingDate.Value.ToString("dd/MM/yyyy"): "-")
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Company" PropertyName="CompanyId">
+                    @{
+                        var company = billCompanies.FirstOrDefault(c => c.Id == context.CompanyId);
+                        @((company?.Name) ?? "N/A")
+
+                    }
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnModel" HeaderText="Product" PropertyName="ProductId">
+                    @{
+                        var product = FilteredProducts.FirstOrDefault(p => p.Id == context.ProductId);
+                        @($"{product.Name} ( {product.ColourName}) " ?? "-")
+                    }
+                </GridColumn>
+
+                @* <GridColumn TItem="SaleReturnModel" HeaderText="Return Type" PropertyName="ReturnType">
+                <Badge Color="@GetReturnTypeBadgeColor(context.ReturnType ?? InventoryManagement.Core.Enums.ReturnType.Other)">
+                    @(context.ReturnType?.ToString() ?? "-")
+                </Badge>
+            </GridColumn>
+
+            <GridColumn TItem="SaleReturnModel" HeaderText="Barcode" PropertyName="BarcodeNo">
+                @context.BarcodeNo
+            </GridColumn>
+
+            <GridColumn TItem="SaleReturnModel" HeaderText="Quantity" PropertyName="Quantity">
+                @context.Quantity
+            </GridColumn>
+
+            <GridColumn TItem="SaleReturnModel" HeaderText="Status" PropertyName="IsActive">
+                @if (context.IsActive)
+                {
+                    <Badge Color="BadgeColor.Success">Active</Badge>
+                }
+                else
+                {
+                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                }
+            </GridColumn> *@
+@*
+            <GridColumn TItem="SaleReturnModel" HeaderText="Actions">
+                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small"
+                        @onclick="() => ShowEditModal(context)">
+                    <Icon Name="IconName.PencilSquare" /> Edit
+                </Button>
+                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small"
+                        @onclick="() => DeleteSaleReturn(context.Id)">
+                    <Icon Name="IconName.Trash" /> Delete
+                </Button>
+            </GridColumn>
+        </Grid>
+    }
+</div>
+
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+        <BodyTemplate>
+            <EditForm EditContext="@editContext" OnValidSubmit="SaveSaleReturn">
+                <DataAnnotationsValidator />
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Return Date <span class="text-danger">*</span></label>
+                        <InputDate class="form-control" @bind-Value="saleReturn.ReturnDate" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        <ValidationMessage For="@(() => saleReturn.ReturnDate)" />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Billing Date <span class="text-danger">*</span></label>
+                        <InputDate class="form-control" @bind-Value="saleReturn.BillingDate" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        <ValidationMessage For="@(() => saleReturn.BillingDate)" />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
+                        <InputSelect class="form-select" @bind-Value="saleReturn.BillToCompanyId"
+                                     @onchange="(e) => HandleCompanyChange(Convert.ToInt32(e.Value))">
+                            <option value="0">-- Select Company --</option>
+                            @foreach (var company in billCompanies)
+                            {
+                                <option value="@company.Id">@company.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => saleReturn.BillToCompanyId)" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Product <span class="text-danger">*</span></label>
+                        @{
+                            var productClass = $"form-select {GetValidationClass(saleReturn, "product")}";
+                        }
+                        <InputSelect class="@productClass" @bind-Value="saleReturn.ProductId"
+                                     @onchange="@(() => ClearMessages())">
+                            <option value="0">-- Select Product --</option>
+                            @foreach (var product in FilteredProducts)
+                            {
+                                <option value="@product.Id">@($"{product.Name} ({product.ColourName.ToUpper()}) ({product.SKU})-{product.Unit}")</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => saleReturn.ProductId)" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Unit <span class="text-danger">*</span></label>
+                        <InputSelect class="form-select"
+                                     @bind-Value="saleReturn.UnitId"
+                                     @oninput="(e) => HandleUnitAsync(Convert.ToInt32(e.Value))">
+
+                            <option value="0">-- Select Uni --</option>
+                            @foreach (var unit in Units)
+                            {
+                                <option value="@unit.Id">@unit.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => saleReturn.UnitId)" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">
+                            Item Quantity <span class="text-danger">*</span>
+                        </label>
+
+                        <InputNumber class="form-control"
+                                     @bind-Value="saleReturn.Quantity"
+                                     min="1"
+                                     @oninput="(e) => HandleBoxQuantityAsync(Convert.ToInt32(e.Value))">
+                        </InputNumber>
+                        <ValidationMessage For="@(() => saleReturn.Quantity)" />
+                    </div>
+
+                    @if (saleReturn.UnitId == (int)UnitType.BOX)
+                    {
+                        <div class="col-md-4 mb-3">
+
+                            <label class="form-label">
+                                Box Quantity <span class="text-danger">*</span>
+                            </label>
+                            <InputNumber class="form-control"
+                                         @bind-Value="saleReturn.BoxQuantity"
+                                         min="0"
+                                         @oninput="(e) => HandleBoxQuantityAsync(Convert.ToInt32(e.Value))">
+                            </InputNumber>
+
+                            <ValidationMessage For="@(() => saleReturn.BoxQuantity)" />
+                        </div>
+                    }
+
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Return Type <span class="text-danger">*</span></label>
+                        <InputSelect class="form-select" @bind-Value="saleReturn.ReturnType">
+                            <option value="">-- Select Return Type --</option>
+                            <option value="@InventoryManagement.Core.Enums.ReturnType.Defective">Defective</option>
+                            <option value="@InventoryManagement.Core.Enums.ReturnType.Excess">Excess</option>
+                            <option value="@InventoryManagement.Core.Enums.ReturnType.Damaged">Damaged</option>
+                            <option value="@InventoryManagement.Core.Enums.ReturnType.Other">Other</option>
+                        </InputSelect>
+                        <ValidationMessage For="@(() => saleReturn.ReturnType)" />
+                    </div>
+                </div>
+
+                <div class="row align-items-center">
+                    <div class="@(saleReturn.ReturnType == ReturnType.Excess || saleReturn.ReturnType == ReturnType.Other ? "col-md-8" : "col-md-12") mb-3">
+                        <label class="form-label">Barcode</label>
+                        <div class="input-group">
+                            <InputText class="form-control"
+                                       @bind-Value="saleReturn.BarcodeNo"
+                                       placeholder="Scan or enter barcode" />
+
+                            <Button Color="ButtonColor.Secondary"
+                                    @onclick="ValidateBarcode"
+                                    Disabled="@(saleReturn.BillToCompanyId == 0)">
+                                <Icon Name="IconName.CheckCircle" /> Validate
+                            </Button>
+                        </div>
+                        @if (!string.IsNullOrEmpty(validationMessage))
+                        {
+                            <div class="@(validationIsValid ? "text-success" : "text-danger") mt-1 small">
+                                @validationMessage
+                            </div>
+                        }
+                        <ValidationMessage For="@(() => saleReturn.BarcodeNo)" />
+                    </div>
+
+                    @if (saleReturn.ReturnType == ReturnType.Excess || saleReturn.ReturnType == ReturnType.Other)
+                    {
+                        <div class="col-md-4 mb-3">
+                            <br />
+                            <div class="mt-1">
+                                <InputCheckbox class="form-check-input" @bind-Value="saleReturn.IsTakeInStock" id="isTakeInStock " />
+                                <label class="form-label mb-0" for="isTakeInStock">Need to take in stock</label>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Reason</label>
+                        <InputText class="form-control" @bind-Value="saleReturn.Reason"
+                                   placeholder="Reason for return" />
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Remarks</label>
+                        <InputText class="form-control" rows="3" @bind-Value="saleReturn.Remarks" />
+                    </div>
+                </div>
+
+                @if (saleReturn.Id > 0)
+                {
+                    <div class="col-md-4 mb-3">
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="saleReturn.IsActive" id="isActive" />
+                            <label class="form-check-label" for="isActive">Active</label>
+                        </div>
+                    </div>
+                }
+
+                <div class="text-end mt-3">
+                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+                </div>
+            </EditForm>
+        </BodyTemplate>
+    </Modal>
+}
+@code {
+    private Modal modal = default!;
+
+    private List<SaleReturnModel2> saleReturns = new();
+    private List<CompanyModel> billCompanies = new();
+    public List<ProductModel> FilteredProducts { get; set; } = new();
+
+    private SaleReturnModel2 saleReturn = new();
+
+    private EditContext editContext = default!;
+    private ValidationMessageStore messageStore = default!;
+
+    private bool isLoading = true;
+    private string modalTitle = "Add Sale Return";
+    private bool isEditMode = false;
+
+    private bool showErrorMessage = false;
+    private string errorMessage = string.Empty;
+    private System.Threading.Timer? errorTimer;
+
+    private string validationMessage = string.Empty;
+    private bool validationIsValid = false;
+    private string Route = "/sale-returns";
+    private bool showValidation = false;
+    public List<UnitModel> Units => CommonUtils.UnitList;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await LoadData();
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
+    }
+
+    private void InitializeEditContext()
+    {
+        editContext = new EditContext(saleReturn);
+        messageStore = new ValidationMessageStore(editContext);
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+            saleReturns = (await SaleReturnService.GetAllSaleReturnsAsync()).ToList();
+            billCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
+            FilteredProducts = (await ProductService.GetAllProductsAsync()).ToList();
+            InitializeEditContext();
+        }
+        catch
+        {
+            ShowError("Connectivity issue happened, operation failed");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    #region Sale Return CRUD Operations
+
+    private void ShowAddModal()
+    {
+        modalTitle = "Add New Sale Return";
+        isEditMode = false;
+        saleReturn = new SaleReturnModel2
+        {
+            ReturnDate = DateTime.Now,
+            ReturnType = null,
+            IsActive = true,
+            Quantity = 1,
+            CreatedBy = Convert.ToInt32(CurrentUserId),
+            CreatedOn = DateTime.UtcNow,
+        };
+        validationMessage = string.Empty;
+        validationIsValid = false;
+        showValidation = false;
+        InitializeEditContext();
+        modal.ShowAsync();
+    }
+
+    private async Task ShowEditModal(SaleReturnModel2 editSaleReturn)
+    {
+        modalTitle = $"Edit Sale Return - {editSaleReturn.ReturnNo}";
+        isEditMode = true;
+        saleReturn = new SaleReturnModel2
+        {
+            Id = editSaleReturn.Id,
+            ReturnNo = editSaleReturn.ReturnNo,
+            ReturnDate = editSaleReturn.ReturnDate,
+            BillingDate = editSaleReturn.BillingDate,
+            BillToCompanyId = editSaleReturn.BillToCompanyId,
+            IsTakeInStock = editSaleReturn.IsTakeInStock,
+            ReturnInwardItemId = editSaleReturn.ReturnInwardItemId,
+            ProductId = editSaleReturn.ProductId,
+            ReturnType = editSaleReturn.ReturnType,
+            BarcodeNo = editSaleReturn.BarcodeNo,
+            UnitId = editSaleReturn.UnitId,
+            Quantity = editSaleReturn.Quantity,
+            BoxQuantity = editSaleReturn.UnitId == (int)UnitType.PCS ? 1 : editSaleReturn.BoxQuantity,
+            Reason = editSaleReturn.Reason,
+            Remarks = editSaleReturn.Remarks,
+            IsActive = editSaleReturn.IsActive,
+            UpdatedBy = Convert.ToInt32(CurrentUserId),
+            UpdatedOn = DateTime.UtcNow
+        };
+        validationMessage = string.Empty;
+        validationIsValid = false;
+        showValidation = false;
+        InitializeEditContext();
+        await modal.ShowAsync();
+    }
+
+    private async Task SaveSaleReturn()
+    {
+        try
+        {
+            // isLoading = true;
+            ClearMessages();
+            showValidation = true;
+            saleReturn.UnitName = Units.FirstOrDefault(u => u.Id == saleReturn.UnitId)?.Name;
+
+            if (saleReturn.ReturnType == ReturnType.Defective || saleReturn.ReturnType == ReturnType.Damaged)
+            {
+                saleReturn.IsTakeInStock = false;
+            }
+
+            if (saleReturn.UnitId != (int)UnitType.BOX)
+            {
+                saleReturn.BoxQuantity = 0;
+
+            }
+
+            if (!editContext.Validate())
+            {
+                editContext.NotifyValidationStateChanged();
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+            saleReturn.BoxQuantity = saleReturn.UnitId == (int)UnitType.PCS ? 0 : saleReturn.BoxQuantity;
+            ValidateCompany();
+            ValidateQuantity();
+
+
+            if (!string.IsNullOrWhiteSpace(saleReturn.BarcodeNo))
+            {
+                await ValidateBarcode();
+                if (!validationIsValid)
+                {
+                    messageStore.Clear(() => saleReturn.BarcodeNo);
+                    messageStore.Add(() => saleReturn.BarcodeNo, validationMessage);
+                    editContext.NotifyValidationStateChanged();
+                    return;
+                }
+            }
+            if (editContext.GetValidationMessages().Any())
+            {
+                editContext.NotifyValidationStateChanged();
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            bool result;
+            if (isEditMode)
+            {
+                result = await SaleReturnService.UpdateSaleReturnAsync(saleReturn);
+            }
+            else
+            {
+                result = await SaleReturnService.CreateSaleReturnAsync(saleReturn);
+            }
+
+            if (result)
+            {
+                await HideModal();
+                await LoadData();
+            }
+            else
+            {
+                await HideModal();
+                ShowError("Connectivity issue happened, operation failed");
+            }
+        }
+        catch
+        {
+            await HideModal();
+            ShowError("Connectivity issue happened, operation failed");
+        }
+    }
+
+    private async Task DeleteSaleReturn(int id)
+    {
+        try
+        {
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
+                "Are you sure you want to delete this sale return?");
+            if (!confirmed) return;
+
+            var userId = Convert.ToInt32(CurrentUserId);
+            var result = await SaleReturnService.DeleteSaleReturnAsync(id, userId);
+            if (result)
+            {
+                await LoadData();
+            }
+            else
+            {
+                ShowError("Connectivity issue happened, operation failed");
+            }
+        }
+        catch
+        {
+            ShowError("Connectivity issue happened, operation failed");
+        }
+    }
+
+    private async Task HideModal()
+    {
+        await modal.HideAsync();
+    }
+
+    #endregion
+
+    #region Barcode Validation
+
+    private async Task ValidateBarcode()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(saleReturn.BarcodeNo))
+            {
+                validationMessage = "Please enter a barcode first.";
+                validationIsValid = false;
+                return;
+            }
+
+            if (saleReturn.BillToCompanyId == 0)
+            {
+                validationMessage = "Please select a company first.";
+                validationIsValid = false;
+                return;
+            }
+
+            var validationResult = await SaleReturnService.ValidateBarcodeForSaleReturnAsync(
+                saleReturn.BarcodeNo,
+                saleReturn.BillToCompanyId
+            );
+
+            validationIsValid = validationResult.IsValid;
+            validationMessage = validationResult.IsValid
+                ? $"Valid barcode. Product: {validationResult.ProductName}"
+                : validationResult.ErrorMessage;
+
+            StateHasChanged();
+        }
+        catch
+        {
+            validationMessage = "Connectivity issue happened, validation failed";
+            validationIsValid = false;
+            StateHasChanged();
+        }
+    }
+
+    #endregion
+
+    #region Validation
+
+    private void ValidateCompany()
+    {
+        messageStore.Clear(() => saleReturn.BillToCompanyId);
+        if (saleReturn.BillToCompanyId == 0)
+        {
+            messageStore.Add(() => saleReturn.BillToCompanyId, "Please select a company");
+        }
+
+        editContext.NotifyValidationStateChanged();
+    }
+
+    private void HandleCompanyChange(int id)
+    {
+        saleReturn.BillToCompanyId = id;
+        ClearMessages();
+        ValidateCompany();
+    }
+    private async Task HandleUnitAsync(int input)
+    {
+        saleReturn.UnitId = input;
+        try
+        {
+            messageStore.Clear(() => saleReturn.UnitId);
+
+            if (saleReturn.UnitId == 0)
+            {
+                await ValidateUnit();
+            }
+
+        }
+        catch
+        {
+
+        }
+
+    }
+    private async Task HandleQuantityAsync(int input)
+    {
+        saleReturn.Quantity = input;
+
+        try
+        {
+            ValidateQuantity();
+            await ValidateBarcodeAndQuantity();
+        }
+        catch
+        {
+        }
+
+    }
+    private async Task HandleBoxQuantityAsync(int input)
+    {
+        saleReturn.BoxQuantity = input;
+
+        try
+        {
+            await ValidateBoxQuantityAndUnitidBOX();
+
+        }
+        catch
+        {
+        }
+
+    }
+
+
+    private async Task ValidateUnit()
+    {
+        messageStore.Clear(() => saleReturn.UnitId);
+
+        if (saleReturn.UnitId == 0 || saleReturn.UnitId == null)
+        {
+            messageStore.Add(() => saleReturn.UnitId, "Required.");
+            validationIsValid = false;
+            editContext.NotifyValidationStateChanged();
+            StateHasChanged();
+        }
+    }
+    private async Task ValidateBarcodeAndQuantity()
+    {
+        messageStore.Clear(() => saleReturn.Quantity);
+
+        if (!string.IsNullOrWhiteSpace(saleReturn.BarcodeNo))
+        {
+            if (saleReturn.UnitId == (int)UnitType.PCS && saleReturn.Quantity != 1)
+            {
+                messageStore.Add(() => saleReturn.Quantity, " One Barcode Only Have One Quantity.");
+                validationIsValid = false;
+                editContext.NotifyValidationStateChanged();
+                StateHasChanged();
+                return;
+
+            }
+            else
+            {
+                messageStore.Clear(() => saleReturn.Quantity);
+                editContext.NotifyValidationStateChanged();
+            }
+        }
+    }
+    private void ValidateQuantity()
+    {
+        try
+        {
+            messageStore.Clear(() => saleReturn.Quantity);
+
+            if (saleReturn.Quantity <= 0)
+            {
+                messageStore.Add(() => saleReturn.Quantity, "Minimum Quantity must be 1");
+                validationIsValid = false;
+                editContext.NotifyValidationStateChanged();
+                StateHasChanged();
+            }
+
+            else
+            {
+                //  messageStore.Clear(() => saleReturn.BoxQuantity);
+                messageStore.Clear(() => saleReturn.Quantity);
+            }
+            editContext.NotifyValidationStateChanged();
+
+        }
+        catch
+        {
+            validationMessage = "Connectivity issue happened, validation failed";
+            validationIsValid = false;
+            StateHasChanged();
+        }
+    }
+    private async Task ValidateBoxQuantityAndUnitidBOX()
+    {
+        messageStore.Clear(() => saleReturn.BoxQuantity);
+        if ((saleReturn.UnitId == (int)UnitType.BOX && saleReturn.BoxQuantity <= 0))
+        {
+            messageStore.Add(() => saleReturn.BoxQuantity, "Box Quantity must be greater than 0");
+            validationIsValid = false;
+            editContext.NotifyValidationStateChanged();
+            StateHasChanged();
+        }
+    }
+    private async Task ValidateBoxQuantity()
+    {
+        messageStore.Clear(() => saleReturn.UnitId);
+        if (saleReturn.BoxQuantity <= 0 && saleReturn.UnitId != (int)UnitType.BOX)
+        {
+            messageStore.Add(() => saleReturn.UnitId, "Box Quantity must be greater than 0");
+            validationIsValid = false;
+            editContext.NotifyValidationStateChanged();
+            StateHasChanged();
+        }
+
+    }
+
+    private BadgeColor GetReturnTypeBadgeColor(InventoryManagement.Core.Enums.ReturnType returnType)
+    {
+        return returnType switch
+        {
+            InventoryManagement.Core.Enums.ReturnType.Defective => BadgeColor.Danger,
+            InventoryManagement.Core.Enums.ReturnType.Excess => BadgeColor.Warning,
+            InventoryManagement.Core.Enums.ReturnType.Damaged => BadgeColor.Danger,
+            InventoryManagement.Core.Enums.ReturnType.Other => BadgeColor.Secondary,
+            _ => BadgeColor.Secondary
+        };
+    }
+
+    #endregion
+
+    #region Error Display
+
+    private void ShowError(string message)
+    {
+        errorMessage = message;
+        showErrorMessage = true;
+        StateHasChanged();
+
+        errorTimer?.Dispose();
+        errorTimer = new System.Threading.Timer(_ =>
+        {
+            showErrorMessage = false;
+            errorMessage = string.Empty;
+            InvokeAsync(StateHasChanged);
+        }, null, 4000, System.Threading.Timeout.Infinite);
+    }
+
+    public new void Dispose()
+    {
+        errorTimer?.Dispose();
+        base.Dispose();
+    }
+    #endregion
+
+    #region Helpers from modal example
+
+    private void ClearMessages()
+    {
+        validationMessage = string.Empty;
+        validationIsValid = false;
+        showValidation = false;
+    }
+
+    private string GetValidationClass(SaleReturnModel2 model, string field)
+    {
+        if (!showValidation)
+            return "";
+
+        return field switch
+        {
+            "product" => model.ProductId == 0 ? "is-invalid" : "is-valid",
+            "quantity" => model.Quantity <= 0 ? "is-invalid" : "is-valid",
+            "unit" => model.UnitId <= 0 ? "is-invalid" : "is-valid",
+            _ => string.Empty
+        };
+    }
+
+    #endregion 
+}*@
