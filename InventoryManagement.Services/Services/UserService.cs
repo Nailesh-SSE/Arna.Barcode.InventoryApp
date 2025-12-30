@@ -116,13 +116,13 @@ public class UserService : IUserService
                    x.EmailId.ToLower() == email.ToLower() ||
                    x.UserName.ToLower() == userName.ToLower()
                )
-               && (!id.HasValue || x.Id != id.Value) 
+               && (!id.HasValue || x.Id != id.Value)
          );
         bool userNameExists = users.Any(x => x.UserName.ToLower() == userName.ToLower());
         bool phoneExists = users.Any(x => x.ContactNo.ToLower() == phone.ToLower());
         bool emailExists = users.Any(x => x.EmailId.ToLower() == email.ToLower());
 
-        
+
         return (userNameExists, phoneExists, emailExists);
     }
     public async Task<bool> CreateUserAsync(UserModel model)
@@ -173,5 +173,32 @@ public class UserService : IUserService
     {
         var roleRepository = _unitOfWork.GetRepository<Roles>();
         return (await roleRepository.GetAllAsync()).ToList();
+    }
+    public async Task<bool> ChangePasswordAsync(int userId, string newPassword)
+    {
+        try
+        {
+            var userRepository = _unitOfWork.GetRepository<Users>();
+            var user = await userRepository.GetByIdAsync(userId);
+
+            if (user == null)
+                return false;
+
+            user.Password = newPassword;
+            user.UpdatedOn = DateTime.UtcNow;
+
+            userRepository.Update(user);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            throw;
+        }
+    }
+    public async Task<Users?> GetUserByUserIdAsync(int userId)
+    {
+        var userRepository = _unitOfWork.GetRepository<Users>();
+        return await userRepository.GetByIdAsync(userId);
     }
 }
