@@ -29,7 +29,7 @@ public class RoleService : IRoleService
             }
             else
             {
-                rolesEnumerable = await roleRepository.FindAsync(r => !r.IsDeleted && r.IsActive && r.RoleLevel >= 5);
+                rolesEnumerable = await roleRepository.FindAsync(r => !r.IsDeleted && r.IsActive && r.RoleLevel > 5);
             }
 
             var roles = rolesEnumerable.ToList();
@@ -53,7 +53,7 @@ public class RoleService : IRoleService
 
             throw;
         }
-     
+
     }
 
     public async Task<RoleModel?> GetRoleByIdAync(int userRoleId)
@@ -81,7 +81,7 @@ public class RoleService : IRoleService
 
             throw;
         }
-     
+
     }
 
     public async Task<bool> CreateRoleAsync(RoleModel roleModel)
@@ -157,6 +157,19 @@ public class RoleService : IRoleService
             Roles = Roles.Where(c => c.Id != id.Value);
         }
         return !Roles.Any();
+    }
+    public async Task<int> GetRoleLevelByUserRoleId(int roleId)
+    {
+        var roleRepo = _unitOfWork.GetRepository<Roles>();
+
+        var role = (await roleRepo
+            .FindAsync(r => r.Id == roleId && !r.IsDeleted))
+            .FirstOrDefault();
+
+        if (role == null)
+            return 0; // or throw exception
+
+        return role.RoleLevel;
     }
 }
 

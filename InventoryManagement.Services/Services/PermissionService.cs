@@ -83,19 +83,20 @@ public class PermissionService : IPermissionService
 
     private async Task<List<FormMaster>> GetPermittedFormsAsync(List<UserFormPermissionModel> permissions)
     {
-        var allowedRoutes = permissions
+        var allowedFormIds = permissions
             .Where(p => p.CanView)
-            .Select(p => p.Route)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .Select(p => p.FormId)
+            .ToHashSet();
 
         return (await _unitOfWork
             .GetRepository<FormMaster>()
             .FindAsync(f =>
                 !f.IsDeleted &&
                 f.IsActive &&
-                allowedRoutes.Contains(f.Route)))
+                allowedFormIds.Contains(f.Id)))
             .ToList();
     }
+
 
     private async Task<List<UserFormPermissionModel>> LoadPermissionsFromDbAsync(int userId)
     {
@@ -139,6 +140,7 @@ public class PermissionService : IPermissionService
                     ? new UserFormPermissionModel
                     {
                         Route = form.Route,
+                        FormId = form.Id,
                         CanView = rolePerm.CanView,
                         CanCreate = rolePerm.CanCreate,
                         CanEdit = rolePerm.CanEdit,
@@ -158,9 +160,9 @@ public class PermissionService : IPermissionService
         _cache.Remove(GetFormsCacheKey(userId));
     }
 
-    private static bool IsAdminRole(string roleName) =>
-        roleName.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
-        roleName.Equals("FactoryAdmin", StringComparison.OrdinalIgnoreCase);
+    private static bool IsAdminRole(string roleName) => roleName.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+    private static bool IsFactoryAdminRole(string roleName) => roleName.Equals("FactoryAdmin", StringComparison.OrdinalIgnoreCase);
+
 
     private static string GetPermissionCacheKey(int userId) => $"user-permissions-{userId}";
     private static string GetFormsCacheKey(int userId) => $"user-forms-{userId}";

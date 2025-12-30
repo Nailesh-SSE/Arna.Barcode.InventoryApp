@@ -84,7 +84,7 @@ else
 
                     <GridColumn TItem="FormMasterModel" HeaderText="Actions">
                         <div class="d-flex gap-1 justify-content-start">
-                            @if (CanEdit("/form"))
+                            @if (CanEdit(Route))
                             {
                                 <Button Color="ButtonColor.Warning"
                                         Size="ButtonSize.Small"
@@ -92,7 +92,7 @@ else
                                     <Icon Name="IconName.PencilSquare" /> Edit
                                 </Button>
                             }
-                            @if (CanDelete("/form"))
+                            @if (CanDelete(Route))
                             {
                                 <Button Color="ButtonColor.Danger"
                                         Size="ButtonSize.Small"
@@ -192,6 +192,7 @@ else
 
 
     private string modalTitle = "Add Form";
+    private string Route = "/form";
 
     private FormMasterModel formModel = new();
     private List<FormMasterModel> formList = new();
@@ -212,8 +213,9 @@ else
     {
         try
         {
+            
             isLoading = true;
-            formList = await FormService.GetAllAsync();
+            formList = await FormService.GetAllAsync(CurrentUserRoleId);
                 if (formList.Any())
                     parentformList = formList.Where(a => a.Route == "#").ToList();
             isLoading = false;

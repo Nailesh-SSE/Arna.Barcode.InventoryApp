@@ -7,7 +7,7 @@
 
 <PageTitle>Users</PageTitle>
 
-@if (!IsAdmin())
+@if (!CanView(Route))
 {
     <div class="container-fluid mt-5">
         <div class="row justify-content-center">
@@ -301,7 +301,8 @@ else
              CreatedBy = u.CreatedBy,
              UpdatedBy = u.UpdatedBy,
              IsActive = u.IsActive,
-             RoleId = u.RoleId
+             RoleId = u.RoleId,
+             Password = u.Password
          }).ToList();
         roles = (await RoleService.GetAllRolesAsync(userRoleId)).ToList();
         isLoading = false;

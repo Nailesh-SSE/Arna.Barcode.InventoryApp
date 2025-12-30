@@ -14,43 +14,48 @@ public class FormMasterService : IFormMasterService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<List<FormMasterModel>> GetAllAsync()
+    public async Task<List<FormMasterModel>> GetAllAsync(int roleId)
     {
         try
         {
             var repo = _unitOfWork.GetRepository<FormMaster>();
-            var forms = await repo.FindAsync(x => !x.IsDeleted);
+            var forms = await repo.FindAsync(x => !x.IsDeleted); 
+            var formList = forms.Select(f => new FormMasterModel
+            {
+                Id = f.Id,
+                FormName = f.FormName,
+                Route = f.Route,
+                DisplayIndex = f.DisplayIndex,
+                Icon = f.Icon,
+                ParentId = f.ParentId,
+                ParentName = f.ParentName,
+                IsActive = f.IsActive
+            }).ToList();
 
-            var result = forms
-                .OrderBy(f => f.ParentId)
-                .ThenBy(f => f.DisplayIndex)
-                .Select(f => new FormMasterModel
-                {
-                    Id = f.Id,
-                    FormName = f.FormName,
-                    Route = f.Route,
-                    DisplayIndex = f.DisplayIndex,
-                    Icon = f.Icon,
-                    ParentId = f.ParentId,
-                    ParentName = f.ParentName,
-                    IsActive = f.IsActive
-                })
+            var parents = formList
+                .Where(f => f.ParentId == null)
+                .OrderBy(f => f.DisplayIndex)
                 .ToList();
 
-            if (result.Any())
+            var result = new List<FormMasterModel>();
+            foreach (var parent in parents)
             {
-                return result;
+                result.Add(parent);
+
+                var children = formList
+                    .Where(c => c.ParentId == parent.Id)
+                    .OrderBy(c => c.DisplayIndex)
+                    .ToList();
+
+                result.AddRange(children);
             }
 
-            return new();
-
+            return result;
         }
         catch (Exception ex)
         {
-
             throw;
         }
-
     }
 
     public async Task<FormMasterModel?> GetByIdAsync(int id)

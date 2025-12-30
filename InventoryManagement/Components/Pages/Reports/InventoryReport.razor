@@ -1,14 +1,18 @@
-﻿@page "/reports/sale-return"
+﻿@page "/reports/Inventory"
 @using InventoryManagement.Components.Auth
 @using InventoryManagement.Services.Models.ReportModels
 @using InventoryManagement.Services.Interfaces
+@using InventoryManagement.Services.Reports.Interfaces
+@using InventoryManagement.Services.Services
 @inherits AuthComponentBase
 @inject ISaleReturnReportService SaleReturnReportService
 @inject ICompanyService CompanyService
+@inject IColourService ColourService
 @inject ICategoryService CategoryService
+@inject IInventoryReportService InventoryReportService
 @inject IJSRuntime JS
 
-<PageTitle>Sale Return Report</PageTitle>
+<PageTitle> Inventory Return Report</PageTitle>
 @if (!CanView(Route))
 {
     <AccessDenied />
@@ -19,7 +23,7 @@ else
         <!-- Header -->
         <div class="row mb-4 align-items-center">
             <div class="col">
-                <h3>Sale Return Reports & Analytics</h3>
+                <h3>Inventory Reports & Analytics</h3>
                 <p class="text-muted">Comprehensive reporting and insights for sale return inventory management</p>
             </div>
             <div class="col-auto">
@@ -27,9 +31,9 @@ else
                     <button class="btn btn-outline-primary" @onclick="RefreshReport">
                         <Icon Name="IconName.ArrowClockwise" /> Refresh
                     </button>
-                    @*  <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
-                    <Icon Name="IconName.Download" /> Export
-                </button> *@
+                    <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
+                        <Icon Name="IconName.Download" /> Export
+                    </button>
                 </div>
             </div>
         </div>
@@ -54,19 +58,19 @@ else
                     <div class="card-body">
                         <EditForm Model="@filter" OnValidSubmit="GenerateReport">
                             <div class="row g-3">
-                                <div class="col-12">
+                                @* <div class="col-12">
                                     <label class="form-label">Start Date</label>
                                     <InputDate class="form-control" @bind-Value="filter.StartDate" />
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label">End Date</label>
                                     <InputDate class="form-control" @bind-Value="filter.EndDate" />
-                                </div>
+                                </div> *@
                                 <div class="col-12">
-                                    <label class="form-label">Supplier</label>
-                                    <InputSelect class="form-select" @bind-Value="filter.BillToCompanyId">
-                                        <option value="">All Suppliers</option>
-                                        @foreach (var company in billCompanies)
+                                    <label class="form-label">Brand</label>
+                                    <InputSelect class="form-select" @bind-Value="filter.BrandId">
+                                        <option value="">All Brands</option>
+                                        @foreach (var company in brands)
                                         {
                                             <option value="@company.Id">@company.Name</option>
                                         }
@@ -82,68 +86,60 @@ else
                                         }
                                     </InputSelect>
                                 </div>
-                                @*  <div class="col-6">
+                                <div class="col-12">
+                                    <label class="form-label">Colour</label>
+                                    <InputSelect class="form-select" @bind-Value="filter.ColourId">
+                                        <option value="">All Colours</option>
+                                        @foreach (var category in colours)
+                                        {
+                                            <option value="@category.Id">@category.Name</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                @*      <div class="col-6">
                                 <label class="form-label">Min Quantity</label>
-                                <InputNumber class="form-control" @bind-Value="filter.MinQuantity" />
+                                <InputNumber class="form-control" @bind-Value="filter.MInGoodMinGoodStock" />
                             </div>
                             <div class="col-6">
                                 <label class="form-label">Max Quantity</label>
-                                <InputNumber class="form-control" @bind-Value="filter.MaxQuantity" />
-                            </div> *@
-                                <div class="col-12">
-                                    <label class="form-label">Return Numbers</label>
-                                    <InputText class="form-control" @bind-Value="filter.ReturnNumbers" placeholder="comma-separated" />
-                                </div>
-                                @*   <div class="col-12">
-                                <label class="form-label">Product SKUs</label>
-                                <InputText class="form-control" @bind-Value="filter.ProductSKUs" placeholder="comma-separated" />
-                            </div> *@
-                            <div class="col-12">
-                                <label class="form-label">Sort By</label>
-                                <InputSelect class="form-select" @bind-Value="filter.SortBy">
-                                    <option value="ReturnDate">Date</option>
-                                    <option value="ReturnNo">Return Number</option>
-                                    <option value="ShipmentCompany">Supplier</option>
-                                    @* <option value="Quantity">Quantity</option>
-                                    <option value="TotalCost">Total Cost</option> *@
-                                </InputSelect>
+                                <InputNumber class="form-control" @bind-Value="filter.MaxGoodStock" />
                             </div>
-                            <div class="col-6">
-                                <label class="form-label">Page Size</label>
-                                <InputSelect class="form-select" @bind-Value="filter.PageSize">
-                                    <option value="10">10</option>
-                                    <option value="25">25</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                    <option value="500">500</option>
-                                </InputSelect>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">Sort Order</label>
-                                <div class="form-check form-switch mt-2">
-                                    <InputCheckbox class="form-check-input" @bind-Value="filter.SortDescending" />
-                                    <label class="form-check-label">Descending</label>
+                                <div class="col-6">
+                                    <label class="form-label">Active Products</label>
+                                    <InputSelect TValue="bool?" class="form-select" @bind-Value="filter.IsActive">
+                                        <option value="">All</option>
+                                        <option value="true">Active Only</option>
+                                        <option value="false">Inactive Only</option>
+                                    </InputSelect>
                                 </div>
-                            </div>
-                           @*  <div class="col-12">
-                                <label class="form-label">Options</label>
-                                <div class="form-check">
-                                    <InputCheckbox class="form-check-input" @bind-Value="filter.IncludeInactive" />
-                                    <label class="form-check-label">Include Inactive</label>
+                                <div class="col-6">
+                                    <label class="form-label">Deleted Products</label>
+                                    <InputSelect TValue="bool?" class="form-select" @bind-Value="filter.IsDeleted">
+                                        <option value="">All</option>
+                                        <option value="true">Deleted Only</option>
+                                        <option value="false">Not Deleted Only</option>
+                                    </InputSelect>
                                 </div>
-                                <div class="form-check">
-                                    <InputCheckbox class="form-check-input" @bind-Value="filter.GroupByProduct" />
-                                    <label class="form-check-label">Group by Product</label>
+                                                
+                        *@
+                                <div class="col-6">
+                                    <label class="form-label">Page Size</label>
+                                    <InputSelect class="form-select" @bind-Value="filter.PageSize">
+                                        <option value="10">10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                        <option value="500">500</option>
+                                    </InputSelect>
                                 </div>
-                                <div class="form-check">
-                                    <InputCheckbox class="form-check-input" @bind-Value="filter.GroupBySupplier" />
-                                    <label class="form-check-label">Group by Supplier</label>
+                                @* <div class="col-6">
+                                    <label class="form-label">Sort Order</label>
+                                    <div class="form-check form-switch mt-2">
+                                        <InputCheckbox class="form-check-input" @bind-Value="filter.SortDescending" />
+                                        <label class="form-check-label">Descending</label>
+                                    </div>
                                 </div>
-                                <div class="form-check">
-                                    <InputCheckbox class="form-check-input" @bind-Value="filter.SummaryOnly" />
-                                    <label class="form-check-label">Summary Only</label>
-                                </div>
-                            </div> *@
+                    *@
                                 <div class="col-12 d-grid gap-2">
                                     <button type="submit" class="btn btn-primary">
                                         <Icon Name="IconName.Search" /> Generate Report
@@ -161,22 +157,22 @@ else
                 </div>
             </div>
 
-        <!-- Report Content -->
-        <div class="col-md-9">
-            @if (isLoading)
-            {
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <div class="mt-2"><strong>Generating report...</strong></div>
-                    <div class="progress mt-2" style="height: 4px;">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: @loadingProgress%;"></div>
+            <!-- Report Content -->
+            <div class="col-md-9">
+                @if (isLoading)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <div class="mt-2"><strong>Generating report...</strong></div>
+                        <div class="progress mt-2" style="height: 4px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: @loadingProgress%;"></div>
+                        </div>
                     </div>
-                </div>
-            }
-            else if (reportResult is not null)
-            {
-                <!-- Report Summary -->
-                @* <div class="row mb-4">
+                }
+                else if (reportResult is not null)
+                {
+                    <!-- Report Summary -->
+                    @* <div class="row mb-4">
                     <div class="col-md-6">
                         <div class="card bg-primary text-white">
                             <div class="card-body">
@@ -195,65 +191,53 @@ else
                     </div>
                 </div> *@
 
-                <!-- Data Table -->
-                @if (!filter.SummaryOnly && reportResult.Items.Any())
-                {
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">Detailed Results</h5>
-                            <small class="text-muted">
-                                Page @reportResult.PageNumber of @reportResult.PageCount
-                                (@reportResult.TotalRecords total records)
-                            </small>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Return No</th>
-                                            <th>Date</th>
-                                            <th>Product</th>
-                                            <th>SKU</th>
-                                            <th>Category</th>
-                                            <th class="text-end">Quantity</th>
-                                            <th>Unit</th>
-                                            <th>Supplier</th>
-                                            @* <th>Batch</th> *@
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var item in reportResult.Items)
-                                        {
-                                            <tr>
-                                                <td>@((reportResult.PageNumber - 1) * reportResult.PageSize + reportResult.Items.IndexOf(item) + 1)</td>
-                                                <td><span class="badge bg-primary">@item.ReturnNo</span></td>
-                                                <td>@item.ReturnDate.ToString("dd/MM/yyyy")</td>
-                                                <td>@item.ProductName</td>
-                                                <td><code>@item.SKU</code></td>
-                                                <td>@item.CategoryName</td>
-                                                <td class="text-end">@item.Quantity.ToString("N2")</td>
-                                                <td>@item.Unit</td>
-                                                <td>@item.BillToCompanyName</td>
-                                                @* <td><span class="badge bg-secondary">@item.BatchNumber</span></td> *@
-                                                <td>
-                                                    @if (item.IsActive)
-                                                    {
-                                                        <Badge Color="BadgeColor.Success">Active</Badge>
-                                                    }
-                                                    else
-                                                    {
-                                                        <Badge Color="BadgeColor.Secondary">Inactive</Badge>
-                                                    }
-                                                </td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
+                    <!-- Data Table -->
+                    @if (reportResult.Items.Any())
+                    {
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Detailed Results</h5>
+                                <small class="text-muted">
+                                    Page @reportResult.PageNumber of @reportResult.PageCount
+                                    (@reportResult.TotalRecords total records)
+                                </small>
                             </div>
-                        </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Product</th>
+
+                                                <th>Inward</th>
+                                                <th>Outward</th>
+                                                <th>SaleReturn</th>
+                                                <th>Total Sale</th>
+                                                <th>GoodStock</th>
+
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var item in reportResult.Items)
+                                            {
+                                                <tr>
+                                                    <td>@((reportResult.PageNumber - 1) * reportResult.PageSize + reportResult.Items.IndexOf(item) + 1)</td>
+
+
+                                                    <td><code>@item.Sku</code></td>
+                                                    <td>@item.Inward</td>
+                                                    <td>@item.Outward</td>
+                                                    <td>@item.Returns</td>
+                                                    <td>@item.TotalSale</td>
+                                                    <td>@item.GoodStock</td>
+
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
 
                             <!-- Pagination -->
                             <div class="card-footer">
@@ -291,7 +275,7 @@ else
                             </div>
                         </div>
                     }
-                    else if (filter.SummaryOnly)
+                    @* else if (filter.SummaryOnly)
                     {
                         <div class="card">
                             <div class="card-header">
@@ -327,7 +311,7 @@ else
                                 </div>
                             </div>
                         </div>
-                    }
+                    } *@
                     else if (!reportResult.Items.Any())
                     {
                         <div class="text-center py-5">
@@ -353,14 +337,15 @@ else
     private string? alertMessage;
     private string alertType = "info";
 
-    private SaleReturnFilter filter = new();
-    private List<CompanyModel> billCompanies = new();
+    private InventoryReportFilter filter = new();
+    private List<CompanyModel> brands = new();
     private List<CategoryModel> categories = new();
+    private List<ColourModel> colours = new();
 
-    private SaleReturnReportResult? reportResult;
+    private InventoryReportResult? reportResult { get; set; } = new();
     private bool isLoading = false;
     private int loadingProgress = 0;
-    private string Route = "/reports/sale-return";
+    private string Route = "/reports/Inventory";
     protected override async Task OnInitializedAsync()
     {
         await LoadDefaultFilters();
@@ -369,18 +354,26 @@ else
 
     private async Task LoadCompaniesAndCategories()
     {
-        billCompanies = await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo);
+        brands = await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo);
         categories = await CategoryService.GetAllCategoriesAsync();
+        colours = await ColourService.GetAllColourAsync();
     }
 
     private async Task LoadDefaultFilters()
     {
-        filter = new SaleReturnFilter
+        filter = new InventoryReportFilter
         {
             StartDate = DateTime.Today.AddDays(-30),
             EndDate = DateTime.Today,
             PageSize = 25,
             SortBy = "ReturnDate",
+            ColourId = null,
+            CategoryId = null,
+            BrandId = null,
+            IsActive = null,
+            IsDeleted = null,
+            MInGoodMinGoodStock = 0,
+            MaxGoodStock = null,
             SortDescending = true
         };
         await InvokeAsync(StateHasChanged);
@@ -388,7 +381,8 @@ else
 
     private async Task ClearFilters()
     {
-        filter = new SaleReturnFilter();
+        filter = new InventoryReportFilter
+();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -400,7 +394,7 @@ else
         try
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            reportResult = await SaleReturnReportService.GenerateSaleReturnReportAsync(filter);
+            reportResult = await InventoryReportService.GenerateInventoryReportAsync(filter);
             sw.Stop();
             if (reportResult is not null)
             {
@@ -435,8 +429,8 @@ else
         }
         try
         {
-            var excelData = await SaleReturnReportService.ExportToExcelAsync(filter);
-            var fileName = $"SaleReturn_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            var excelData = await InventoryReportService.ExportToExcelAsync(filter);
+            var fileName = $"Inventory Report - {DateTime.Now:yyyy-MM-dd} ({DateTime.Now:hh-mm tt}).xlsx";
             var filePath = Path.Combine(Environment.CurrentDirectory, "wwwroot", "exports");
 
             if (!Directory.Exists(filePath))

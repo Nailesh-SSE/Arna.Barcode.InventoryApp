@@ -4,7 +4,7 @@ namespace InventoryManagement.Services.Interfaces;
 
 public interface IFormMasterService
 {
-    Task<List<FormMasterModel>> GetAllAsync();
+    Task<List<FormMasterModel>> GetAllAsync(int roleId);
     Task<List<FormMasterModel>> GetParentFormsAsync();
     Task<FormMasterModel?> GetByIdAsync(int id);
     Task<bool> CreateAsync(FormMasterModel model);

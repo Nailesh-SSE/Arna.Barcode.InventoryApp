@@ -1,10 +1,4 @@
-﻿using InventoryManagement.Core.Entities;
-using InventoryManagement.Services.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using InventoryManagement.Services.Models;
 
 namespace InventoryManagement.Services.Interfaces
 {
@@ -16,5 +10,6 @@ namespace InventoryManagement.Services.Interfaces
         Task<bool> UpdateRoleAsync(RoleModel roleModel);
         Task<bool> DeleteRoleAsync(int id, int deletedBy);
         Task<bool> IsRoleNameUnique(string Name, int? id = null);
+        Task<int> GetRoleLevelByUserRoleId(int roleId);
     }
 }

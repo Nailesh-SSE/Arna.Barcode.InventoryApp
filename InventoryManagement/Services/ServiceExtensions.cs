@@ -1,13 +1,14 @@
+using BlazorDownloadFile;
 using InventoryManagement.Core.Data;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Auth;
 using InventoryManagement.Services.Interfaces;
+using InventoryManagement.Services.Reports.Interfaces;
 using InventoryManagement.Services.Reports.Services;
 using InventoryManagement.Services.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
-using BlazorDownloadFile;
 
 namespace InventoryManagement.Services;
 
@@ -49,6 +50,7 @@ public static class ServiceExtensions
         services.AddTransient<IInwardReportService, InwardReportGenerator>();
         services.AddTransient<IOutwardReportService, OutwardReportGenerator>();
         services.AddTransient<ISaleReturnReportService, SaleReturnReportGenerator>();
+        services.AddTransient<IInventoryReportService, InventoryReportGenerator>();
 
         services.AddAuthorizationCore();
         services.AddScoped<ProtectedLocalStorage>();

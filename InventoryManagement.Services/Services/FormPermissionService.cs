@@ -32,7 +32,7 @@ public class FormPermissionService : IFormPermissionService
             if (currentRoleLevel >= 5)
             {
                 var allowedRoleIds = roles
-                    .Where(r => r.RoleLevel >= 5)
+                    .Where(r => r.RoleLevel > 5)
                     .Select(r => r.Id)
                     .ToHashSet();
 

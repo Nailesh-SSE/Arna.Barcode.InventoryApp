@@ -14,39 +14,39 @@
 }
 else
 {
-    <div class="container-fluid">
-        <!-- Header -->
-        <div class="row mb-4 align-items-center">
-            <div class="col">
-                <h3>Instock Reports & Analytics</h3>
-                <p class="text-muted">Comprehensive reporting and insights for instock inventory management</p>
-            </div>
-            <div class="col-auto">
-                <div class="btn-group">
-                    <button class="btn btn-outline-primary" @onclick="RefreshReport">
-                        <Icon Name="IconName.ArrowClockwise" /> Refresh
-                    </button>
-                    @*     <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h3>Instock Reports & Analytics</h3>
+            <p class="text-muted">Comprehensive reporting and insights for instock inventory management</p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group">
+                <button class="btn btn-outline-primary" @onclick="RefreshReport">
+                    <Icon Name="IconName.ArrowClockwise" /> Refresh
+                </button>
+                <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
                     <Icon Name="IconName.Download" /> Export
-                </button> *@
-                </div>
+                </button>
             </div>
         </div>
-        @if (!string.IsNullOrEmpty(alertMessage))
-        {
-            <div class="alert alert-@alertType alert-dismissible fade show" role="alert">
-                @alertMessage
-                <button type="button" class="btn-close" @onclick="() => alertMessage = null"></button>
-            </div>
-        }
-        <div class="row">
-            <div class="col-md-3 mb-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="mb-0">
-                            <Icon Name="IconName.Funnel" /> Filter Options
-                        </h6>
-                    </div>
+    </div>
+    @if (!string.IsNullOrEmpty(alertMessage))
+    {
+        <div class="alert alert-@alertType alert-dismissible fade show" role="alert">
+            @alertMessage
+            <button type="button" class="btn-close" @onclick="() => alertMessage = null"></button>
+        </div>
+    }
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <Icon Name="IconName.Funnel" /> Filter Options
+                    </h6>
+                </div>
 
                     <div class="card-body">
                         <EditForm Model="@filter" OnValidSubmit="GenerateReport">
@@ -177,7 +177,7 @@ else
                 else if (reportResult != null)
                 {
                     <!-- Report Summary -->
-                    <div class="row mb-4">
+                    @* <div class="row mb-4">
                         <div class="col-md-6">
                             <div class="card bg-primary text-white">
                                 <div class="card-body">
@@ -194,7 +194,7 @@ else
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> *@
 
 
                     <!-- Data Table -->
