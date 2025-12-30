@@ -353,7 +353,8 @@ namespace InventoryManagement.Core.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<decimal>("BoxQuantity")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<int>("BrandId")
                         .HasColumnType("int");
@@ -742,7 +743,37 @@ namespace InventoryManagement.Core.Migrations
                     b.ToTable("Roles");
                 });
 
-            modelBuilder.Entity("InventoryManagement.Core.Entities.SaleReturn", b =>
+            modelBuilder.Entity("InventoryManagement.Core.Entities.SP_Entities.InventoryReportDTO", b =>
+                {
+                    b.Property<string>("CategoryName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("GoodStock")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Inward")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("MakeCompany")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Outward")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Returns")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Sku")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("TotalSale")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.ToTable("InventoryReportDTO");
+                });
+
+            modelBuilder.Entity("InventoryManagement.Core.Entities.Users", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -789,6 +820,9 @@ namespace InventoryManagement.Core.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
 
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");
@@ -879,14 +913,6 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<string>("SaleReturnNo")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Password")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<int>("RoleId")
-                        .HasColumnType("int");
 
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("int");

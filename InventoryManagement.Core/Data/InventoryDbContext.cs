@@ -34,11 +34,8 @@ public class InventoryDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        base.OnModelCreating(modelBuilder);
-         modelBuilder.Entity<InventoryReportDTO>(entity =>
-    {
-        entity.HasNoKey();  
-    });
+        modelBuilder.Entity<InventoryReportDTO>().HasNoKey();
+
         // Configure relationships
         modelBuilder.Entity<Colour>()
             .HasIndex(c => new { c.Name, c.Code })
@@ -119,7 +116,14 @@ public class InventoryDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<OutwardDetail>();
-      
+        modelBuilder.Entity<SaleReturn>(entity =>
+        {
+            entity.HasMany(e => e.SaleReturnItems)
+                  .WithOne(e => e.SaleReturn)
+                  .HasForeignKey(e => e.SaleReturnId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<SaleReturn>()
             .HasOne(sr => sr.BillToCompany)
             .WithMany()
@@ -147,6 +151,10 @@ public class InventoryDbContext : DbContext
             .HasIndex(r => r.Name)
             .IsUnique()
             .HasFilter("[IsDeleted] = 0");
+
+        modelBuilder.Entity<InwardItem>()
+    .Property(x => x.BoxQuantity)
+    .HasPrecision(18, 4);
 
     }
 }

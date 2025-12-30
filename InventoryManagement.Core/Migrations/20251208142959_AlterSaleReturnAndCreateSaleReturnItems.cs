@@ -11,61 +11,55 @@ namespace InventoryManagement.Core.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_SaleReturns_Products_ProductId",
-                table: "SaleReturns");
+            migrationBuilder.Sql(@"
+IF EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_SaleReturns_ProductId'
+      AND object_id = OBJECT_ID('SaleReturns')
+)
+BEGIN
+    DROP INDEX [IX_SaleReturns_ProductId] ON [SaleReturns];
+END
+");
 
-            migrationBuilder.DropIndex(
-                name: "IX_SaleReturns_ProductId",
-                table: "SaleReturns");
 
-            migrationBuilder.DropColumn(
-                name: "BarcodeNo",
-                table: "SaleReturns");
+            migrationBuilder.Sql(@"
+IF COL_LENGTH('SaleReturns','BarcodeNo') IS NOT NULL
+    ALTER TABLE SaleReturns DROP COLUMN BarcodeNo;
 
-            migrationBuilder.DropColumn(
-                name: "BillingDate",
-                table: "SaleReturns");
+IF COL_LENGTH('SaleReturns','BillingDate') IS NOT NULL
+    ALTER TABLE SaleReturns DROP COLUMN BillingDate;
 
-            migrationBuilder.DropColumn(
-                name: "BoxQuantity",
-                table: "SaleReturns");
+IF COL_LENGTH('SaleReturns','BoxQuantity') IS NOT NULL
+    ALTER TABLE SaleReturns DROP COLUMN BoxQuantity;
 
-            migrationBuilder.DropColumn(
-                name: "IsTakeInStock",
-                table: "SaleReturns");
+IF COL_LENGTH('SaleReturns','IsTakeInStock') IS NOT NULL
+    ALTER TABLE SaleReturns DROP COLUMN IsTakeInStock;
 
-            migrationBuilder.DropColumn(
-                name: "ProductId",
-                table: "SaleReturns");
+IF COL_LENGTH('SaleReturns','ProductId') IS NOT NULL
+    ALTER TABLE SaleReturns DROP COLUMN ProductId;
 
-            migrationBuilder.DropColumn(
-                name: "Quantity",
-                table: "SaleReturns");
+IF COL_LENGTH('SaleReturns','Quantity') IS NOT NULL
+    ALTER TABLE SaleReturns DROP COLUMN Quantity;
 
-            migrationBuilder.DropColumn(
-                name: "Reason",
-                table: "SaleReturns");
+IF COL_LENGTH('SaleReturns','Reason') IS NOT NULL
+    ALTER TABLE SaleReturns DROP COLUMN Reason;
 
-            migrationBuilder.DropColumn(
-                name: "Remarks",
-                table: "SaleReturns");
+IF COL_LENGTH('SaleReturns','Remarks') IS NOT NULL
+    ALTER TABLE SaleReturns DROP COLUMN Remarks;
 
-            migrationBuilder.DropColumn(
-                name: "ReturnInwardItemId",
-                table: "SaleReturns");
+IF COL_LENGTH('SaleReturns','ReturnInwardItemId') IS NOT NULL
+    ALTER TABLE SaleReturns DROP COLUMN ReturnInwardItemId;
 
-            migrationBuilder.DropColumn(
-                name: "ReturnNo",
-                table: "SaleReturns");
+IF COL_LENGTH('SaleReturns','ReturnNo') IS NOT NULL
+    ALTER TABLE SaleReturns DROP COLUMN ReturnNo;
 
-            migrationBuilder.DropColumn(
-                name: "ReturnType",
-                table: "SaleReturns");
+IF COL_LENGTH('SaleReturns','ReturnType') IS NOT NULL
+    ALTER TABLE SaleReturns DROP COLUMN ReturnType;
 
-            migrationBuilder.DropColumn(
-                name: "UnitId",
-                table: "SaleReturns");
+IF COL_LENGTH('SaleReturns','UnitId') IS NOT NULL
+    ALTER TABLE SaleReturns DROP COLUMN UnitId;
+");
 
             migrationBuilder.RenameColumn(
                 name: "ReturnDate",
