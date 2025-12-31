@@ -2,71 +2,72 @@
     <BodyTemplate>
         <EditForm EditContext="@editContext" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator />
+            <fieldset disabled="@IsEditMode">
+                <div class="modal-content-custom">
+                    <div class="modal-body-section">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label">Inward Date <span class="text-danger">*</span></label>
+                                <InputDate class="form-control" @bind-Value="Inward.InwardDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                                <ValidationMessage For="@(() => Inward.InwardDate)" />
+                            </div>
 
-            <div class="modal-content-custom">
-                <div class="modal-body-section">
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <label class="form-label">Inward Date <span class="text-danger">*</span></label>
-                            <InputDate class="form-control" @bind-Value="Inward.InwardDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
-                            <ValidationMessage For="@(() => Inward.InwardDate)" />
+                            <div class="col-md-6">
+                                <label class="form-label">Inward Time</label>
+                                <input type="time" class="form-control"
+                                       value="@Inward.InwardTime.ToString(@"hh\:mm")"
+                                       @onchange="OnTimeChanged" required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Ship Company <span class="text-danger">*</span></label>
+                                <DropDown TItem="CompanyModel"
+                                          Items="@ShipCompanies"
+                                          SelectedId="@Inward.ShipMentCompanyId"
+                                          ValueSelector="x => x.Id"
+                                          TextSelector="x => x.Name"
+                                          Placeholder="-- Select Company --"
+                                          OnValueChanged="OnShipMentCompanySelected" />
+                                <ValidationMessage For="@(() => Inward.ShipMentCompanyId)" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Category</label>
+                                <DropDown TItem="CategoryModel"
+                                          Items="@Categories"
+                                          SelectedId="@Inward.CategoryId"
+                                          ValueSelector="x => x.Id"
+                                          TextSelector="x => x.Name"
+                                          Placeholder="-- All Categories --"
+                                          OnValueChanged="OnCategorySelected" />
+                            </div>
                         </div>
 
-                        <div class="col-md-6">
-                            <label class="form-label">Inward Time</label>
-                            <input type="time" class="form-control"
-                                   value="@Inward.InwardTime.ToString(@"hh\:mm")"
-                                   @onchange="OnTimeChanged" required />
+                        <div class="col-md-12 mt-2">
+                            <label class="form-label">Remarks</label>
+                            <InputText class="form-control" @bind-Value="Inward.Remarks" />
                         </div>
 
-                        <div class="col-md-6">
-                            <label class="form-label">Ship Company <span class="text-danger">*</span></label>
-                            <DropDown TItem="CompanyModel"
-                                      Items="@ShipCompanies"
-                                      SelectedId="@Inward.ShipMentCompanyId"
-                                      ValueSelector="x => x.Id"
-                                      TextSelector="x => x.Name"
-                                      Placeholder="-- Select Company --"
-                                      OnValueChanged="OnShipMentCompanySelected" />
-                        <ValidationMessage For="@(() => Inward.ShipMentCompanyId)" />
-                        </div>
+                        <div class="row">
+                            <div class="col-md-6 ms-1">
+                                @if (Inward.Id > 0)
+                                {
+                                    <div class="form-check mt-3">
+                                        <InputCheckbox id="isActiveCheck" class="form-check-input" @bind-Value="Inward.IsActive" />
+                                        <label class="form-check-label" for="isActiveCheck">Is Active</label>
+                                    </div>
+                                }
 
-                        <div class="col-md-6">
-                            <label class="form-label">Category</label>
-                            <DropDown TItem="CategoryModel"
-                                      Items="@Categories"
-                                      SelectedId="@Inward.CategoryId"
-                                      ValueSelector="x => x.Id"
-                                      TextSelector="x => x.Name"
-                                      Placeholder="-- All Categories --"
-                                      OnValueChanged="OnCategorySelected" />
+                            </div>
                         </div>
                     </div>
 
-                    <div class="col-md-12 mt-2">
-                        <label class="form-label">Remarks</label>
-                        <InputText class="form-control" @bind-Value="Inward.Remarks" />
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 ms-1">
-                            @if (Inward.Id > 0)
-                            {
-                                <div class="form-check mt-3">
-                                    <InputCheckbox id="isActiveCheck" class="form-check-input" @bind-Value="Inward.IsActive" />
-                                    <label class="form-check-label" for="isActiveCheck">Is Active</label>
-                                </div>
-                            }
-
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-footer-section mt-3 text-end">
-                    <button type="button" class="btn btn-secondary me-2" @onclick="HandleCancel">Cancel</button>
+                    <div class="modal-footer-section mt-3 text-end">
+                        <button type="button" class="btn btn-secondary me-2" @onclick="HandleCancel">Cancel</button>
                     <button type="submit" class="btn btn-primary"> @(Inward.Id>0 ? "Update" : "Next")</button>
+                    </div>
                 </div>
-            </div>
+            </fieldset>
         </EditForm>
     </BodyTemplate>
 </Modal>
@@ -84,6 +85,7 @@
     [Parameter] public List<ProductModel> Products { get; set; } = new();
     [Parameter] public EventCallback OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public bool IsEditMode { get; set; }
 
     protected override void OnParametersSet()
     {

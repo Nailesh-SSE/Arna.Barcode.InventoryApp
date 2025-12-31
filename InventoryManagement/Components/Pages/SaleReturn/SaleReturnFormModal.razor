@@ -1,37 +1,38 @@
 ﻿
 
-<Modal @ref=modal Title="@Title"  Size="ModalSize.Large" >
+<Modal @ref=modal Title="@Title" Size="ModalSize.Large">
     <BodyTemplate>
         <EditForm EditContext="editContext" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator />
+            <fieldset disabled="@OnEditMode">
+                <div class="container-fluid">
+                    <div class="row m-2">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">SaleReturn Date <span class="text-danger">*</span></label>
+                            <InputDate @bind-Value="SaleReturnModel.SaleReturnDate" @onblur="HandleDateValidation"
+                                       class="form-control"
+                                       max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                            <ValidationMessage For="@(() => SaleReturnModel.SaleReturnDate)" />
+                        </div>
 
-            <div class="container-fluid">
-                <div class="row m-2">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">SaleReturn Date <span class="text-danger">*</span></label>
-                        <InputDate @bind-Value="SaleReturnModel.SaleReturnDate" @onblur="HandleDateValidation"
-                                   class="form-control"
-                                   max="@DateTime.Today.ToString("yyyy-MM-dd")" />
-                        <ValidationMessage For="@(() => SaleReturnModel.SaleReturnDate)" />
-                    </div>
-
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Return Company <span class="text-danger">*</span></label>
-                        <InputSelect @bind-Value="SaleReturnModel.BillToCompanyId" @onchange="HandleBillToValidation" class="form-select">
-                            <option value="0">-- Select Company --</option>
-                            @foreach (var company in BillToCompanyList)
-                            {
-                                <option value="@company.Id">@company.Name</option>
-                            }
-                        </InputSelect>
-                        <ValidationMessage For="@(() => SaleReturnModel.BillToCompanyId)" />
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Return Company <span class="text-danger">*</span></label>
+                            <InputSelect @bind-Value="SaleReturnModel.BillToCompanyId" @onchange="HandleBillToValidation" class="form-select">
+                                <option value="0">-- Select Company --</option>
+                                @foreach (var company in BillToCompanyList)
+                                {
+                                    <option value="@company.Id">@company.Name</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => SaleReturnModel.BillToCompanyId)" />
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer-section mt-3 text-end">
-                <button type="button" class="btn btn-secondary me-2" @onclick="HandleCancel">Cancel</button>
-                <button type="submit" class="btn btn-primary"> @(SaleReturnModel.Id > 0 ? "Update" : "Next")</button>
-            </div>
+                <div class="modal-footer-section mt-3 text-end">
+                    <button type="button" class="btn btn-secondary me-2" @onclick="HandleCancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary"> @(SaleReturnModel.Id > 0 ? "Update" : "Next")</button>
+                </div>
+            </fieldset>
         </EditForm>
     </BodyTemplate>
 
@@ -42,11 +43,12 @@
     public EditContext? editContext;
     private ValidationMessageStore? validationMessage;
 
-    [Parameter]  public string Title { get; set; } = "Sale Return Form";
-    [Parameter]  public SaleReturnModel SaleReturnModel{ get; set; } = new();
-    [Parameter]  public List<CompanyModel> BillToCompanyList { get; set; } = new();
-    [Parameter]  public EventCallback OnSave { get; set; }
-    [Parameter]  public EventCallback OnCancel { get; set; }
+    [Parameter] public string Title { get; set; } = "Sale Return Form";
+    [Parameter] public SaleReturnModel SaleReturnModel { get; set; } = new();
+    [Parameter] public List<CompanyModel> BillToCompanyList { get; set; } = new();
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public bool OnEditMode { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -60,7 +62,7 @@
     }
 
     public async Task Show()
-    {         
+    {
         await modal.ShowAsync();
     }
 
