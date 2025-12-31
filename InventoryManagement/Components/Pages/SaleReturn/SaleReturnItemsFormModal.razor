@@ -379,6 +379,7 @@
     }
     public async Task RemoveUnSaveItem(SaleReturnItemsModel item)
     {
+        hideAddNewButton = false;
         await RemoveItemRow.InvokeAsync(item);
 
     }

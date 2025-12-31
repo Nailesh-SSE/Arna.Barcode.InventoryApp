@@ -140,7 +140,8 @@
                                                     {   
                                                         <button type="button"
                                                                 class="btn btn-danger btn-sm"
-                                                                @onclick="@(() => HandleDeleteItem(item.Id))">
+                                                                @onclick="@(() => HandleDeleteItem(item.Id))"
+                                                                disabled="@item.HasOutOfStockBarcodes">
                                                                 Delete
                                                         </button>
 
