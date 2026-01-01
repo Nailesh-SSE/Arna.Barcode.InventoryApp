@@ -79,12 +79,12 @@ public class UserService : IUserService
         var userRepository = _unitOfWork.GetRepository<Users>();
 
         var roles = (await roleRepository.FindAsync(r =>
-                        !r.IsDeleted && r.IsActive))
+                        !r.IsDeleted))
                         .ToList();
 
         var users = (await userRepository.FindAsync(u =>
-                        !u.IsDeleted && u.IsActive))
-                        .ToList();
+                        !u.IsDeleted)).ToList();
+
 
         var currentRoleLevel = roles
             .FirstOrDefault(r => r.Id == userRoleId)?

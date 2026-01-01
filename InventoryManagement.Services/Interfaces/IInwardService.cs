@@ -5,7 +5,7 @@ namespace InventoryManagement.Services.Interfaces;
 
 public interface IInwardService
 {
-    Task<List<InwardModel>> GetAllAsync();
+    Task<List<InwardModel>> GetAllAsync(bool isAdmin);
     Task<InwardModel?> GetByIdAsync(int id);
     Task<int> CreateAsync(InwardModel model);
     Task<bool> UpdateAsync(InwardModel model);

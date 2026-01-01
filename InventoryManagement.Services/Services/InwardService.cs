@@ -19,17 +19,24 @@ public class InwardService : IInwardService
     }
 
     #region Public Methods
-
-    public async Task<List<InwardModel>> GetAllAsync()
+    public async Task<List<InwardModel>> GetAllAsync(bool isAdmin)
     {
         var inwardRepo = _unitOfWork.GetRepository<Inward>();
-        var inwards = await inwardRepo.GetQueryable()
-              .Include(i => i.ShipMentCompany)
-              .Include(i => i.Category)
-              .Where(i => !i.IsDeleted)
-              .OrderByDescending(i => i.InwardDate)
-              .AsNoTracking()
-              .ToListAsync();
+        var query = inwardRepo.GetQueryable()
+            .Include(i => i.ShipMentCompany)
+            .Include(i => i.Category)
+            .Where(i => !i.IsDeleted);
+
+        if (!isAdmin)
+        {
+            query = query.Where(i => i.CreatedOn.Date == DateTime.Now.Date);
+        }
+
+        var inwards = await query
+            .OrderByDescending(i => i.InwardDate)
+            .AsNoTracking()
+            .ToListAsync();
+
         return inwards.Select(MapToModel).ToList();
     }
 
