@@ -197,22 +197,11 @@ else
         if (selectedSaleReturn == null) return;
         itemTitle = $"Manage SaleReturn Items | SaleReturn No: {data?.SaleReturnNo}";
         modalTitle = "Sale Return  No:" + data.SaleReturnNo;
-        var items = await SaleReturnService.GetSaleReturnItemsByReturnId(data.Id);
-        foreach (var item in items)
-        {
-            var product = ProductList.FirstOrDefault(p => p.Id == item.ProductId);
-            if (product != null)
-            {
-                item.ProductSearchText = product.SKU;
-            }
-            var outward = OutwardList.FirstOrDefault(p => p.Id == item.OutwardId);
-            if (outward != null)
-            {
-                item.OutwardSearchText = outward.OutwardNo;
-            }
-        }
-        SaleReturnItems = items;
-        saleReturnItemsFormModal.ItemsList = items;
+        
+        SaleReturnItems = await SaleReturnService.GetSaleReturnItemsByReturnId(data.Id);
+        await SyncSearchText();
+ 
+        saleReturnItemsFormModal.ItemsList = SaleReturnItems;
         saleReturnItemsFormModal.SelectedSaleReturn = selectedSaleReturn;
 
         StateHasChanged();
@@ -243,7 +232,7 @@ else
 
         SaleReturnItems = await SaleReturnService
             .GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
-
+        await SyncSearchText();
         await SendOperationResponse(
             true,
             isUpdate ? "Updated successfully" : "Saved successfully"
@@ -273,7 +262,28 @@ else
     {
         await AddNewItemRow(null);
     }
+    private async Task SyncSearchText()
+    {
+        if (SaleReturnItems == null || SaleReturnItems.Count == 0)
+            return;
 
+        foreach (var item in SaleReturnItems)
+        {
+            // PRODUCT
+            if (item.ProductId > 0)
+            {
+                item.ProductSearchText = ProductList
+                    ?.FirstOrDefault(p => p.Id == item.ProductId)?.SKU ?? "";
+            }
+
+            // OUTWARD
+            if (item.OutwardId > 0)
+            {
+                item.OutwardSearchText = OutwardList
+                    ?.FirstOrDefault(o => o.Id == item.OutwardId)?.OutwardNo ?? "";
+            }
+        }
+    }
     private async Task AddNewItemRow(SaleReturnValidationResult? data)
     {
         SaleReturnItems ??= new List<SaleReturnItemsModel>();
@@ -284,7 +294,7 @@ else
             await SendOperationResponse(false, "Please Save Unsave Item First");
             return;
         }
-
+        
         if (data == null || data.ProductId == null || data.ProductId == 0)
         {
             var hasBlankRow = SaleReturnItems.Any(item =>
@@ -293,13 +303,29 @@ else
             if (hasBlankRow)
                 return;
         }
+        string productText = string.Empty;
+        if (data?.ProductId > 0)
+        {
+            productText = ProductList?
+                .FirstOrDefault(p => p.Id == data.ProductId)?
+                .SKU ?? string.Empty;
+        }
 
+        string outwardText = string.Empty;
+        if (data?.OutwardId > 0)
+        {
+            outwardText = OutwardList?
+                .FirstOrDefault(o => o.Id == data.OutwardId)?
+                .OutwardNo ?? string.Empty;
+        }
         SaleReturnItems.Add(new SaleReturnItemsModel
         {
             ProductId = data?.ProductId ?? 0,
+            ProductSearchText = productText,
             ShipToCompanyId = data?.ShipToId ?? 0,
             UnitId = data?.UnitId ?? 0,
             OutwardId = data?.OutwardId ?? 0,
+            OutwardSearchText = outwardText,
             BarCodeNo = data?.BarcodeNo ?? null,
             ReturnQuantity = 1
         });

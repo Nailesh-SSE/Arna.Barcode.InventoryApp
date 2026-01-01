@@ -20,19 +20,44 @@
                     <button type="button" class="btn-close" @onclick="@(() => successMessage = "")"></button>
                 </div>
             }
+        </div>
+            <div class="col-12 mb-2">
+                <div class="position-relative">
 
+                    @if (isScanning)
+                    {
+                        <button type="button"
+                                class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2"
+                                title="Close Camera"
+                                style="z-index: 10;"
+                                @onclick="CloseCamera">
+                            <Icon Name="IconName.XCircle" />
+                        </button>
+                    <div class="scanner-wrapper">
+                        <div id="reader"></div>
+                    </div>
+                    }
+                </div>
             <!-- BARCODE SECTION -->
-            <div class="d-flex gap-2 mb-3">
-                <InputText class="form-control"
+            <div class="d-flex align-items-center gap-2 mb-3 flex-nowrap">
+                <InputText class="form-control flex-grow-1"
                            placeholder="Enter Barcode"
                            @bind-Value="ItemsModel.BarCodeNo" />
-                <Button Class="btn btn-dark" @onclick="HandleBarcode">Validate</Button>
+
+                <button type="button"
+                        class="btn btn-secondary d-flex align-items-center gap-1"
+                        @onclick="StartCameraScan"
+                        disabled="@isScanning">
+                    <Icon Name="IconName.Camera" /> Scan
+                </button>
+
+                <Button Class="btn btn-dark">Validate</Button>
             </div>
 
             <!-- ITEMS TABLE -->
             @if (ItemsList.Any())
             {
-                <div class="table-responsive" style="height: 750px; overflow-y: auto;">
+                <div class="table-responsive" style="height: 650px; overflow-y: auto;">
                     <table class="table table-bordered table-sm align-middle">
                         <thead class="table-light">
                             <tr>
@@ -208,6 +233,14 @@
                             }
                         </tbody>
                     </table>
+                    <div class="text-end mt-3">                    
+                        <button type="button"
+                                disabled="@hideAddNewButton"
+                                class="btn btn-success "
+                                @onclick="HandleAddItem">
+                            <i class="bi bi-plus-circle me-1"></i>Add New Item
+                        </button>
+                    </div>
                 </div>
             }
             else
@@ -216,18 +249,19 @@
                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                     No items added yet. Click "Add Item" to get started.
                 </div>
+                <div class="text-end mt-3">
+                    <button type="button" class="btn btn-secondary me-2" @onclick="HandleClose">Cancel</button>
+                    <button type="button"
+                            disabled="@hideAddNewButton"
+                            class="btn btn-success "
+                            @onclick="HandleAddItem">
+                        <i class="bi bi-plus-circle me-1"></i>Add New Item
+                    </button>
+                </div>
             }
-
-            <!-- ADD NEW ROW -->
-            <div class="text-end mt-3">
-                <button type="button" class="btn btn-secondary me-2" @onclick="HandleClose">Cancel</button>
-                <button type="button"
-                        disabled="@hideAddNewButton"
-                        class="btn btn-success "
-                        @onclick="HandleAddItem">
-                    <i class="bi bi-plus-circle me-1"></i>Add New Item
-                </button>
-            </div>
+            <div class ="text-start mt-3">
+                <button type="button" class="btn btn-secondary me-2" @onclick="HandleClose">Close</button>
+            </div>           
         </div>
     </BodyTemplate>
 </Modal>
@@ -240,6 +274,9 @@
     private string? successMessage { get; set; }
     private bool showValidation = false;
     private bool hideAddNewButton = false;
+    private bool isScanning = false;
+    private DotNetObjectReference<SaleReturnItemsFormModal>? dotNetHelper;
+    private InputText barcodeInput = default!;
 
     // private EditContext editContext;
     // private ValidationMessageStore? validationMessage;
@@ -253,6 +290,7 @@
     [Parameter] public List<CompanyModel?> CompanyList { get; set; } = new();
     [Parameter] public List<OutwardModel?> OutwardList { get; set; } = new();
 
+   private System.Threading.Timer? errorTimer;
     public List<UnitModel> Units => CommonUtils.UnitList;
 
 
@@ -354,7 +392,24 @@
 
         await AddItemRow.InvokeAsync();
     }
-
+    private async Task ValidateBarcode(string? barcode)
+    {
+        errorMessage = string.Empty;
+     
+        if (string.IsNullOrWhiteSpace(barcode))
+        {
+            errorMessage = "Barcode is required.";
+            return ;
+        }
+       
+        barcode = barcode.Trim();
+        // 2️⃣ Length validation (exactly 16 characters)
+        if (barcode.Length != 16)
+        {
+            errorMessage = "Barcode must be exactly 16 characters .";
+            return ;
+        }
+    }
     private bool ValidateSaleReturnItem(SaleReturnItemsModel item)
     {
         showValidation = true;
@@ -422,6 +477,8 @@
 
     private async Task HandleBarcode()
     {
+        await ValidateBarcode(ItemsModel.BarCodeNo);
+        if (errorMessage != string.Empty) return;       
         await OnBarcodeVal.InvokeAsync();
     }
 
@@ -439,7 +496,7 @@
     {
         hideAddNewButton = false;
         await RemoveItemRow.InvokeAsync(item);
-       
+
     }
     private void ResetUiState()
     {
@@ -449,5 +506,179 @@
         successMessage = "";
     }
 
+    private async Task StartCameraScan()
+    {
+        if (isScanning) return;
 
+        try
+        {
+            isScanning = true;
+            await Task.Yield();
+            dotNetHelper?.Dispose();
+            dotNetHelper = DotNetObjectReference.Create(this);
+
+            await JS.InvokeVoidAsync("manageScanner.start", dotNetHelper);
+        }
+        catch (Exception)
+        {
+            isScanning = false;
+            ShowError("Could not start camera");
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnBarcodeScanned(string scannedBarcode)
+    {
+        errorMessage = string.Empty;
+        if (dotNetHelper == null) return;
+
+        if (string.IsNullOrWhiteSpace(scannedBarcode))
+            return;
+
+        ItemsModel.BarCodeNo = scannedBarcode;
+
+        isScanning = false;
+        
+        await HandleBarcode();
+        
+    }
+
+    public async Task CloseCamera()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
+
+        if (dotNetHelper != null)
+        {
+            dotNetHelper.Dispose();
+            dotNetHelper = null;
+        }
+
+        isScanning = false;
+
+        if (barcodeInput != null &&
+         barcodeInput.Element.HasValue)
+        {
+            await barcodeInput.Element.Value.FocusAsync();
+        }
+    }
+    private void ShowError(string message)
+    {
+        errorMessage = message;
+        //showErrorMessage = true;
+        StateHasChanged();
+
+        errorTimer?.Dispose();
+        errorTimer = new System.Threading.Timer(_ =>
+        {
+       //     showErrorMessage = false;
+            errorMessage = string.Empty;
+            InvokeAsync(StateHasChanged);
+        }, null, 4000, System.Threading.Timeout.Infinite);
+    }
 }
+<style>
+    .scanner-wrapper {
+        width: 100%;
+        max-width: 600px; /* camera width */
+        height: 350px; /* camera height */
+        margin: 0 auto;
+        background: #000;
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    #reader {
+        width: 100%;
+        height: 100%;
+    }
+
+        /* Force video to stay inside box */
+        #reader video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover;
+        }
+
+    /* Center scan box */
+    #reader__scan_region {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<script>
+    let html5QrcodeScanner;
+
+    window.manageScanner = {
+        start: (dotNetHelper) => {
+            if (html5QrcodeScanner) { return; }
+
+            html5QrcodeScanner = new Html5Qrcode("reader");
+
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            html5QrcodeScanner.start({ facingMode: "environment" }, config,
+                (decodedText, decodedResult) => {
+                    // SUCCESS:
+                    // 1. Stop the camera immediately so it doesn't scan twice
+                    // 2. Clear the variable and DOM
+                    // 3. Send result to C#
+                    window.manageScanner.stop().then(() => {
+                        dotNetHelper.invokeMethodAsync('OnBarcodeScanned', decodedText)
+                            .catch(err => console.log("Blazor component disposed", err));
+                    });
+                },
+                (errorMessage) => {
+                    // ignore errors
+                })
+            .catch(err => {
+                console.error("Error starting scanner", err);
+                alert("Could not start camera. Permissions?");
+            });
+        },
+
+        stop: () => {
+            return new Promise((resolve, reject) => {
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.stop().then(() => {
+                        html5QrcodeScanner.clear();
+                        html5QrcodeScanner = null;
+                        document.getElementById("reader").innerHTML = "";
+                        resolve();
+                    }).catch(err => {
+                        console.log("Error stopping scanner", err);
+                        html5QrcodeScanner = null;
+                        resolve();
+                    });
+                } else {
+                    resolve();
+                }
+            });
+        },
+        forceStop: () => {
+            if (!html5QrcodeScanner) return;
+
+            try
+            {
+                html5QrcodeScanner.stop();
+                html5QrcodeScanner.clear();
+            }
+            catch (e)
+            {
+                console.warn("Scanner stop error", e);
+            }
+
+            html5QrcodeScanner = null;
+
+            const reader = document.getElementById("reader");
+            if (reader) reader.innerHTML = "";
+        }
+    };
+</script>
