@@ -28,11 +28,13 @@
                         </div>
                     </div>
                 </div>
+            </fieldset>
                 <div class="modal-footer-section mt-3 text-end">
                     <button type="button" class="btn btn-secondary me-2" @onclick="HandleCancel">Cancel</button>
-                    <button type="submit" class="btn btn-primary"> @(SaleReturnModel.Id > 0 ? "Update" : "Next")</button>
-                </div>
-            </fieldset>
+                <button type="submit" class="btn btn-primary" disabled="@OnEditMode">
+                    @(SaleReturnModel.Id > 0 ? "Update" : "Next")
+                </button>
+                </div>         
         </EditForm>
     </BodyTemplate>
 

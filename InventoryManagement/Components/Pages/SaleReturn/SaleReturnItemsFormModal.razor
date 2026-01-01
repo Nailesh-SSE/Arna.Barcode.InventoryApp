@@ -32,11 +32,11 @@
             <!-- ITEMS TABLE -->
             @if (ItemsList.Any())
             {
-                <div class="table-responsive" style="max-height: 450px;">
+                <div class="table-responsive" style="height: 750px; overflow-y: auto;">
                     <table class="table table-bordered table-sm align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th class="col-3">Product <span class="text-danger">*</span></th>
+                                <th class="col-3 col-md-3">Product <span class="text-danger">*</span></th>
                                 <th class="col-2">Ship To </th>
                                 <th class="col-1">Unit <span class="text-danger">*</span></th>
                                 <th class="col-1">Qty <span class="text-danger">*</span></th>
@@ -53,7 +53,7 @@
                             {
                                 <tr>
                                     <!-- PRODUCT -->
-                                    <td>
+                                    @* <td>
                                         <InputSelect class="form-select" @bind-Value="@item.ProductId">
                                             <option value="0">Select</option>
                                             @foreach (var product in ProductList)
@@ -61,6 +61,26 @@
                                                 <option value="@product.Id">@product.SKU</option>
                                             }
                                         </InputSelect>
+                                        @if (showValidation && item.ProductId == 0)
+                                        {
+                                            <small class="text-danger">Required</small>
+                                        }
+                                    </td> *@
+                                    <!-- PRODUCT -->
+                                    <td>
+                                                  <!-- PRODUCT -->
+                                    <td>
+                                        <SearchableDropdown TItem="ProductModel"
+                                                            Items="@ProductList"
+                                                            ItemTextSelector="@(p => p.SKU)"
+                                                            SelectedText="@item.ProductSearchText"
+                                                            Placeholder="Search product..."
+                                                            OnItemSelected="@(p => OnProductDropdownSelected(item, p))"
+                                                            ShowValidationMessage="@(showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))"
+                                                             />
+
+                                    
+                                    </td>
                                         @if (showValidation && item.ProductId == 0)
                                         {
                                             <small class="text-danger">Required</small>
@@ -107,7 +127,7 @@
                                     </td>
 
                                     <!-- OUTWARD (WIDER) -->
-                                    <td style="width:150px;">
+                                    @* <td style="width:150px;">
                                         <InputSelect class="form-select" @bind-Value="@item.OutwardId">
                                             <option value="0">Select</option>
                                             @foreach (var outward in OutwardList)
@@ -115,6 +135,15 @@
                                                 <option value="@outward?.Id">@outward?.OutwardNo</option>
                                             }
                                         </InputSelect>
+                                    </td> *@
+                                    <td style="width:150px;">
+                                        <SearchableDropdown TItem="OutwardModel"
+                                                            Items="OutwardList"
+                                                            ItemTextSelector="@(o => o.OutwardNo)"
+                                                            SelectedText="@item.OutwardSearchText"
+                                                            Placeholder="Search Outward..."
+                                                            OnItemSelected="@(o => OnOutwardDropdownSelected(item, o))"
+                                                              />
                                     </td>
 
                                     <!-- RETURN TYPE -->
@@ -190,10 +219,11 @@
             }
 
             <!-- ADD NEW ROW -->
-            <div class="text-center mt-3">
+            <div class="text-end mt-3">
+                <button type="button" class="btn btn-secondary me-2" @onclick="HandleClose">Cancel</button>
                 <button type="button"
                         disabled="@hideAddNewButton"
-                        class="btn btn-success btn-sm"
+                        class="btn btn-success "
                         @onclick="HandleAddItem">
                     <i class="bi bi-plus-circle me-1"></i>Add New Item
                 </button>
@@ -252,7 +282,7 @@
     public async Task Show()
     {
         ResetUiState();
-
+        var mo = ItemsModel;
         if (ItemsList == null || ItemsList.Count == 0)
         {
             await AddItemRow.InvokeAsync();
@@ -356,6 +386,34 @@
         errorMessage = "";
         return true;
     }
+    private void OnProductDropdownSelected(SaleReturnItemsModel saleReturnItem, ProductModel product)
+    {
+        ClearMessages();
+
+        if (product is null)
+        {
+            saleReturnItem.ProductSearchText = "";
+            saleReturnItem.ProductId = 0;
+            return;
+        }
+
+        saleReturnItem.ProductId = product.Id;
+        saleReturnItem.ProductSearchText = product.SKU;
+    }
+    private void OnOutwardDropdownSelected(SaleReturnItemsModel saleReturnItem, OutwardModel outward)
+    {
+        ClearMessages();
+
+        if (outward is null)
+        {
+            saleReturnItem.OutwardSearchText = "";
+            saleReturnItem.OutwardId = 0;
+            return;
+        }
+
+        saleReturnItem.OutwardId = outward.Id;
+        saleReturnItem.OutwardSearchText = outward.OutwardNo;
+    }
     private async Task ClearMessages()
     {
         errorMessage = "";
@@ -379,8 +437,9 @@
     }
     public async Task RemoveUnSaveItem(SaleReturnItemsModel item)
     {
+        hideAddNewButton = false;
         await RemoveItemRow.InvokeAsync(item);
-
+       
     }
     private void ResetUiState()
     {
