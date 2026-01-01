@@ -50,6 +50,7 @@ public static class ServiceExtensions
         services.AddTransient<IInwardReportService, InwardReportGenerator>();
         services.AddTransient<IOutwardReportService, OutwardReportGenerator>();
         services.AddTransient<ISaleReturnReportService, SaleReturnReportGenerator>();
+        services.AddTransient<IBarcodeTrackingReportService, BarcodeTrackingReportGenerator>();
         services.AddTransient<IInventoryReportService, InventoryReportGenerator>();
 
         services.AddAuthorizationCore();

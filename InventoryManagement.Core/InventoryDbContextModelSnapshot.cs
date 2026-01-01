@@ -72,7 +72,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("ParentCategoryId");
 
-                    b.ToTable("Categories");
+                    b.ToTable("Categories", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Colour", b =>
@@ -117,7 +117,7 @@ namespace InventoryManagement.Core.Migrations
                         .IsUnique()
                         .HasFilter("[IsDeleted] = 0");
 
-                    b.ToTable("Colour");
+                    b.ToTable("Colour", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Company", b =>
@@ -172,7 +172,7 @@ namespace InventoryManagement.Core.Migrations
                         .IsUnique()
                         .HasFilter("[IsDeleted] = 0");
 
-                    b.ToTable("Companies");
+                    b.ToTable("Companies", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.FormMaster", b =>
@@ -225,7 +225,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("FormMasters");
+                    b.ToTable("FormMasters", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Inward", b =>
@@ -259,9 +259,6 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsSalesReturn")
-                        .HasColumnType("bit");
-
                     b.Property<string>("Remarks")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -281,7 +278,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("ShipMentCompanyId");
 
-                    b.ToTable("Inwards");
+                    b.ToTable("Inwards", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.InwardBarcodeItem", b =>
@@ -336,7 +333,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("InwardItemId");
 
-                    b.ToTable("InwardBarcodeItems");
+                    b.ToTable("InwardBarcodeItems", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.InwardItem", b =>
@@ -353,8 +350,7 @@ namespace InventoryManagement.Core.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<decimal>("BoxQuantity")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("BrandId")
                         .HasColumnType("int");
@@ -408,7 +404,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("InwardItems");
+                    b.ToTable("InwardItems", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Outward", b =>
@@ -462,7 +458,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("BillToCompanyId");
 
-                    b.ToTable("Outwards");
+                    b.ToTable("Outwards", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.OutwardDetail", b =>
@@ -518,7 +514,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("OutwardDetails");
+                    b.ToTable("OutwardDetails", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Platform", b =>
@@ -559,7 +555,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Platform");
+                    b.ToTable("Platform", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Product", b =>
@@ -644,7 +640,7 @@ namespace InventoryManagement.Core.Migrations
                     b.HasIndex("SKU")
                         .IsUnique();
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.RoleFormPermission", b =>
@@ -693,7 +689,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RoleFormPermissions");
+                    b.ToTable("RoleFormPermissions", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Roles", b =>
@@ -740,37 +736,90 @@ namespace InventoryManagement.Core.Migrations
                         .IsUnique()
                         .HasFilter("[IsDeleted] = 0");
 
-                    b.ToTable("Roles");
+                    b.ToTable("Roles", (string)null);
                 });
 
-            modelBuilder.Entity("InventoryManagement.Core.Entities.SP_Entities.InventoryReportDTO", b =>
+            modelBuilder.Entity("InventoryManagement.Core.Entities.SaleReturn", b =>
                 {
-                    b.Property<string>("CategoryName")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
 
-                    b.Property<decimal>("GoodStock")
-                        .HasColumnType("decimal(18,2)");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<decimal>("Inward")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("MakeCompany")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("Outward")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("Returns")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Sku")
+                    b.Property<string>("BarcodeNo")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<decimal>("TotalSale")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<int>("BillToCompanyId")
+                        .HasColumnType("int");
 
-                    b.ToTable("InventoryReportDTO");
+                    b.Property<DateTime>("BillingDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("BoxQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsTakeInStock")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("ReturnDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReturnInwardItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReturnNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("ReturnType")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UnitId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UpdatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BillToCompanyId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("SaleReturns", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Users", b =>
@@ -837,7 +886,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.UsersInRole", b =>
@@ -881,130 +930,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UsersInRoles");
-                });
-
-            modelBuilder.Entity("SaleReturn", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("BillToCompanyId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("CreatedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("SaleReturnDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("SaleReturnNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("UpdatedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedOn")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BillToCompanyId");
-
-                    b.ToTable("SaleReturns");
-                });
-
-            modelBuilder.Entity("SaleReturnItems", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("BarCodeNo")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("CreatedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsTakeInStock")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("OutwardId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ReasonToReturn")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTime?>("ReturnDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("ReturnQuantity")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("ReturnType")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SaleReturnId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SerialNo")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ShipToCompanyId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UnitId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UpdatedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedOn")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoryId");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("SaleReturnId");
-
-                    b.HasIndex("ShipToCompanyId");
-
-                    b.ToTable("SaleReturnItems");
+                    b.ToTable("UsersInRoles", (string)null);
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Category", b =>
@@ -1113,6 +1039,25 @@ namespace InventoryManagement.Core.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("InventoryManagement.Core.Entities.SaleReturn", b =>
+                {
+                    b.HasOne("InventoryManagement.Core.Entities.Company", "BillToCompany")
+                        .WithMany()
+                        .HasForeignKey("BillToCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryManagement.Core.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BillToCompany");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("InventoryManagement.Core.Entities.UsersInRole", b =>
                 {
                     b.HasOne("InventoryManagement.Core.Entities.Company", "Company")
@@ -1130,52 +1075,6 @@ namespace InventoryManagement.Core.Migrations
                     b.Navigation("Company");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SaleReturn", b =>
-                {
-                    b.HasOne("InventoryManagement.Core.Entities.Company", "BillToCompany")
-                        .WithMany()
-                        .HasForeignKey("BillToCompanyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("BillToCompany");
-                });
-
-            modelBuilder.Entity("SaleReturnItems", b =>
-                {
-                    b.HasOne("InventoryManagement.Core.Entities.Category", "Category")
-                        .WithMany()
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("InventoryManagement.Core.Entities.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SaleReturn", "SaleReturn")
-                        .WithMany("SaleReturnItems")
-                        .HasForeignKey("SaleReturnId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("InventoryManagement.Core.Entities.Company", "ShipToCompany")
-                        .WithMany()
-                        .HasForeignKey("ShipToCompanyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Category");
-
-                    b.Navigation("Product");
-
-                    b.Navigation("SaleReturn");
-
-                    b.Navigation("ShipToCompany");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Category", b =>
@@ -1205,11 +1104,6 @@ namespace InventoryManagement.Core.Migrations
             modelBuilder.Entity("InventoryManagement.Core.Entities.Product", b =>
                 {
                     b.Navigation("InwardItems");
-                });
-
-            modelBuilder.Entity("SaleReturn", b =>
-                {
-                    b.Navigation("SaleReturnItems");
                 });
 #pragma warning restore 612, 618
         }

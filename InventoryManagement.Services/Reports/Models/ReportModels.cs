@@ -252,6 +252,42 @@ public class InventoryReportFilter : BaseReportFilter
 //    public decimal GoodStock { get; set; }
 //    public bool IsActive { get; set; } = true;
 //    public bool IsDelete { get; set; } = false;
-
 //}
+#endregion
+
+#region barcode tracking Models
+public class BarCodeReportResult : BaseReportResult
+{
+    public List<BarcodeTrackDTO> Items { get; set; } = new();
+    //public BarcodeReportSummary Summary { get; set; } = new();
+    public int PageCount { get; set; }
+    public bool HasNextPage { get; set; }
+    public bool HasPreviousPage { get; set; }
+}
+public class BarcodeFilter : BaseReportFilter
+{
+    public string? barcode { get; set; }
+}
+public class BarcodeReportItem
+{
+    public string BarCodeNo { get; set; }
+    public DateTime TransactionTime { get; set; }
+    public string TransactionNo { get; set; }
+    public string Transaction { get; set; }
+}
+//public class BarcodeReportSummary
+//{
+//    public int TotalReturns { get; set; }
+//    public decimal TotalQuantity { get; set; }
+//    public decimal TotalValue { get; set; }
+//    public int UniqueProductsCount { get; set; }
+//    public int UniqueSuppliersCount { get; set; }
+//    public decimal AverageQuantityPerReturn { get; set; }
+//    public decimal AverageValuePerReturn { get; set; }
+//    public Dictionary<string, decimal> QuantityByCategory { get; set; } = new();
+//    public Dictionary<string, decimal> ValueBySupplier { get; set; } = new();
+//    public Dictionary<string, int> CountByProduct { get; set; } = new();
+//}
+
+
 #endregion

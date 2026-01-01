@@ -31,11 +31,12 @@ public class InventoryDbContext : DbContext
 
     [NotMapped]
     public DbSet<InventoryReportDTO> InventoryReportDTO { get; set; }
-
+    [NotMapped]
+    public DbSet<BarcodeTrackDTO> barcodeTrackDTO { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<InventoryReportDTO>().HasNoKey();
-
+        modelBuilder.Entity<BarcodeTrackDTO>().HasNoKey();
         // Configure relationships
         modelBuilder.Entity<Colour>()
             .HasIndex(c => new { c.Name, c.Code })
