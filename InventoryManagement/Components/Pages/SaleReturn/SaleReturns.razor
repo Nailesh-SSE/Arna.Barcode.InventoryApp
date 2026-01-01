@@ -36,8 +36,7 @@ else
     <SaleReturnTable SaleReturns="saleReturnList"
                      BillToCompanies="BillToCompanyList"
                      OnEditSaleReturn="ShowEditModal"
-                     OnAddItems="OpenItemModel" />
-
+                     OnAddItems="OpenItemModel" CanEdit="CanEdit(Route)" CanDelete="CanDelete(Route)" />
 }
 
 <SaleReturnFormModal @ref="saleReturnFormModal"
@@ -89,6 +88,7 @@ else
 
     private string validationMessage = string.Empty;
     private bool validationIsValid = false;
+    private string Route = "/sale-returns";
 
     protected override async Task OnInitializedAsync()
     {
