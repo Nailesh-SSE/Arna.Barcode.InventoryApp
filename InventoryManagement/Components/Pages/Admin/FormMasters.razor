@@ -110,7 +110,7 @@ else
 }
 
 
-<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large" UseStaticBackdrop>
     <BodyTemplate>
         <EditForm EditContext="@editContext" OnValidSubmit="SaveForm">
             <DataAnnotationsValidator />

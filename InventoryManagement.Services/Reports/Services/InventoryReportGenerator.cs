@@ -8,13 +8,14 @@ using Microsoft.EntityFrameworkCore;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using System.Data;
+using System.Diagnostics;
 
 namespace InventoryManagement.Services.Reports.Services;
 
 public class InventoryReportGenerator : IInventoryReportService
 {
     private readonly IUnitOfWork _unitOfWork;
-  
+
     private readonly InventoryDbContext _db;
 
     public InventoryReportGenerator(IUnitOfWork unitOfWork, InventoryDbContext db)
@@ -24,17 +25,20 @@ public class InventoryReportGenerator : IInventoryReportService
     }
     public async Task<InventoryReportResult> GenerateInventoryReportAsync(InventoryReportFilter filter)
     {
-         int pageSize = filter.PageSize;
-        int pageNumber = filter.PageNumber <= 0 ? 1 : filter.PageNumber;
-
+        var stopwatch = Stopwatch.StartNew();
         var items = await Call_sp_GetInventoryReport(filter);
+        var pagedItems = items.Skip((filter.PageNumber - 1) * filter.PageSize).Take(filter.PageSize).ToList();
 
         var result = new InventoryReportResult
         {
-            Items = items,
-            PageNumber = pageNumber,
-            PageSize = pageSize,
-            TotalRecords = items.Count // ideally from DB
+            Items = pagedItems,
+            PageNumber = filter.PageNumber,
+            PageSize = filter.PageSize,
+            TotalRecords = items.Count,
+            GenerationTime = stopwatch.Elapsed,
+            PageCount = (int)Math.Ceiling((double)items.Count / filter.PageSize),
+            HasNextPage = filter.PageNumber * filter.PageSize < items.Count,
+            HasPreviousPage = filter.PageNumber > 1
         };
 
         return result;
@@ -47,11 +51,11 @@ public class InventoryReportGenerator : IInventoryReportService
         var today = DateTime.Now.ToString("dd-MM-yyyy");
 
         IWorkbook workbook = new XSSFWorkbook();
-        ISheet sheet = workbook.CreateSheet(today+"Inventory Report");
+        ISheet sheet = workbook.CreateSheet(today + "Inventory Report");
 
         //header row
         IRow headerRow = sheet.CreateRow(0);
-        string [] headers = new string[]
+        string[] headers = new string[]
         {
            "No","Item Name","Inward", "Issued", "Return", "Total Sale", "Good Stock"
         };
@@ -64,14 +68,14 @@ public class InventoryReportGenerator : IInventoryReportService
         {
             var item = report[i];
             IRow row = sheet.CreateRow(i + 1);
-            row.CreateCell(0).SetCellValue(i+1);
+            row.CreateCell(0).SetCellValue(i + 1);
             row.CreateCell(1).SetCellValue(item.Sku);
             row.CreateCell(2).SetCellValue((double)item.Inward);
             row.CreateCell(3).SetCellValue((double)item.Outward);
             row.CreateCell(4).SetCellValue((double)item.Returns);
             row.CreateCell(5).SetCellValue((double)item.TotalSale);
             row.CreateCell(6).SetCellValue((double)item.GoodStock);
-           
+
         }
         for (int i = 0; i < headers.Length; i++)
         {
@@ -98,24 +102,24 @@ public class InventoryReportGenerator : IInventoryReportService
         var MaxGoodStockParam = new SqlParameter("@MaxGoodStock", SqlDbType.Decimal) { Value = (object?)filter.MaxGoodStock ?? DBNull.Value };
         try
         {
-             result = await _db.InventoryReportDTO.FromSqlRaw(
-              "EXEC sp_GetInventoryReport @BrandId, @CategoryId, @ColourId, @IsActive, @IsDeleted, @MinGoodStock, @MaxGoodStock",
-              BrandParam,
-              CategoryParam,
-              ColourParam,
-              IsActiveParam,
-              IsDeletedParam,
-              MinGoodStockParam,
-              MaxGoodStockParam
-          )
-          .AsNoTracking()
-          .ToListAsync();
+            result = await _db.InventoryReportDTO.FromSqlRaw(
+             "EXEC sp_GetInventoryReport @BrandId, @CategoryId, @ColourId, @IsActive, @IsDeleted, @MinGoodStock, @MaxGoodStock",
+             BrandParam,
+             CategoryParam,
+             ColourParam,
+             IsActiveParam,
+             IsDeletedParam,
+             MinGoodStockParam,
+             MaxGoodStockParam
+         )
+         .AsNoTracking()
+         .ToListAsync();
             return result;
         }
-        catch (Exception ex) 
+        catch (Exception ex)
         {
             return result;
         }
-   
+
     }
 }

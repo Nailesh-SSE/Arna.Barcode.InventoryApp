@@ -15,72 +15,72 @@
 }
 else
 {
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="row mb-4 align-items-center">
-        <div class="col">
-            <h3>Outward Reports & Analytics</h3>
-            <p class="text-muted">Comprehensive reporting and insights for outward inventory management</p>
-        </div>
-        <div class="col-auto">
-            <div class="btn-group">
-                <button class="btn btn-outline-primary" @onclick="RefreshReport">
-                    <Icon Name="IconName.ArrowClockwise" /> Refresh
-                </button>
-                <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
-                    <Icon Name="IconName.Download" /> Export
-                </button>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="row mb-4 align-items-center">
+            <div class="col">
+                <h3>Outward Reports & Analytics</h3>
+                <p class="text-muted">Comprehensive reporting and insights for outward inventory management</p>
+            </div>
+            <div class="col-auto">
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary" @onclick="RefreshReport">
+                        <Icon Name="IconName.ArrowClockwise" /> Refresh
+                    </button>
+                    <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
+                        <Icon Name="IconName.Download" /> Export
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-    @if (!string.IsNullOrEmpty(alertMessage))
-    {
-        <div class="alert alert-@alertType alert-dismissible fade show" role="alert">
-            @alertMessage
-            <button type="button" class="btn-close" @onclick="() => alertMessage = null"></button>
-        </div>
-    }
-    <div class="row">
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <Icon Name="IconName.Funnel" /> Filter Options
-                    </h6>
-                </div>
+        @if (!string.IsNullOrEmpty(alertMessage))
+        {
+            <div class="alert alert-@alertType alert-dismissible fade show" role="alert">
+                @alertMessage
+                <button type="button" class="btn-close" @onclick="() => alertMessage = null"></button>
+            </div>
+        }
+        <div class="row">
+            <div class="col-md-3 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <Icon Name="IconName.Funnel" /> Filter Options
+                        </h6>
+                    </div>
 
-                <div class="card-body">
-                    <EditForm Model="@filter" OnValidSubmit="GenerateReport">
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <label class="form-label">Start Date</label>
-                                <InputDate class="form-control" @bind-Value="filter.StartDate" />
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">End Date</label>
-                                <InputDate class="form-control" @bind-Value="filter.EndDate" />
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Supplier</label>
-                                <InputSelect class="form-select" @bind-Value="filter.BillToCompanyId">
-                                    <option value="">All Bill</option>
-                                    @foreach (var company in billCompanies)
-                                    {
-                                        <option value="@company.Id">@company.Name</option>
-                                    }
-                                </InputSelect>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Category</label>
-                                <InputSelect class="form-select" @bind-Value="filter.CategoryId">
-                                    <option value="">All Categories</option>
-                                    @foreach (var category in categories)
-                                    {
-                                        <option value="@category.Id">@category.Name</option>
-                                    }
-                                </InputSelect>
-                            </div>
-                            @*      <div class="col-6">
+                    <div class="card-body">
+                        <EditForm Model="@filter" OnValidSubmit="GenerateReport">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label">Start Date</label>
+                                    <InputDate class="form-control" @bind-Value="filter.StartDate" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">End Date</label>
+                                    <InputDate class="form-control" @bind-Value="filter.EndDate" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Supplier</label>
+                                    <InputSelect class="form-select" @bind-Value="filter.BillToCompanyId">
+                                        <option value="">All Bill</option>
+                                        @foreach (var company in billCompanies)
+                                        {
+                                            <option value="@company.Id">@company.Name</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Category</label>
+                                    <InputSelect class="form-select" @bind-Value="filter.CategoryId">
+                                        <option value="">All Categories</option>
+                                        @foreach (var category in categories)
+                                        {
+                                            <option value="@category.Id">@category.Name</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                @*      <div class="col-6">
                                 <label class="form-label">Min Quantity</label>
                                 <InputNumber class="form-control" @bind-Value="filter.MinQuantity" />
                             </div>
@@ -96,38 +96,36 @@ else
                                 <label class="form-label">Product SKUs</label>
                                 <InputText class="form-control" @bind-Value="filter.ProductSKUs" placeholder="comma-separated" />
                             </div> *@
-                            @* <div class="col-12">
+                                @* <div class="col-12">
                                 <label class="form-label">Batch Numbers</label>
                                 <InputText class="form-control" @bind-Value="filter.BatchNumbers" placeholder="comma-separated" />
                             </div> *@
-                            <div class="col-12">
-                                <label class="form-label">Sort By</label>
-                                <InputSelect class="form-select" @bind-Value="filter.SortBy">
-                                    <option value="OutwardDate">Date</option>
-                                    <option value="OutwardNo">Outward Number</option>
-                                    <option value="ShipmentCompany">Supplier</option>
-                                    @* <option value="Quantity">Quantity</option>
+                                <div class="col-12">
+                                    <label class="form-label">Sort By</label>
+                                    <InputSelect class="form-select" @bind-Value="filter.SortBy">
+                                        <option value="OutwardDate">Date</option>
+                                        <option value="OutwardNo">Outward Number</option>
+                                        <option value="ShipmentCompany">Supplier</option>
+                                        @* <option value="Quantity">Quantity</option>
                                     <option value="TotalCost">Total Cost</option> *@
-                                </InputSelect>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">Page Size</label>
-                                <InputSelect class="form-select" @bind-Value="filter.PageSize">
-                                    <option value="10">10</option>
-                                    <option value="25">25</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                    <option value="500">500</option>
-                                </InputSelect>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">Sort Order</label>
-                                <div class="form-check form-switch mt-2">
-                                    <InputCheckbox class="form-check-input" @bind-Value="filter.SortDescending" />
-                                    <label class="form-check-label">Descending</label>
+                                    </InputSelect>
                                 </div>
-                            </div>
-                            @* <div class="col-12">
+                                <div class="col-6">
+                                    <label class="form-label">Page Size</label>
+                                    <InputSelect class="form-select" @bind-Value="filter.PageSize">
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </InputSelect>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Sort Order</label>
+                                    <div class="form-check form-switch mt-2">
+                                        <InputCheckbox class="form-check-input" @bind-Value="filter.SortDescending" />
+                                        <label class="form-check-label">Descending</label>
+                                    </div>
+                                </div>
+                                @* <div class="col-12">
                                 <label class="form-label">Options</label>
                                 <div class="form-check">
                                     <InputCheckbox class="form-check-input" @bind-Value="filter.IncludeInactive" />
@@ -146,39 +144,39 @@ else
                                     <label class="form-check-label">Summary Only</label>
                                 </div>
                             </div> *@
-                            <div class="col-12 d-grid gap-2">
-                                <button type="submit" class="btn btn-primary">
-                                    <Icon Name="IconName.Search" /> Generate Report
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary" @onclick="ClearFilters">
-                                    <Icon Name="IconName.XCircle" /> Clear
-                                </button>
-                                <button type="button" class="btn btn-outline-info" @onclick="LoadDefaultFilters">
-                                    <Icon Name="IconName.ArrowClockwise" /> Default
-                                </button>
+                                <div class="col-12 d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <Icon Name="IconName.Search" /> Generate Report
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" @onclick="ClearFilters">
+                                        <Icon Name="IconName.XCircle" /> Clear
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info" @onclick="LoadDefaultFilters">
+                                        <Icon Name="IconName.ArrowClockwise" /> Default
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    </EditForm>
-                </div>
-            </div>
-        </div>
-
-        <!-- Report Content -->
-        <div class="col-md-9">
-            @if (isLoading)
-            {
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <div class="mt-2"><strong>Generating report...</strong></div>
-                    <div class="progress mt-2" style="height: 4px;">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: @loadingProgress%;"></div>
+                        </EditForm>
                     </div>
                 </div>
-            }
-            else if (reportResult is not null)
-            {
-                <!-- Report Summary -->
-                @* <div class="row mb-4">
+            </div>
+
+            <!-- Report Content -->
+            <div class="col-md-9">
+                @if (isLoading)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <div class="mt-2"><strong>Generating report...</strong></div>
+                        <div class="progress mt-2" style="height: 4px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: @loadingProgress%;"></div>
+                        </div>
+                    </div>
+                }
+                else if (reportResult is not null)
+                {
+                    <!-- Report Summary -->
+                    @* <div class="row mb-4">
                     <div class="col-md-6">
                         <div class="card bg-primary text-white">
                             <div class="card-body">
@@ -197,66 +195,67 @@ else
                     </div>
                 </div> *@
 
-                <!-- Data Table -->
-                @if (!filter.SummaryOnly && reportResult.Items.Any())
-                {
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">Detailed Results</h5>
-                            <small class="text-muted">
-                                Page @reportResult.PageNumber of @reportResult.PageCount
-                                (@reportResult.TotalRecords total records)
-                            </small>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Outward No</th>
-                                            <th>Date</th>
-                                            <th>Product</th>
-                                            <th>SKU</th>
-                                            <th>Category</th>
-                                            <th class="text-end">Quantity</th>
-                                            <th>Unit</th>
-                                            <th>Supplier</th>
-                                            @* <th>Batch</th> *@
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var item in reportResult.Items)
-                                        {
-                                            <tr>
-                                                <td>@((reportResult.PageNumber - 1) * reportResult.PageSize + reportResult.Items.IndexOf(item) + 1)</td>
-                                                <td><span class="badge bg-primary">@item.OutwardNumber</span></td>
-                                                <td>@item.OutwardDate.ToString("dd/MM/yyyy")</td>
-                                                <td>@item.ProductName</td>
-                                                <td><code>@item.SKU</code></td>
-                                                <td>@item.CategoryName</td>
-                                                <td class="text-end">@item.Quantity.ToString("N2")</td>
-                                                <td>@item.Unit</td>
-                                                <td>@item.BillToCompanyName</td>
-                                                @* <td><span class="badge bg-secondary">@item.BatchNumber</span></td> *@
-                                                <td>
-                                                    @if (item.IsActive)
-                                                    {
-                                                        <Badge Color="BadgeColor.Success">Active</Badge>
-                                                    }
-                                                    else
-                                                    {
-                                                        <Badge Color="BadgeColor.Secondary">Inactive</Badge>
-                                                    }
-                                                </td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
+                    <!-- Data Table -->
+                    @if (!filter.SummaryOnly && reportResult.Items.Any())
+                    {
+                        <div class="d-flex flex-column vh-100">
+                            <div class="card flex-grow-1">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Detailed Results</h5>
+                                    <small class="text-muted">
+                                        Page @reportResult.PageNumber of @reportResult.PageCount
+                                        (@reportResult.TotalRecords total records)
+                                    </small>
+                                </div>
+                                <div class="card-body p-0 overflow-auto">
+                                    <div class="table-responsive overflow-auto" style="max-height: 80vh;">
+                                        <table class="table table-striped table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Outward No</th>
+                                                    <th>Date</th>
+                                                    <th>Product</th>
+                                                    <th>SKU</th>
+                                                    <th>Category</th>
+                                                    <th class="text-end">Quantity</th>
+                                                    <th>Unit</th>
+                                                    <th>Supplier</th>
+                                                    @* <th>Batch</th> *@
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in reportResult.Items)
+                                                {
+                                                    <tr>
+                                                        <td>@((reportResult.PageNumber - 1) * reportResult.PageSize + reportResult.Items.IndexOf(item) + 1)</td>
+                                                        <td><span class="badge bg-primary">@item.OutwardNumber</span></td>
+                                                        <td>@item.OutwardDate.ToString("dd/MM/yyyy")</td>
+                                                        <td>@item.ProductName</td>
+                                                        <td><code>@item.SKU</code></td>
+                                                        <td>@item.CategoryName</td>
+                                                        <td class="text-end">@item.Quantity.ToString("N2")</td>
+                                                        <td>@item.Unit</td>
+                                                        <td>@item.BillToCompanyName</td>
+                                                        @* <td><span class="badge bg-secondary">@item.BatchNumber</span></td> *@
+                                                        <td>
+                                                            @if (item.IsActive)
+                                                            {
+                                                                <Badge Color="BadgeColor.Success">Active</Badge>
+                                                            }
+                                                            else
+                                                            {
+                                                                <Badge Color="BadgeColor.Secondary">Inactive</Badge>
+                                                            }
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-
                             <!-- Pagination -->
                             <div class="card-footer">
                                 <nav>
@@ -367,6 +366,7 @@ else
     // Report result and loading state
     private OutwardReportResult? reportResult;
     private bool isLoading = false;
+    private bool isRefreshMessage = false;
     private int loadingProgress = 0;
     private string Route = "/reports/outward";
 
@@ -392,35 +392,31 @@ else
             SortBy = "OutwardDate",
             SortDescending = true
         };
-        await InvokeAsync(StateHasChanged);
+        ShowAlert("secondary", "Default filters loaded.");
     }
 
     private async Task ClearFilters()
     {
-        filter = new OutwardFilter();
-        await InvokeAsync(StateHasChanged);
+        filter = new();
+        reportResult = null;
+        ShowAlert("info", "Filters cleared.");
     }
 
     private async Task GenerateReport()
     {
         isLoading = true;
-        loadingProgress = 10;
-        alertMessage = null;
+        loadingProgress = 0;
+        StateHasChanged();
         try
         {
-            var sw = System.Diagnostics.Stopwatch.StartNew();
+            loadingProgress = 25;
             reportResult = await OutwardReportService.GenerateOutwardReportAsync(filter);
-            sw.Stop();
-            if (reportResult is not null)
-            {
-                reportResult.GenerationTime = sw.Elapsed;
-            }
             loadingProgress = 100;
+            ShowAlert("success", $"Report {(isRefreshMessage ? "refreshed" : "generated")} successfully.");
         }
         catch (Exception ex)
         {
-            alertMessage = $"Error generating report: {ex.Message}";
-            alertType = "danger";
+            ShowAlert("danger", $"Failed to generate report: {ex.Message}");
         }
         finally
         {
@@ -431,7 +427,16 @@ else
 
     private async Task RefreshReport()
     {
-        await GenerateReport();
+        if (reportResult != null)
+        {
+            isRefreshMessage = true;
+            await GenerateReport();
+            isRefreshMessage = false;
+        }
+        else
+        {
+            ShowAlert("warning", "No report to refresh.");
+        }
     }
 
     private async Task ExportCurrentReport()
@@ -467,10 +472,12 @@ else
         }
     }
 
-    private async Task GoToPage(int page)
+    private async Task GoToPage(int pageNumber)
     {
-        if (reportResult is null) return;
-        filter.PageNumber = page;
+        if (reportResult == null || pageNumber < 1 || pageNumber > reportResult.PageCount)
+            return;
+
+        filter.PageNumber = pageNumber;
         await GenerateReport();
     }
 
