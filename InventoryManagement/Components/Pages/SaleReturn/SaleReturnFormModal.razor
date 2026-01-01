@@ -1,6 +1,6 @@
 ﻿
 
-<Modal @ref=modal Title="@Title" Size="ModalSize.Large">
+<Modal @ref=modal Title="@Title" Size="ModalSize.Large" UseStaticBackdrop>
     <BodyTemplate>
         <EditForm EditContext="editContext" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator />

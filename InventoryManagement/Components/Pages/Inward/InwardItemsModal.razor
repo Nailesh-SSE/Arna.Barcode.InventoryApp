@@ -1,6 +1,6 @@
 ﻿@inject IJSRuntime JSRuntime
 @inject IInwardService inwardService
-<Modal @ref="modal" Title="@Title" Size="ModalSize.ExtraLarge">
+<Modal @ref="modal" Title="@Title" Size="ModalSize.ExtraLarge" UseStaticBackdrop>
     <BodyTemplate>
         @if (SelectedInward != null)
         {
