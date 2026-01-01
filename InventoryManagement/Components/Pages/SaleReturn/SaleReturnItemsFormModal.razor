@@ -51,7 +51,7 @@
                     <Icon Name="IconName.Camera" /> Scan
                 </button>
 
-                <Button Class="btn btn-dark">Validate</Button>
+                <Button Class="btn btn-dark" @onclick="HandleBarcode">Validate</Button>
             </div>
 
             <!-- ITEMS TABLE -->
@@ -290,7 +290,7 @@
     [Parameter] public List<CompanyModel?> CompanyList { get; set; } = new();
     [Parameter] public List<OutwardModel?> OutwardList { get; set; } = new();
 
-   private System.Threading.Timer? errorTimer;
+    private System.Threading.Timer? errorTimer;
     public List<UnitModel> Units => CommonUtils.UnitList;
 
 
@@ -395,15 +395,14 @@
     private async Task ValidateBarcode(string? barcode)
     {
         errorMessage = string.Empty;
-     
+
         if (string.IsNullOrWhiteSpace(barcode))
         {
             errorMessage = "Barcode is required.";
             return ;
         }
-       
+
         barcode = barcode.Trim();
-        // 2️⃣ Length validation (exactly 16 characters)
         if (barcode.Length != 16)
         {
             errorMessage = "Barcode must be exactly 16 characters .";
