@@ -58,14 +58,6 @@ else
                     <div class="card-body">
                         <EditForm Model="@filter" OnValidSubmit="GenerateReport">
                             <div class="row g-3">
-                                @* <div class="col-12">
-                                    <label class="form-label">Start Date</label>
-                                    <InputDate class="form-control" @bind-Value="filter.StartDate" />
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">End Date</label>
-                                    <InputDate class="form-control" @bind-Value="filter.EndDate" />
-                                </div> *@
                                 <div class="col-12">
                                     <label class="form-label">Brand</label>
                                     <InputSelect class="form-select" @bind-Value="filter.BrandId">
@@ -96,50 +88,14 @@ else
                                         }
                                     </InputSelect>
                                 </div>
-                                @*      <div class="col-6">
-                                <label class="form-label">Min Quantity</label>
-                                <InputNumber class="form-control" @bind-Value="filter.MInGoodMinGoodStock" />
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">Max Quantity</label>
-                                <InputNumber class="form-control" @bind-Value="filter.MaxGoodStock" />
-                            </div>
-                                <div class="col-6">
-                                    <label class="form-label">Active Products</label>
-                                    <InputSelect TValue="bool?" class="form-select" @bind-Value="filter.IsActive">
-                                        <option value="">All</option>
-                                        <option value="true">Active Only</option>
-                                        <option value="false">Inactive Only</option>
-                                    </InputSelect>
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label">Deleted Products</label>
-                                    <InputSelect TValue="bool?" class="form-select" @bind-Value="filter.IsDeleted">
-                                        <option value="">All</option>
-                                        <option value="true">Deleted Only</option>
-                                        <option value="false">Not Deleted Only</option>
-                                    </InputSelect>
-                                </div>
-                                                
-                        *@
                                 <div class="col-6">
                                     <label class="form-label">Page Size</label>
                                     <InputSelect class="form-select" @bind-Value="filter.PageSize">
-                                        <option value="10">10</option>
                                         <option value="25">25</option>
                                         <option value="50">50</option>
                                         <option value="100">100</option>
-                                        <option value="500">500</option>
                                     </InputSelect>
                                 </div>
-                                @* <div class="col-6">
-                                    <label class="form-label">Sort Order</label>
-                                    <div class="form-check form-switch mt-2">
-                                        <InputCheckbox class="form-check-input" @bind-Value="filter.SortDescending" />
-                                        <label class="form-check-label">Descending</label>
-                                    </div>
-                                </div>
-                    *@
                                 <div class="col-12 d-grid gap-2">
                                     <button type="submit" class="btn btn-primary">
                                         <Icon Name="IconName.Search" /> Generate Report
@@ -171,147 +127,89 @@ else
                 }
                 else if (reportResult is not null)
                 {
-                    <!-- Report Summary -->
-                    @* <div class="row mb-4">
-                    <div class="col-md-6">
-                        <div class="card bg-primary text-white">
-                            <div class="card-body">
-                                <h5 class="card-title">Total Records</h5>
-                                <h3>@reportResult.TotalRecords.ToString("N0")</h3>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card bg-success text-white">
-                            <div class="card-body">
-                                <h5 class="card-title">Total Quantity</h5>
-                                <h3>@reportResult.Summary.TotalQuantity.ToString("N2")</h3>
-                            </div>
-                        </div>
-                    </div>
-                </div> *@
-
                     <!-- Data Table -->
                     @if (reportResult.Items.Any())
                     {
-                        <div class="card">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">Detailed Results</h5>
-                                <small class="text-muted">
-                                    Page @reportResult.PageNumber of @reportResult.PageCount
-                                    (@reportResult.TotalRecords total records)
-                                </small>
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-striped table-hover mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>#</th>
-                                                <th>Product</th>
-
-                                                <th>Inward</th>
-                                                <th>Outward</th>
-                                                <th>SaleReturn</th>
-                                                <th>Total Sale</th>
-                                                <th>GoodStock</th>
-
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach (var item in reportResult.Items)
-                                            {
+                        <div class="d-flex flex-column vh-100">
+                            <div class="card flex-grow-1">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Detailed Results</h5>
+                                    <small class="text-muted">
+                                        Page @reportResult.PageNumber of @reportResult.PageCount
+                                        (@reportResult.TotalRecords total records)
+                                    </small>
+                                </div>
+                                <div class="card-body p-0 overflow-auto">
+                                    <div class="table-responsive overflow-auto" style="max-height: 80vh;">
+                                        <table class="table table-striped table-hover mb-0">
+                                            <thead class="table-light">
                                                 <tr>
-                                                    <td>@((reportResult.PageNumber - 1) * reportResult.PageSize + reportResult.Items.IndexOf(item) + 1)</td>
-
-
-                                                    <td><code>@item.Sku</code></td>
-                                                    <td>@item.Inward</td>
-                                                    <td>@item.Outward</td>
-                                                    <td>@item.Returns</td>
-                                                    <td>@item.TotalSale</td>
-                                                    <td>@item.GoodStock</td>
+                                                    <th>#</th>
+                                                    <th>Product</th>
+                                                    <th>Inward</th>
+                                                    <th>Outward</th>
+                                                    <th>SaleReturn</th>
+                                                    <th>Total Sale</th>
+                                                    <th>GoodStock</th>
 
                                                 </tr>
-                                            }
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in reportResult.Items)
+                                                {
+                                                    <tr>
+                                                        <td>@((reportResult.PageNumber - 1) * reportResult.PageSize + reportResult.Items.IndexOf(item) + 1)</td>
+                                                        <td><code>@item.Sku</code></td>
+                                                        <td>@item.Inward</td>
+                                                        <td>@item.Outward</td>
+                                                        <td>@item.Returns</td>
+                                                        <td>@item.TotalSale</td>
+                                                        <td>@item.GoodStock</td>
 
-                            <!-- Pagination -->
-                            <div class="card-footer">
-                                <nav>
-                                    <ul class="pagination pagination-sm mb-0">
-                                        <li class="page-item @(reportResult.HasPreviousPage ? "" : "disabled")">
-                                            <button class="page-link" @onclick="() => GoToPage(1)">
-                                                <Icon Name="IconName.ChevronDoubleLeft" />
-                                            </button>
-                                        </li>
-                                        <li class="page-item @(reportResult.HasPreviousPage ? "" : "disabled")">
-                                            <button class="page-link" @onclick="() => GoToPage(reportResult.PageNumber - 1)">
-                                                <Icon Name="IconName.ChevronLeft" />
-                                            </button>
-                                        </li>
-                                        @for (int i = Math.Max(1, reportResult.PageNumber - 2); i <= Math.Min(reportResult.PageCount, reportResult.PageNumber + 2); i++)
-                                        {
-                                            var page = i;
-                                            <li class="page-item @(page == reportResult.PageNumber ? "active" : "")">
-                                                <button class="page-link" @onclick="() => GoToPage(page)">@i</button>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Pagination -->
+                                <div class="card-footer">
+                                    <nav>
+                                        <ul class="pagination pagination-sm mb-0">
+                                            <li class="page-item @(reportResult.HasPreviousPage ? "" : "disabled")">
+                                                <button class="page-link" @onclick="() => GoToPage(1)">
+                                                    <Icon Name="IconName.ChevronDoubleLeft" />
+                                                </button>
                                             </li>
-                                        }
-                                        <li class="page-item @(reportResult.HasNextPage ? "" : "disabled")">
-                                            <button class="page-link" @onclick="() => GoToPage(reportResult.PageNumber + 1)">
-                                                <Icon Name="IconName.ChevronRight" />
-                                            </button>
-                                        </li>
-                                        <li class="page-item @(reportResult.HasNextPage ? "" : "disabled")">
-                                            <button class="page-link" @onclick="() => GoToPage(reportResult.PageCount)">
-                                                <Icon Name="IconName.ChevronDoubleRight" />
-                                            </button>
-                                        </li>
-                                    </ul>
-                                </nav>
+                                            <li class="page-item @(reportResult.HasPreviousPage ? "" : "disabled")">
+                                                <button class="page-link" @onclick="() => GoToPage(reportResult.PageNumber - 1)">
+                                                    <Icon Name="IconName.ChevronLeft" />
+                                                </button>
+                                            </li>
+                                            @for (int i = Math.Max(1, reportResult.PageNumber - 2); i <= Math.Min(reportResult.PageCount, reportResult.PageNumber + 2); i++)
+                                            {
+                                                var page = i;
+                                                <li class="page-item @(page == reportResult.PageNumber ? "active" : "")">
+                                                    <button class="page-link" @onclick="() => GoToPage(page)">@i</button>
+                                                </li>
+                                            }
+                                            <li class="page-item @(reportResult.HasNextPage ? "" : "disabled")">
+                                                <button class="page-link" @onclick="() => GoToPage(reportResult.PageNumber + 1)">
+                                                    <Icon Name="IconName.ChevronRight" />
+                                                </button>
+                                            </li>
+                                            <li class="page-item @(reportResult.HasNextPage ? "" : "disabled")">
+                                                <button class="page-link" @onclick="() => GoToPage(reportResult.PageCount)">
+                                                    <Icon Name="IconName.ChevronDoubleRight" />
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </nav>
+                                </div>
                             </div>
                         </div>
                     }
-                    @* else if (filter.SummaryOnly)
-                    {
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0">Summary View</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <h6>Report Statistics</h6>
-                                        <ul class="list-unstyled">
-                                            <li><strong>Total Returns:</strong> @reportResult.Summary.TotalReturns</li>
-                                            <li><strong>Unique Products:</strong> @reportResult.Summary.UniqueProductsCount</li>
-                                            <li><strong>Unique Suppliers:</strong> @reportResult.Summary.UniqueSuppliersCount</li>
-                                            <li><strong>Average Quantity/Return:</strong> @reportResult.Summary.AverageQuantityPerReturn.ToString("N2")</li>
-                                        </ul>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <h6>Financial Summary</h6>
-                                        <ul class="list-unstyled">
-                                            <li><strong>Total Quantity:</strong> @reportResult.Summary.TotalQuantity.ToString("N2")</li>
-                                            <li><strong>Total Value:</strong> @reportResult.Summary.TotalValue.ToString("C2")</li>
-                                            <li><strong>Average Value/Return:</strong> @reportResult.Summary.AverageValuePerReturn.ToString("C2")</li>
-                                        </ul>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <h6>Performance</h6>
-                                        <ul class="list-unstyled">
-                                            <li><strong>Generation Time:</strong> @reportResult.GenerationTime.TotalMilliseconds.ToString("F0") ms</li>
-                                            <li><strong>Records Processed:</strong> @reportResult.TotalRecords</li>
-                                            <li><strong>Page Count:</strong> @reportResult.PageCount</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    } *@
                     else if (!reportResult.Items.Any())
                     {
                         <div class="text-center py-5">
@@ -342,14 +240,16 @@ else
     private List<CategoryModel> categories = new();
     private List<ColourModel> colours = new();
 
-    private InventoryReportResult? reportResult { get; set; } = new();
+    private InventoryReportResult? reportResult { get; set; }
     private bool isLoading = false;
-    private int loadingProgress = 0;
+    private bool isRefreshMessage = false;
+    private int loadingProgress;
     private string Route = "/reports/Inventory";
     protected override async Task OnInitializedAsync()
     {
-        await LoadDefaultFilters();
+        await base.OnInitializedAsync();
         await LoadCompaniesAndCategories();
+        LoadDefaultFilters();
     }
 
     private async Task LoadCompaniesAndCategories()
@@ -359,12 +259,13 @@ else
         colours = await ColourService.GetAllColourAsync();
     }
 
-    private async Task LoadDefaultFilters()
+    private void LoadDefaultFilters()
     {
         filter = new InventoryReportFilter
         {
             StartDate = DateTime.Today.AddDays(-30),
             EndDate = DateTime.Today,
+            PageNumber = 1,
             PageSize = 25,
             SortBy = "ReturnDate",
             ColourId = null,
@@ -376,36 +277,34 @@ else
             MaxGoodStock = null,
             SortDescending = true
         };
-        await InvokeAsync(StateHasChanged);
+        ShowAlert("secondary", "Default filters loaded.");
     }
-
     private async Task ClearFilters()
     {
         filter = new InventoryReportFilter
-();
-        await InvokeAsync(StateHasChanged);
+        {
+            PageNumber = 1,
+            PageSize = 25
+        };
+        reportResult = null;
     }
-
     private async Task GenerateReport()
     {
         isLoading = true;
-        loadingProgress = 10;
         alertMessage = null;
         try
         {
-            var sw = System.Diagnostics.Stopwatch.StartNew();
+            loadingProgress = 25;
             reportResult = await InventoryReportService.GenerateInventoryReportAsync(filter);
-            sw.Stop();
-            if (reportResult is not null)
-            {
-                reportResult.GenerationTime = sw.Elapsed;
-            }
             loadingProgress = 100;
+            ShowAlert(
+                "success",
+                $"Report {(isRefreshMessage ? "refreshed" : "generated")} successfully."
+            );
         }
         catch (Exception ex)
         {
-            alertMessage = $"Error generating report: {ex.Message}";
-            alertType = "danger";
+            ShowAlert("danger", $"Failed to generate report: {ex.Message}");
         }
         finally
         {
@@ -416,7 +315,16 @@ else
 
     private async Task RefreshReport()
     {
-        await GenerateReport();
+        if (reportResult != null)
+        {
+            isRefreshMessage = true;
+            await GenerateReport();
+            isRefreshMessage = false;
+        }
+        else
+        {
+            ShowAlert("warning", "No report to refresh.");
+        }
     }
 
     private async Task ExportCurrentReport()
@@ -454,7 +362,9 @@ else
 
     private async Task GoToPage(int page)
     {
-        if (reportResult is null) return;
+        if (reportResult == null || page < 1 || page > reportResult.PageCount)
+            return;
+
         filter.PageNumber = page;
         await GenerateReport();
     }

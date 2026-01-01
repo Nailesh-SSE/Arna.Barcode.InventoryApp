@@ -102,7 +102,7 @@ else
     </div>
 
     @* --- Add/Edit Outward Modal --- *@
-    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large" UseStaticBackdrop>
         <BodyTemplate>
             <EditForm EditContext="@editContext" OnValidSubmit="SaveOutward">
                 <DataAnnotationsValidator />
@@ -161,7 +161,7 @@ else
         </BodyTemplate>
     </Modal>
 
-    <Modal @ref="itemModal" Title="@($"Manage Items - {selectedOutward?.OutwardNo}")" Size="ModalSize.Regular" OnHidden="HideItemModal">
+    <Modal @ref="itemModal" Title="@($"Manage Items - {selectedOutward?.OutwardNo}")" Size="ModalSize.Regular" OnHidden="HideItemModal" UseStaticBackdrop>
         <BodyTemplate>
             @if (selectedOutward != null)
             {
