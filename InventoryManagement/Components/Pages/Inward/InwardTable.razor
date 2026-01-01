@@ -39,14 +39,20 @@
                 <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
                     <Icon Name="IconName.Plus" /> Add Items
                 </Button>
-
-                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => OnEdit.InvokeAsync(context)">
-                    <Icon Name="IconName.PencilSquare" /> Edit
+                @if (CanEdit)
+                {
+                    <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => OnEdit.InvokeAsync(context)">
+                        <Icon Name="IconName.PencilSquare" /> Edit
                 </Button>
-
-                @* <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => OnDelete.InvokeAsync(context.Id)">
-                    <Icon Name="IconName.Trash" /> Delete
-                </Button> *@
+                }
+                @*
+                @if (CanEdit)
+                {
+                  <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => OnDelete.InvokeAsync(context.Id)">
+                  <Icon Name="IconName.Trash" /> Delete
+                  </Button> 
+                }
+                *@
             </div>
         </GridColumn>
     </Grid>
@@ -59,4 +65,6 @@
     [Parameter] public EventCallback<InwardModel> OnEdit { get; set; }
     [Parameter] public EventCallback<int> OnDelete { get; set; }
     [Parameter] public EventCallback<InwardModel?> OnAddItems { get; set; }
+    [Parameter] public bool CanEdit { get; set;}
+    [Parameter] public bool CanDelete { get; set; }
 }

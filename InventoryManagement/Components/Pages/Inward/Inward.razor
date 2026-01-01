@@ -40,7 +40,7 @@ else
         }
         else
         {
-            <InwardTable Inwards="inwards" ShipCompanies="shipCompanies" OnEdit="ShowEditModal" OnDelete="DeleteInward" OnAddItems="OpenAddItemModal" />
+            <InwardTable Inwards="inwards" ShipCompanies="shipCompanies" OnEdit="ShowEditModal" OnDelete="DeleteInward" OnAddItems="OpenAddItemModal" CanEdit="@CanEdit(Route)" CanDelete="@CanDelete(Route)" />
         }
     </div>
 }
@@ -71,7 +71,8 @@ else
     private InwardModel? selectedInward;
     private List<UnitModel> Units => CommonUtils.UnitList;
     private string Route = "/inward";
-
+    private bool isAdmin = false;
+   
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
@@ -92,7 +93,8 @@ else
     private async Task LoadData()
     {
         isLoading = true;
-        inwards = (await InwardService.GetAllAsync()).ToList();
+        isAdmin = IsAdmin() || IsFactoryAdmin();
+        inwards = (await InwardService.GetAllAsync(isAdmin)).ToList();
         shipCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
         MakeCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo)).ToList();
         categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
