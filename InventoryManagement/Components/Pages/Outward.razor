@@ -92,8 +92,8 @@ else
                                 @: &nbsp;Add Item
                             }
                         </Button>
-                        <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                            <Icon Name="IconName.PencilSquare" /> Edit
+                        <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                            <Icon Name="IconName.Eye"/> View
                         </Button>
                     }
                 </GridColumn>
@@ -106,56 +106,57 @@ else
         <BodyTemplate>
             <EditForm EditContext="@editContext" OnValidSubmit="SaveOutward">
                 <DataAnnotationsValidator />
+                <fieldset disabled="@isEditMode">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Outward Date <span class="text-danger">*</span></label>
+                            <InputDate class="form-control" @bind-Value="outward.OutwardDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                            <ValidationMessage For="@(() => outward.OutwardDate)" />
+                        </div>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Outward Date <span class="text-danger">*</span></label>
-                        <InputDate class="form-control" @bind-Value="outward.OutwardDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
-                        <ValidationMessage For="@(() => outward.OutwardDate)" />
-                    </div>
-
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
-                        <DropDown TItem="CompanyModel"
-                                  Items="@billCompanies"
-                                  SelectedId="@outward.BillToCompanyId"
-                                  ValueSelector="x => x.Id"
-                                  TextSelector="x => x.Name"
-                                  Placeholder="-- Select Company --"
-                                  OnValueChanged="OnBillToCompanySelected" />
-                        <ValidationMessage For="@(() => outward.BillToCompanyId)" />
-                    </div>
-                </div>
-                <div class="col-md-12 mb-3">
-                    <label class="form-label">Platform <span class="text-danger">*</span></label>
-                    <DropDown TItem="PlatformModel"
-                              Items="@platforms"
-                              SelectedId="@outward.PlatformId"
-                              ValueSelector="x => x.Id"
-                              TextSelector="x => x.Name"
-                              Placeholder="-- Select Platform --"
-                              OnValueChanged="OnPlatformSelected" />
-                    <ValidationMessage For="@(() => outward.PlatformId)" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Remarks</label>
-                    <InputTextArea class="form-control" rows="3" @bind-Value="outward.Remarks" />
-                </div>
-
-                @if (outward.Id > 0)
-                {
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <InputCheckbox class="form-check-input" @bind-Value="outward.IsActive" id="isActive" />
-                            <label class="form-check-label" for="isActive">Active</label>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
+                            <DropDown TItem="CompanyModel"
+                                      Items="@billCompanies"
+                                      SelectedId="@outward.BillToCompanyId"
+                                      ValueSelector="x => x.Id"
+                                      TextSelector="x => x.Name"
+                                      Placeholder="-- Select Company --"
+                                      OnValueChanged="OnBillToCompanySelected" />
+                            <ValidationMessage For="@(() => outward.BillToCompanyId)" />
                         </div>
                     </div>
-                }
-                <div class="text-end mt-3">
-                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit"> @(outward.Id > 0 ? "Update" : "Next")</Button>
-                </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Platform <span class="text-danger">*</span></label>
+                        <DropDown TItem="PlatformModel"
+                                  Items="@platforms"
+                                  SelectedId="@outward.PlatformId"
+                                  ValueSelector="x => x.Id"
+                                  TextSelector="x => x.Name"
+                                  Placeholder="-- Select Platform --"
+                                  OnValueChanged="OnPlatformSelected" />
+                        <ValidationMessage For="@(() => outward.PlatformId)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Remarks</label>
+                        <InputTextArea class="form-control" rows="3" @bind-Value="outward.Remarks" />
+                    </div>
+
+                    @if (outward.Id > 0)
+                    {
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="outward.IsActive" id="isActive" />
+                                <label class="form-check-label" for="isActive">Active</label>
+                            </div>
+                        </div>
+                    }
+                    <div class="text-end mt-3">
+                        <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                        <Button Color="ButtonColor.Primary" Type="ButtonType.Submit"> @(outward.Id > 0 ? "Update" : "Next")</Button>
+                    </div>
+                </fieldset>
             </EditForm>
         </BodyTemplate>
     </Modal>

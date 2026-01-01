@@ -24,7 +24,7 @@
 
                     @if (InwardItems.Any())
                     {
-                        <div class="table-responsive" style="height: 400px; overflow-y: auto;">
+                        <div class="table-responsive" style="height: 750px; overflow-y: auto;">
                             <table class="table table-bordered align-middle">
                                 <thead class="table-light">
                                     <tr>
@@ -140,7 +140,8 @@
                                                     {   
                                                         <button type="button"
                                                                 class="btn btn-danger btn-sm"
-                                                                @onclick="@(() => HandleDeleteItem(item.Id))">
+                                                                @onclick="@(() => HandleDeleteItem(item.Id))"
+                                                                disabled="@item.HasOutOfStockBarcodes">                             
                                                                 Delete
                                                         </button>
 

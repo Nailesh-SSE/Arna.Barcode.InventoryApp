@@ -45,7 +45,7 @@ else
     </div>
 }
 <InwardFormModal @ref="inwardFormModal" Title="@modalTitle" Inward="inward" ShipCompanies="shipCompanies" Categories="categories"
-                 Products="products" OnSave="SaveInward" OnCancel="HideModal" />
+                 Products="products" OnSave="SaveInward" OnCancel="HideModal" IsEditMode="isEditMode" />
 
 <InwardItemsModal @ref="itemsModal" Title="@itemTitle" SelectedInward="selectedInward" InwardItems="inwardItems" FilteredProducts="filteredProductsbyCategory" Brands="filteredBrandsByCategory"
                   OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnDownloadPdf="DownloadSingleItemPrn" OnAddItem="AddNewItemRow"

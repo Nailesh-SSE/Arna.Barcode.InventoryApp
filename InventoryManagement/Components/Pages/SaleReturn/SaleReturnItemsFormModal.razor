@@ -1,138 +1,168 @@
 ﻿@using InventoryManagement.Services.DTO
+@inject IJSRuntime JS
 
 <Modal @ref="modal" Title="@Title" Size="ModalSize.ExtraLarge">
     <BodyTemplate>
         <div class="p-2">
-          
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <div class="alert alert-danger alert-dismissible fade show">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
-                        <button type="button" class="btn-close" @onclick="@(() => errorMessage = "")"></button>
-                    </div>
-                }
 
-                @if (!string.IsNullOrEmpty(successMessage))
-                {
-                    <div class="alert alert-success alert-dismissible fade show">
-                        <i class="bi bi-check-circle-fill me-2"></i>@successMessage
-                        <button type="button" class="btn-close" @onclick="@(() => successMessage = "")"></button>
-                    </div>
-                }
-
-                <!-- BARCODE SECTION -->
-                <div class="d-flex gap-2 mb-3">
-                    <InputText class="form-control"
-                               placeholder="Enter Barcode"
-                               @bind-Value="ItemsModel.BarCodeNo" />
-                    <Button Class="btn btn-dark" @onclick="HandleBarcode">Validate</Button>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+                    <button type="button" class="btn-close" @onclick="@(() => errorMessage = "")"></button>
                 </div>
+            }
 
-                <!-- ITEMS TABLE -->
-                @if (ItemsList.Any())
-                {
-                    <div class="table-responsive" style="max-height: 450px;">
-                        <table class="table table-bordered table-sm align-middle">
-                            <thead class="table-light">
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success alert-dismissible fade show">
+                    <i class="bi bi-check-circle-fill me-2"></i>@successMessage
+                    <button type="button" class="btn-close" @onclick="@(() => successMessage = "")"></button>
+                </div>
+            }
+
+            <!-- BARCODE SECTION -->
+            <div class="d-flex gap-2 mb-3">
+                <InputText class="form-control"
+                           placeholder="Enter Barcode"
+                           @bind-Value="ItemsModel.BarCodeNo" />
+                <Button Class="btn btn-dark" @onclick="HandleBarcode">Validate</Button>
+            </div>
+
+            <!-- ITEMS TABLE -->
+            @if (ItemsList.Any())
+            {
+                <div class="table-responsive" style="height: 750px; overflow-y: auto;">
+                    <table class="table table-bordered table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="col-3 col-md-3">Product <span class="text-danger">*</span></th>
+                                <th class="col-2">Ship To </th>
+                                <th class="col-1">Unit <span class="text-danger">*</span></th>
+                                <th class="col-1">Qty <span class="text-danger">*</span></th>
+                                <th class="col-2">Lot No</th>
+                                <th class="col-1">Type <span class="text-danger">*</span></th>
+                                <th class="col-1">To Stock</th>
+                                <th class="col-2">Reason</th>
+                                <th class="col-2 text-center">Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var item in ItemsList)
+                            {
                                 <tr>
-                                    <th class="col-3">Product <span class="text-danger">*</span></th>
-                                    <th class="col-2">Ship To </th>
-                                    <th class="col-1">Unit <span class="text-danger">*</span></th>
-                                    <th class="col-1">Qty <span class="text-danger">*</span></th>
-                                    <th class="col-2">Lot No</th>
-                                    <th class="col-1">Type <span class="text-danger">*</span></th>
-                                    <th class="col-1">To Stock</th>
-                                    <th class="col-2">Reason</th>
-                                    <th class="col-2 text-center">Action</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                @foreach (var item in ItemsList)
-                                {
-                                    <tr>
-                                        <!-- PRODUCT -->
-                                        <td>
-                                            <InputSelect class="form-select" @bind-Value="@item.ProductId">
-                                                <option value="0">Select</option>
-                                                @foreach (var product in ProductList)
-                                                {
-                                                    <option value="@product.Id">@product.SKU</option>
-                                                }
-                                            </InputSelect>
-                                        @if (showValidation && item.ProductId == 0)
+                                    <!-- PRODUCT -->
+                                    @* <td>
+                                        <InputSelect class="form-select" @bind-Value="@item.ProductId">
+                                            <option value="0">Select</option>
+                                            @foreach (var product in ProductList)
                                             {
-                                                <small class="text-danger">Required</small>
+                                                <option value="@product.Id">@product.SKU</option>
                                             }
-                                        </td>
+                                        </InputSelect>
+                                        @if (showValidation && item.ProductId == 0)
+                                        {
+                                            <small class="text-danger">Required</small>
+                                        }
+                                    </td> *@
+                                    <!-- PRODUCT -->
+                                    <td>
+                                                  <!-- PRODUCT -->
+                                    <td>
+                                        <SearchableDropdown TItem="ProductModel"
+                                                            Items="@ProductList"
+                                                            ItemTextSelector="@(p => p.SKU)"
+                                                            SelectedText="@item.ProductSearchText"
+                                                            Placeholder="Search product..."
+                                                            OnItemSelected="@(p => OnProductDropdownSelected(item, p))"
+                                                            ShowValidationMessage="@(showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))"
+                                                             />
 
-                                        <!-- SHIP TO -->
-                                        <td>
-                                            <InputSelect class="form-select" @bind-Value="@item.ShipToCompanyId">
-                                                <option value="0">Select</option>
-                                                @foreach (var ship in CompanyList)
-                                                {
-                                                    <option value="@ship?.Id">@ship?.Name</option>
-                                                }
-                                            </InputSelect>
+                                    
+                                    </td>
+                                        @if (showValidation && item.ProductId == 0)
+                                        {
+                                            <small class="text-danger">Required</small>
+                                        }
+                                    </td>
+
+                                    <!-- SHIP TO -->
+                                    <td>
+                                        <InputSelect class="form-select" @bind-Value="@item.ShipToCompanyId">
+                                            <option value="0">Select</option>
+                                            @foreach (var ship in CompanyList)
+                                            {
+                                                <option value="@ship?.Id">@ship?.Name</option>
+                                            }
+                                        </InputSelect>
                                         @* @if (showValidation && item.ShipToCompanyId == 0 && IsLastUnsavedItem(item))
                                             {
                                                 <small class="text-danger">Required</small>
                                             } *@
-                                        </td>
+                                    </td>
 
-                                        <!-- UNIT -->
-                                        <td>
-                                            <InputSelect class="form-select" @bind-Value="@item.UnitId">
-                                                <option value="0">Select</option>
-                                                @foreach (var unit in Units)
-                                                {
-                                                    <option value="@unit.Id">@unit.Name</option>
-                                                }
-                                            </InputSelect>
+                                    <!-- UNIT -->
+                                    <td>
+                                        <InputSelect class="form-select" @bind-Value="@item.UnitId">
+                                            <option value="0">Select</option>
+                                            @foreach (var unit in Units)
+                                            {
+                                                <option value="@unit.Id">@unit.Name</option>
+                                            }
+                                        </InputSelect>
                                         @if (showValidation && item.UnitId == 0 && IsLastUnsavedItem(item))
-                                            {
-                                                <small class="text-danger">Required</small>
-                                            }
-                                        </td>
+                                        {
+                                            <small class="text-danger">Required</small>
+                                        }
+                                    </td>
 
-                                        <!-- QTY (NARROW) -->
-                                        <td class="col-1">
-                                            <InputNumber class="form-control p-1" min="1" @bind-Value="@item.ReturnQuantity" />
+                                    <!-- QTY (NARROW) -->
+                                    <td class="col-1">
+                                        <InputNumber class="form-control p-1" min="1" @bind-Value="@item.ReturnQuantity" />
                                         @if (showValidation && item.ReturnQuantity <= 0 && IsLastUnsavedItem(item))
+                                        {
+                                            <small class="text-danger">Min 1</small>
+                                        }
+                                    </td>
+
+                                    <!-- OUTWARD (WIDER) -->
+                                    @* <td style="width:150px;">
+                                        <InputSelect class="form-select" @bind-Value="@item.OutwardId">
+                                            <option value="0">Select</option>
+                                            @foreach (var outward in OutwardList)
                                             {
-                                                <small class="text-danger">Min 1</small>
+                                                <option value="@outward?.Id">@outward?.OutwardNo</option>
                                             }
-                                        </td>
+                                        </InputSelect>
+                                    </td> *@
+                                    <td style="width:150px;">
+                                        <SearchableDropdown TItem="OutwardModel"
+                                                            Items="OutwardList"
+                                                            ItemTextSelector="@(o => o.OutwardNo)"
+                                                            SelectedText="@item.OutwardSearchText"
+                                                            Placeholder="Search Outward..."
+                                                            OnItemSelected="@(o => OnOutwardDropdownSelected(item, o))"
+                                                              />
+                                    </td>
 
-                                        <!-- OUTWARD (WIDER) -->
-                                        <td style="width:150px;">
-                                            <InputSelect class="form-select" @bind-Value="@item.OutwardId">
-                                                <option value="0">Select</option>
-                                                @foreach (var outward in OutwardList)
-                                                {
-                                                    <option value="@outward?.Id">@outward?.OutwardNo</option>
-                                                }
-                                            </InputSelect>
-                                        </td>
-
-                                        <!-- RETURN TYPE -->
-                                        <td>
-                                            <InputSelect class="form-select" @bind-Value="@item.ReturnType">
-                                                <option value="0">Select</option>
-                                                @foreach (var type in Enum.GetValues(typeof(ReturnType)))
-                                                {
-                                                    <option value="@((int)type)">@type</option>
-                                                }
-                                            </InputSelect>
+                                    <!-- RETURN TYPE -->
+                                    <td>
+                                        <InputSelect class="form-select" @bind-Value="@item.ReturnType">
+                                            <option value="0">Select</option>
+                                            @foreach (var type in Enum.GetValues(typeof(ReturnType)))
+                                            {
+                                                <option value="@((int)type)">@type</option>
+                                            }
+                                        </InputSelect>
                                         @if (showValidation && item.ReturnType == 0 && IsLastUnsavedItem(item))
-                                            {
-                                                <small class="text-danger">Required</small>
-                                            }
-                                        </td>
+                                        {
+                                            <small class="text-danger">Required</small>
+                                        }
+                                    </td>
 
-                                        <!-- TAKE TO STOCK -->
-                                        <td>
+                                    <!-- TAKE TO STOCK -->
+                                    <td>
                                         <InputSelect TValue="bool"
                                                      class="form-select"
                                                      @bind-Value="item.IsTakeInStock">
@@ -141,57 +171,59 @@
                                             <option value="false">No</option>
 
                                         </InputSelect>
-                                        </td>
+                                    </td>
 
-                                        <!-- REASON -->
-                                        <td class="col-1">
-                                            <InputText class="form-control" @bind-Value="@item.ReasonToReturn" />
-                                        </td>
+                                    <!-- REASON -->
+                                    <td class="col-1">
+                                        <InputText class="form-control" @bind-Value="@item.ReasonToReturn" />
+                                    </td>
 
-                                        <!-- ACTION (ONE LINE, TIGHT) -->
-                                        <td class="text-center">
-                                            <div class="d-flex align-items-center justify-content-center gap-1">
-                                                <Button Class="btn btn-success btn-sm p-1" title="Save"
-                                                        @onclick="(() => HandleSubmit(item))">
-                                                    <Icon Name="IconName.Floppy" />
+                                    <!-- ACTION (ONE LINE, TIGHT) -->
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                            <Button Class="btn btn-success btn-sm p-1" title="Save"
+                                                    @onclick="(() => HandleSubmit(item))">
+                                                <Icon Name="IconName.Floppy" />
+                                            </Button>
+
+                                            @if (item.Id > 0)
+                                            {
+
+                                                <Button Class="btn btn-danger btn-sm p-1" title="Delete"
+                                                        @onclick="(() => HandleDelete(item.Id))">
+                                                    <Icon Name="IconName.Trash" />
                                                 </Button>
-
-                                                @if (item.Id > 0)
-                                                {
-
-                                                    <Button Class="btn btn-danger btn-sm p-1" title="Delete"
-                                                            @onclick="(() => HandleDelete(item.Id))">
-                                                        <Icon Name="IconName.Trash" />
-                                                    </Button>
-                                                }
-                                                else
-                                                {
-                                                    <Button Class="btn btn-secondary btn-sm p-1" title="Cancel"
+                                            }
+                                            else
+                                            {
+                                                <Button Class="btn btn-secondary btn-sm p-1" title="Cancel"
                                                         @onclick="(() => RemoveUnSaveItem(item))">
-                                                        <Icon Name="IconName.XCircle" />
-                                                    </Button>
-                                                }
+                                                    <Icon Name="IconName.XCircle" />
+                                                </Button>
+                                            }
 
-                                            </div>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                } 
-                else
-                {
-                    <div class="text-center py-3 text-muted">
-                        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                        No items added yet. Click "Add Item" to get started.
-                    </div>           
-                }
-            
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-3 text-muted">
+                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                    No items added yet. Click "Add Item" to get started.
+                </div>
+            }
+
             <!-- ADD NEW ROW -->
-            <div class="text-center mt-3">
+            <div class="text-end mt-3">
+                <button type="button" class="btn btn-secondary me-2" @onclick="HandleClose">Cancel</button>
                 <button type="button"
-                        class="btn btn-success btn-sm"
+                        disabled="@hideAddNewButton"
+                        class="btn btn-success "
                         @onclick="HandleAddItem">
                     <i class="bi bi-plus-circle me-1"></i>Add New Item
                 </button>
@@ -207,6 +239,7 @@
     private string? errorMessage { get; set; }
     private string? successMessage { get; set; }
     private bool showValidation = false;
+    private bool hideAddNewButton = false;
 
     // private EditContext editContext;
     // private ValidationMessageStore? validationMessage;
@@ -248,18 +281,18 @@
     }
     public async Task Show()
     {
-        showValidation = false;
+        ResetUiState();
+        var mo = ItemsModel;
         if (ItemsList == null || ItemsList.Count == 0)
         {
             await AddItemRow.InvokeAsync();
-            // await HandleAddItem();
         }
         await modal.ShowAsync();
     }
 
     private async Task HandleSubmit(SaleReturnItemsModel item)
     {
-        ClearMessages();
+        await ClearMessages();
 
         if (!ValidateSaleReturnItem(item))
         {
@@ -274,6 +307,7 @@
         //     : "Sale return item updated successfully.";
 
         showValidation = false;
+        hideAddNewButton = false;
         StateHasChanged();
     }
 
@@ -300,6 +334,8 @@
     }
     private async Task HandleAddItem()
     {
+        await ClearMessages();
+
         var hasBlankRow = ItemsList.Any(item =>
             item.Id == 0 &&
             (item.ProductId == 0 ||
@@ -314,9 +350,11 @@
         }
 
         showValidation = false;
+        hideAddNewButton = true;
+
         await AddItemRow.InvokeAsync();
     }
-  
+
     private bool ValidateSaleReturnItem(SaleReturnItemsModel item)
     {
         showValidation = true;
@@ -338,7 +376,7 @@
             errorMessage = "Unit is required.";
             return false;
         }
-   
+
         if (item.ReturnType==0)
         {
             errorMessage = "Return Type Required";
@@ -347,6 +385,34 @@
 
         errorMessage = "";
         return true;
+    }
+    private void OnProductDropdownSelected(SaleReturnItemsModel saleReturnItem, ProductModel product)
+    {
+        ClearMessages();
+
+        if (product is null)
+        {
+            saleReturnItem.ProductSearchText = "";
+            saleReturnItem.ProductId = 0;
+            return;
+        }
+
+        saleReturnItem.ProductId = product.Id;
+        saleReturnItem.ProductSearchText = product.SKU;
+    }
+    private void OnOutwardDropdownSelected(SaleReturnItemsModel saleReturnItem, OutwardModel outward)
+    {
+        ClearMessages();
+
+        if (outward is null)
+        {
+            saleReturnItem.OutwardSearchText = "";
+            saleReturnItem.OutwardId = 0;
+            return;
+        }
+
+        saleReturnItem.OutwardId = outward.Id;
+        saleReturnItem.OutwardSearchText = outward.OutwardNo;
     }
     private async Task ClearMessages()
     {
@@ -366,14 +432,22 @@
 
     public async Task Hide()
     {
+        ResetUiState();
         await modal.HideAsync();
     }
     public async Task RemoveUnSaveItem(SaleReturnItemsModel item)
     {
+        hideAddNewButton = false;
         await RemoveItemRow.InvokeAsync(item);
-
+       
     }
-
+    private void ResetUiState()
+    {
+        showValidation = false;
+        hideAddNewButton = false;
+        errorMessage = "";
+        successMessage = "";
+    }
 
 
 }

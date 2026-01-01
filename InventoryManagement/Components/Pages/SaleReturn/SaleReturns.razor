@@ -44,7 +44,8 @@ else
                      SaleReturnModel="saleReturn"
                      BillToCompanyList="BillToCompanyList"
                      OnSave="SaveSaleReturn"
-                     OnCancel="HideModal" />
+                     OnCancel="HideModal"
+                     OnEditMode="isEditMode" />
 
 <SaleReturnItemsFormModal @ref="saleReturnItemsFormModal"
                           Title="@itemTitle"
@@ -191,13 +192,25 @@ else
     #region ItemModal
     private async Task OpenItemModel(SaleReturnModel data)
     {
-
+        itemsModel.BarCodeNo = string.Empty;
         selectedSaleReturn = saleReturnList.FirstOrDefault(s => s.Id == data.Id);
         if (selectedSaleReturn == null) return;
         itemTitle = $"Manage SaleReturn Items | SaleReturn No: {data?.SaleReturnNo}";
         modalTitle = "Sale Return  No:" + data.SaleReturnNo;
         var items = await SaleReturnService.GetSaleReturnItemsByReturnId(data.Id);
-
+        foreach (var item in items)
+        {
+            var product = ProductList.FirstOrDefault(p => p.Id == item.ProductId);
+            if (product != null)
+            {
+                item.ProductSearchText = product.SKU;
+            }
+            var outward = OutwardList.FirstOrDefault(p => p.Id == item.OutwardId);
+            if (outward != null)
+            {
+                item.OutwardSearchText = outward.OutwardNo;
+            }
+        }
         SaleReturnItems = items;
         saleReturnItemsFormModal.ItemsList = items;
         saleReturnItemsFormModal.SelectedSaleReturn = selectedSaleReturn;
@@ -246,7 +259,7 @@ else
         await HandleResponse(ResponseDto);
     }
     private async Task HandleResponse(OperationResponse Dto)
-    {   
+    {
         await saleReturnItemsFormModal.HandleResponse(Dto);
     }
 
@@ -254,7 +267,7 @@ else
     {
         await SaleReturnService.DeleteSaleReturnItem(itemId);
         SaleReturnItems = await SaleReturnService.GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
-     
+
     }
     private async Task AddEmptyItemRow()
     {
@@ -264,6 +277,13 @@ else
     private async Task AddNewItemRow(SaleReturnValidationResult? data)
     {
         SaleReturnItems ??= new List<SaleReturnItemsModel>();
+        bool hasUnsavedRow = SaleReturnItems.Any(item => item.Id == 0);
+
+        if (hasUnsavedRow)
+        {
+            await SendOperationResponse(false, "Please Save Unsave Item First");
+            return;
+        }
 
         if (data == null || data.ProductId == null || data.ProductId == 0)
         {
@@ -283,7 +303,10 @@ else
             BarCodeNo = data?.BarcodeNo ?? null,
             ReturnQuantity = 1
         });
-
+        if (data != null)
+        {
+            await SendOperationResponse(true, "Barcode validated successfully. Please save to confirm.");
+        }
         StateHasChanged();
     }
     private async Task HideItemModal()
@@ -330,6 +353,10 @@ else
             if (validationResult.IsValid)
             {
                 await AddNewItemRow(validationResult);
+            }
+            else
+            {
+                await SendOperationResponse(false, validationResult.ErrorMessage);
             }
             StateHasChanged();
         }

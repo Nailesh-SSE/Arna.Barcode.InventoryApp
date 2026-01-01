@@ -61,7 +61,8 @@ namespace InventoryManagement.Services.Models
         public string? ReasonToReturn { get; set; } = null;
 
         public DateTime? ReturnDate { get; set; } = DateTime.UtcNow;
-
+        public string? ProductSearchText { get; set; } = string.Empty;
+        public string? OutwardSearchText { get; set; } = string.Empty;
         public List<ProductModel> ProductLIst { get; set; } = new();
         public List<CategoryModel> CategoryList { get; set; } = new();
         public List<CompanyModel> ShipToCompanyList { get; set; } = new();
