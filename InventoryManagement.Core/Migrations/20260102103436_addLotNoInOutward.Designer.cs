@@ -4,6 +4,7 @@ using InventoryManagement.Core.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InventoryManagement.Core.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    partial class InventoryDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260102103436_addLotNoInOutward")]
+    partial class addLotNoInOutward
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -72,7 +75,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("ParentCategoryId");
 
-                    b.ToTable("Categories", (string)null);
+                    b.ToTable("Categories");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Colour", b =>
@@ -117,7 +120,7 @@ namespace InventoryManagement.Core.Migrations
                         .IsUnique()
                         .HasFilter("[IsDeleted] = 0");
 
-                    b.ToTable("Colour", (string)null);
+                    b.ToTable("Colour");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Company", b =>
@@ -172,7 +175,7 @@ namespace InventoryManagement.Core.Migrations
                         .IsUnique()
                         .HasFilter("[IsDeleted] = 0");
 
-                    b.ToTable("Companies", (string)null);
+                    b.ToTable("Companies");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.FormMaster", b =>
@@ -225,7 +228,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("FormMasters", (string)null);
+                    b.ToTable("FormMasters");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Inward", b =>
@@ -281,7 +284,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("ShipMentCompanyId");
 
-                    b.ToTable("Inwards", (string)null);
+                    b.ToTable("Inwards");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.InwardBarcodeItem", b =>
@@ -336,7 +339,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("InwardItemId");
 
-                    b.ToTable("InwardBarcodeItems", (string)null);
+                    b.ToTable("InwardBarcodeItems");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.InwardItem", b =>
@@ -408,7 +411,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("InwardItems", (string)null);
+                    b.ToTable("InwardItems");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Outward", b =>
@@ -466,7 +469,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("BillToCompanyId");
 
-                    b.ToTable("Outwards", (string)null);
+                    b.ToTable("Outwards");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.OutwardDetail", b =>
@@ -522,7 +525,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("OutwardDetails", (string)null);
+                    b.ToTable("OutwardDetails");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Platform", b =>
@@ -563,7 +566,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Platform", (string)null);
+                    b.ToTable("Platform");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Product", b =>
@@ -648,7 +651,7 @@ namespace InventoryManagement.Core.Migrations
                     b.HasIndex("SKU")
                         .IsUnique();
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.RoleFormPermission", b =>
@@ -697,7 +700,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RoleFormPermissions", (string)null);
+                    b.ToTable("RoleFormPermissions");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Roles", b =>
@@ -744,7 +747,7 @@ namespace InventoryManagement.Core.Migrations
                         .IsUnique()
                         .HasFilter("[IsDeleted] = 0");
 
-                    b.ToTable("Roles", (string)null);
+                    b.ToTable("Roles");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.SP_Entities.InventoryReportDTO", b =>
@@ -774,7 +777,7 @@ namespace InventoryManagement.Core.Migrations
                     b.Property<decimal>("TotalSale")
                         .HasColumnType("decimal(18,2)");
 
-                    b.ToTable("InventoryReportDTO", (string)null);
+                    b.ToTable("InventoryReportDTO");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Users", b =>
@@ -841,7 +844,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.UsersInRole", b =>
@@ -885,7 +888,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UsersInRoles", (string)null);
+                    b.ToTable("UsersInRoles");
                 });
 
             modelBuilder.Entity("SaleReturn", b =>
@@ -928,7 +931,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("BillToCompanyId");
 
-                    b.ToTable("SaleReturns", (string)null);
+                    b.ToTable("SaleReturns");
                 });
 
             modelBuilder.Entity("SaleReturnItems", b =>
@@ -1008,7 +1011,7 @@ namespace InventoryManagement.Core.Migrations
 
                     b.HasIndex("ShipToCompanyId");
 
-                    b.ToTable("SaleReturnItems", (string)null);
+                    b.ToTable("SaleReturnItems");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.Category", b =>
