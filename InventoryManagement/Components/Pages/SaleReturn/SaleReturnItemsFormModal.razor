@@ -1,7 +1,7 @@
 ﻿@using InventoryManagement.Services.DTO
 @inject IJSRuntime JS
-
-<Modal @ref="modal" Title="@Title" Size="ModalSize.ExtraLarge" UseStaticBackdrop>
+@implements IAsyncDisposable
+<Modal @ref="modal" Title="@Title" Size="ModalSize.ExtraLarge" UseStaticBackdrop OnHidden="@Hide">
     <BodyTemplate>
         <div class="p-2">
 
@@ -91,9 +91,6 @@
                                             <small class="text-danger">Required</small>
                                         }
                                     </td> *@
-                                    <!-- PRODUCT -->
-                                    <td>
-                                                  <!-- PRODUCT -->
                                     <td>
                                         <SearchableDropdown TItem="ProductModel"
                                                             Items="@ProductList"
@@ -103,9 +100,6 @@
                                                             OnItemSelected="@(p => OnProductDropdownSelected(item, p))"
                                                             ShowValidationMessage="@(showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))"
                                                              />
-
-                                    
-                                    </td>
                                         @if (showValidation && item.ProductId == 0)
                                         {
                                             <small class="text-danger">Required</small>
@@ -489,7 +483,22 @@
     public async Task Hide()
     {
         ResetUiState();
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
+
+        if (dotNetHelper != null)
+        {
+            dotNetHelper.Dispose();
+            dotNetHelper = null;
+        }
+
+        isScanning = false;
         await modal.HideAsync();
+        SelectedSaleReturn = null;
+        ItemsList.Clear();
     }
     public async Task RemoveUnSaveItem(SaleReturnItemsModel item)
     {
@@ -537,9 +546,10 @@
         ItemsModel.BarCodeNo = scannedBarcode;
 
         isScanning = false;
-        
+
         await HandleBarcode();
-        
+        StateHasChanged();
+
     }
 
     public async Task CloseCamera()
@@ -577,6 +587,21 @@
             errorMessage = string.Empty;
             InvokeAsync(StateHasChanged);
         }, null, 4000, System.Threading.Timeout.Infinite);
+    }
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.stop");
+        }
+        catch
+        {
+        }
+
+        dotNetHelper?.Dispose();
+        dotNetHelper = null;
+
+        isScanning = false;
     }
 }
 <style>

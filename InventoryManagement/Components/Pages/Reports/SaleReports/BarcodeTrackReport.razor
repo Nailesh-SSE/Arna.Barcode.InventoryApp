@@ -3,6 +3,7 @@
 @using InventoryManagement.Services.Models.ReportModels
 @using InventoryManagement.Services.Reports.Interfaces
 @inherits AuthComponentBase
+@implements IAsyncDisposable
 @inject IInwardReportService InwardReportService
 @inject IBarcodeTrackingReportService BarcodeTrackingReportService
 @inject ICompanyService CompanyService
@@ -21,6 +22,7 @@ else
         <div class="row mb-4 align-items-center">
             <div class="col">
                 <h3>Track Barcode</h3>
+                <p class="text-muted">Comprehensive reporting and insights for Barcode Tracking management</p>
             </div>
             <div class="col-auto">
                 <div class="btn-group">
@@ -52,12 +54,33 @@ else
                     <div class="card-body">
                         <EditForm Model="@filter" OnValidSubmit="GenerateReport">
                             <div class="row g-3">
+                                <div class="position-relative">
+
+                                    @if (isScanning)
+                                    {
+                                        <button type="button"
+                                                class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2"
+                                                title="Close Camera"
+                                                style="z-index: 10;"
+                                                @onclick="CloseCamera">
+                                            <Icon Name="IconName.XCircle" />
+                                        </button>
+                                    }
+
+                                    <div id="reader" class="border rounded" style="width: 100%;"></div>
+
+                                </div>
                                 <div class="col-12">
                                     <label class="form-label">Barcode No</label>
                                     <InputText class="form-control"
                                                @bind-Value="filter.barcode"
                                                @oninput="HandleInput" />
-
+                                    <button type="button"
+                                            class="btn btn-secondary d-flex align-items-center gap-1"
+                                            @onclick="StartCameraScan"
+                                            disabled="@isScanning">
+                                        <Icon Name="IconName.Camera" /> Scan
+                                    </button>
                                     @if (barcodeError != null)
                                     {
                                         <div class="text-danger small mt-1">
@@ -160,8 +183,13 @@ else
     private int loadingProgress;
     private string? alertMessage;
     private string? barcodeError;
+    private System.Threading.Timer? errorTimer;
+    private bool isScanning = false;
     private string alertType = "info";
     private string Route = "/reports/barcodetrack";
+    private DotNetObjectReference<BarcodeTrackReport>? dotNetHelper;
+    private InputText barcodeInput = default!;
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -236,7 +264,6 @@ else
             SortDescending = true,
             // IncludeInactive = false
         };
-        ShowAlert("secondary", "Default filters loaded.");
     }
 
     private async Task RefreshReport()
@@ -253,6 +280,13 @@ else
         reportResult = null;
         barcodeError = null;
         ShowAlert("info", "Filters cleared.");
+        try
+        {
+            JS.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
+        isScanning = false;
+        StateHasChanged();
     }
     private void ShowAlert(string type, string message)
     {
@@ -299,5 +333,170 @@ else
 
         return true;
     }
-}
+    private void ShowError(string message)
+    {
+        barcodeError = message;
+        //showErrorMessage = true;
+        StateHasChanged();
 
+        errorTimer?.Dispose();
+        errorTimer = new System.Threading.Timer(_ =>
+        {
+            //     showErrorMessage = false;
+            barcodeError = string.Empty;
+            InvokeAsync(StateHasChanged);
+        }, null, 4000, System.Threading.Timeout.Infinite);
+    }
+    private async Task StartCameraScan()
+    {
+        if (isScanning) return;
+
+        try
+        {
+            isScanning = true;
+            await Task.Yield();
+            dotNetHelper?.Dispose();
+            dotNetHelper = DotNetObjectReference.Create(this);
+
+            await JS.InvokeVoidAsync("manageScanner.start", dotNetHelper);
+        }
+        catch (Exception)
+        {
+            isScanning = false;
+            ShowError("Could not start camera");
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnBarcodeScanned(string scannedBarcode)
+    {
+        barcodeError = string.Empty;
+        if (dotNetHelper == null) return;
+
+        if (string.IsNullOrWhiteSpace(scannedBarcode))
+            return;
+
+        filter.barcode = scannedBarcode;
+        if (!ValidateBarcode())
+        {
+            ShowAlert("warning", barcodeError!);
+            reportResult = null;
+            isScanning = false;
+            StateHasChanged();
+        }
+        else
+        {
+            isLoading = false;
+            StateHasChanged();
+            reportResult = await BarcodeTrackingReportService.GenerateBarcodeTarckReportAsync(filter); ;
+            StateHasChanged();
+        }
+    }
+
+    public async Task CloseCamera()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
+
+        if (dotNetHelper != null)
+        {
+            dotNetHelper.Dispose();
+            dotNetHelper = null;
+        }
+
+        isScanning = false;
+
+        if (barcodeInput != null &&
+         barcodeInput.Element.HasValue)
+        {
+            await barcodeInput.Element.Value.FocusAsync();
+        }
+    }
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.stop");
+        }
+        catch{}
+
+        dotNetHelper?.Dispose();
+        dotNetHelper = null;
+
+        isScanning = false;
+    }
+}
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<script>
+    let html5QrcodeScanner;
+
+    window.manageScanner = {
+        start: (dotNetHelper) => {
+            if (html5QrcodeScanner) { return; }
+
+            html5QrcodeScanner = new Html5Qrcode("reader");
+
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            html5QrcodeScanner.start({ facingMode: "environment" }, config,
+                (decodedText, decodedResult) => {
+                    // SUCCESS:
+                    // 1. Stop the camera immediately so it doesn't scan twice
+                    // 2. Clear the variable and DOM
+                    // 3. Send result to C#
+                    window.manageScanner.stop().then(() => {
+                        dotNetHelper.invokeMethodAsync('OnBarcodeScanned', decodedText)
+                            .catch(err => console.log("Blazor component disposed", err));
+                    });
+                },
+                (errorMessage) => {
+                    // ignore errors
+                })
+            .catch(err => {
+                console.error("Error starting scanner", err);
+                alert("Could not start camera. Permissions?");
+            });
+        },
+
+        stop: () => {
+            return new Promise((resolve, reject) => {
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.stop().then(() => {
+                        html5QrcodeScanner.clear();
+                        html5QrcodeScanner = null;
+                        document.getElementById("reader").innerHTML = "";
+                        resolve();
+                    }).catch(err => {
+                        console.log("Error stopping scanner", err);
+                        html5QrcodeScanner = null;
+                        resolve();
+                    });
+                } else {
+                    resolve();
+                }
+            });
+        },
+        forceStop: () => {
+            if (!html5QrcodeScanner) return;
+
+            try
+            {
+                html5QrcodeScanner.stop();
+                html5QrcodeScanner.clear();
+            }
+            catch (e)
+            {
+                console.warn("Scanner stop error", e);
+            }
+
+            html5QrcodeScanner = null;
+
+            const reader = document.getElementById("reader");
+            if (reader) reader.innerHTML = "";
+        }
+    };
+</script>
