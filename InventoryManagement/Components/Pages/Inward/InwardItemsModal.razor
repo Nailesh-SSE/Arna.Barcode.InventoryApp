@@ -49,9 +49,9 @@
                                         <tr class="@rowClasses">
                                             <td>
                                                 <select class="@brandClass"
-                                                             value="@item.BrandId"
-                                                             @onchange="(e => onChangeBrand(item, int.Parse(e.Value.ToString())))"
-                                                             disabled="@item.HasOutOfStockBarcodes">
+                                                        value="@item.BrandId"
+                                                        @onchange="(e => onChangeBrand(item, int.Parse(e.Value.ToString())))"
+                                                        disabled="@item.HasOutOfStockBarcodes">
                                                     <option value="0">-- Select --</option>
                                                     @foreach (var brand in Brands)
                                                     {
@@ -134,15 +134,15 @@
                                                             class="btn btn-primary btn-sm"
                                                             @onclick="@(() => HandleSaveItem(item))"
                                                             disabled="@item.HasOutOfStockBarcodes">
-                                                            Save
+                                                        Save
                                                     </button>
                                                     @if (item.Id > 0)
-                                                    {   
+                                                    {
                                                         <button type="button"
                                                                 class="btn btn-danger btn-sm"
                                                                 @onclick="@(() => HandleDeleteItem(item.Id))"
-                                                                disabled="@item.HasOutOfStockBarcodes">                             
-                                                                Delete
+                                                                disabled="@item.HasOutOfStockBarcodes">
+                                                            Delete
                                                         </button>
 
                                                         <button type="button"
@@ -166,7 +166,7 @@
                                 </tbody>
                             </table>
                             <div class="text-end mt-2">
-                                <button type="button" class="btn btn-success btn-sm" @onclick="HandleAddItem">
+                                <button type="button" disabled="@hideAddNewButton" class="btn btn-success btn-sm" @onclick="HandleAddItem">
                                     <i class="bi bi-plus-circle me-1"></i>Add New Item
                                 </button>
                             </div>
@@ -180,6 +180,7 @@
                         </div>
                         <div class="text-center mt-2">
                             <button type="button"
+                                    disabled="@hideAddNewButton"
                                     class="btn btn-success btn-sm"
                                     @onclick="HandleAddItem">
                                 <i class="bi bi-plus-circle me-1"></i>Add New Item
@@ -207,6 +208,7 @@
     private string successMessage = "";
     private bool showValidation = false;
     private bool isSaving = false;
+    private bool hideAddNewButton = false;
     private InwardItemModel? currentSavingItem = null;
 
     [Parameter] public string Title { get; set; } = "Manage Inward Items";
@@ -227,7 +229,7 @@
 
     public async Task Show()
     {
-        ClearMessages();
+        ResetUiState();
         showValidation = false;
         if (InwardItems == null || InwardItems.Count == 0)
         {
@@ -253,6 +255,7 @@
 
     public async Task Hide()
     {
+        ResetUiState();
         await modal.HideAsync();
     }
 
@@ -367,7 +370,6 @@
     private async Task HandleAddItem()
     {
         ClearMessages();
-
         // Check if there's an unsaved item with no data
         var hasBlankUnsavedRow = InwardItems.Any(item =>
             item.Id == 0 && (item.ProductId == 0 || item.ItemQuantity == 0));
@@ -381,12 +383,14 @@
         }
 
         showValidation = false;
+        hideAddNewButton = true;
         await OnAddItem.InvokeAsync();
         StateHasChanged();
     }
 
     private void RemoveUnsavedItem(InwardItemModel item)
     {
+        hideAddNewButton = false;
         ClearMessages();
         OnRemoveUnsaved.InvokeAsync(item);
         StateHasChanged();
@@ -473,5 +477,12 @@
             .ToList();
         OnProductDropdownSelected(item, null);
         StateHasChanged();
+    }
+    private void ResetUiState()
+    {
+        showValidation = false;
+        hideAddNewButton = false;
+        errorMessage = "";
+        successMessage = "";
     }
 }

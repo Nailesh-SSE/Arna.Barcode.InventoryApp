@@ -23,12 +23,35 @@ else
             </div>
             <div class="col-auto">
                 <div class="btn-group">
-                    <button class="btn btn-outline-primary" @onclick="RefreshReport">
-                        <Icon Name="IconName.ArrowClockwise" /> Refresh
+                    <button class="btn btn-outline-primary"
+                            disabled="@isRefresh"
+                            @onclick="RefreshReport">
+                        @if (isRefresh)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Refreshing...</span>
+                        }
+                        else
+                        {
+                            <Icon Name="IconName.ArrowClockwise" />
+                            <span>Refresh</span>
+                        }
                     </button>
-                    <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
-                        <Icon Name="IconName.Download" /> Export
+                    <button class="btn btn-outline-success"
+                            disabled="@isExporting"
+                            @onclick="ExportCurrentReport">
+                        @if (isExporting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Exporting...</span>
+                        }
+                        else
+                        {
+                            <Icon Name="IconName.Download" />
+                            <span>Export</span>
+                        }
                     </button>
+
                 </div>
             </div>
         </div>
@@ -362,7 +385,8 @@ else
     private List<CompanyModel> shipCompanies = new();
     private List<CategoryModel> categories = new();
     private bool isLoading;
-    private bool isRefreshMessage = false;
+    private bool isExporting = false;
+    private bool isRefresh = false;
     private int loadingProgress;
     private string? alertMessage;
     private string alertType = "info";
@@ -401,7 +425,7 @@ else
             loadingProgress = 25;
             reportResult = await InwardReportService.GenerateInwardReportAsync(filter);
             loadingProgress = 100;
-            ShowAlert("success", $"Report {(isRefreshMessage ? "refreshed" : "generated")} successfully.");
+            ShowAlert("success", $"Report {(isRefresh ? "refreshed" : "generated")} successfully.");
         }
         catch (Exception ex)
         {
@@ -439,9 +463,9 @@ else
     {
         if (reportResult != null)
         {
-            isRefreshMessage = true;
+            isRefresh = true;
             await GenerateReport();
-            isRefreshMessage = false;
+            isRefresh = false;
         }
         else
         {
@@ -451,14 +475,16 @@ else
 
     private async Task ExportCurrentReport()
     {
-        if (reportResult == null)
+        if (reportResult == null || isExporting)
         {
             ShowAlert("warning", "No report available to export.");
             return;
         }
-
+        isExporting = true;
+        StateHasChanged();
         try
         {
+            await Task.Delay(100);
             var excelData = await InwardReportService.ExportToExcelAsync(filter);
             var fileName = $"Inward_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
             var filePath = Path.Combine(Environment.CurrentDirectory, "wwwroot", "exports");
@@ -478,6 +504,11 @@ else
         catch (Exception ex)
         {
             ShowAlert("danger", $"Failed to export report: {ex.Message}");
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
         }
     }
 

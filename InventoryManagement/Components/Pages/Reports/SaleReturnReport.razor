@@ -24,11 +24,33 @@ else
             </div>
             <div class="col-auto">
                 <div class="btn-group">
-                    <button class="btn btn-outline-primary" @onclick="RefreshReport">
-                        <Icon Name="IconName.ArrowClockwise" /> Refresh
+                    <button class="btn btn-outline-primary"
+                            disabled="@isRefresh"
+                            @onclick="RefreshReport">
+                        @if (isRefresh)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Refreshing...</span>
+                        }
+                        else
+                        {
+                            <Icon Name="IconName.ArrowClockwise" />
+                            <span>Refresh</span>
+                        }
                     </button>
-                    <button class="btn btn-outline-success" @onclick="ExportCurrentReport">
-                        <Icon Name="IconName.Download" /> Export
+                    <button class="btn btn-outline-success"
+                            disabled="@isExporting"
+                            @onclick="ExportCurrentReport">
+                        @if (isExporting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Exporting...</span>
+                        }
+                        else
+                        {
+                            <Icon Name="IconName.Download" />
+                            <span>Export</span>
+                        }
                     </button>
                 </div>
             </div>
@@ -361,7 +383,8 @@ else
 
     private SaleReturnReportResult? reportResult;
     private bool isLoading = false;
-    private bool isRefreshMessage = false;
+    private bool isExporting = false;
+    private bool isRefresh = false;
     private int loadingProgress = 0;
     private string Route = "/reports/sale-return";
     protected override async Task OnInitializedAsync()
@@ -406,7 +429,7 @@ else
             loadingProgress = 25;
             reportResult = await SaleReturnReportService.GenerateSaleReturnReportAsync(filter);
             loadingProgress = 100;
-            ShowAlert("success", $"Report {(isRefreshMessage ? "refreshed" : "generated")} successfully.");
+            ShowAlert("success", $"Report {(isRefresh ? "refreshed" : "generated")} successfully.");
         }
         catch (Exception ex)
         {
@@ -423,9 +446,9 @@ else
     {
         if (reportResult != null)
         {
-            isRefreshMessage = true;
+            isRefresh = true;
             await GenerateReport();
-            isRefreshMessage = false;
+            isRefresh = false;
         }
         else
         {
@@ -435,12 +458,13 @@ else
 
     private async Task ExportCurrentReport()
     {
-        if (reportResult is null)
+        if (reportResult == null || isExporting)
         {
-            alertMessage = "No report to export.";
-            alertType = "warning";
+            ShowAlert("warning", "No report available to export.");
             return;
         }
+        isExporting = true;
+        StateHasChanged();
         try
         {
             var excelData = await SaleReturnReportService.ExportToExcelAsync(filter);
@@ -463,6 +487,11 @@ else
         {
             alertMessage = $"Export failed: {ex.Message}";
             alertType = "danger";
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
         }
     }
 

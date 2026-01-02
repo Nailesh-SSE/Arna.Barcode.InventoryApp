@@ -40,7 +40,7 @@ else
                 @if (CanCreate(Route))
                 {
                     <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
-                        <Icon Name="IconName.Plus" /> Add
+                        <Icon Name="IconName.Plus" /> Add New
                     </Button>
                 }
             </div>
@@ -127,7 +127,7 @@ else
         <EditForm EditContext="@editContext" OnValidSubmit="Save">
             <DataAnnotationsValidator />
             <div class="mb-2">
-                <label class="form-label">Role</label>
+                <label class="form-label">Role <span class="text-danger">*</span></label>
                 <DropDown TItem="RoleModel"
                           Items="@roles"
                           SelectedId="@model.RoleId"
@@ -140,7 +140,7 @@ else
 
 
             <div class="mb-2">
-                <label class="form-label">Form</label>
+                <label class="form-label">Form <span class="text-danger">*</span></label>
                 <DropDown TItem="FormMasterModel"
                           Items="@forms"
                           SelectedId="@model.FormId"
@@ -293,7 +293,7 @@ else
         if (User.Identity?.IsAuthenticated != true)
             return;
 
-        if (await JS.InvokeAsync<bool>("confirm", "Delete?"))
+        if (await JS.InvokeAsync<bool>("confirm", "Really do you want to delete this item?"))
         {
             await Service.DeleteAsync(id, UserId);
             await LoadData();
