@@ -3,6 +3,7 @@
 @using InventoryManagement.Services.Models.ReportModels
 @using InventoryManagement.Services.Reports.Interfaces
 @inherits AuthComponentBase
+@implements IAsyncDisposable
 @inject IInwardReportService InwardReportService
 @inject IBarcodeTrackingReportService BarcodeTrackingReportService
 @inject ICompanyService CompanyService
@@ -279,6 +280,13 @@ else
         reportResult = null;
         barcodeError = null;
         ShowAlert("info", "Filters cleared.");
+        try
+        {
+            JS.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
+        isScanning = false;
+        StateHasChanged();
     }
     private void ShowAlert(string type, string message)
     {
@@ -406,6 +414,19 @@ else
         {
             await barcodeInput.Element.Value.FocusAsync();
         }
+    }
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.stop");
+        }
+        catch{}
+
+        dotNetHelper?.Dispose();
+        dotNetHelper = null;
+
+        isScanning = false;
     }
 }
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
