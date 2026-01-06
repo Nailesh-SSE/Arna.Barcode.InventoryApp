@@ -354,15 +354,34 @@
     }
     public async Task HandleResponse(OperationResponse ResponseDto)
     {
-        if(ResponseDto.IsSuccess)
+        if(ResponseDto.IsSuccess)   
         {
             successMessage = ResponseDto.Message;
+            _= AutoHideAlertAsync();
         }
         else
         {
             errorMessage = ResponseDto.Message;
+            _ = AutoHideAlertAsync();
         }
+    }
+    private void ShowSuccessMessage( string message)
+    {
 
+        successMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+    private void ShowErrorMessage(string message)
+    {
+        errorMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+    private async Task AutoHideAlertAsync()
+    {
+        await Task.Delay(4500);
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        await InvokeAsync(StateHasChanged);
     }
     private async Task HandleAddItem()
     {
@@ -392,14 +411,14 @@
 
         if (string.IsNullOrWhiteSpace(barcode))
         {
-            errorMessage = "Barcode is required.";
+            ShowErrorMessage("Barcode is required.");
             return ;
         }
 
         barcode = barcode.Trim();
         if (barcode.Length != 16)
         {
-            errorMessage = "Barcode must be exactly 16 characters .";
+            ShowErrorMessage("Barcode must be exactly 16 characters .");
             return ;
         }
     }
@@ -409,28 +428,27 @@
 
         if (item.ProductId == 0)
         {
-            errorMessage = "Product is required.";
+            ShowErrorMessage("Product is required.");        
             return false;
         }
 
         if (item.ReturnQuantity <= 0)
         {
-            errorMessage = "Return quantity must be greater than 0.";
+            ShowErrorMessage("Return quantity must be greater than 0.");        
             return false;
         }
 
         if (item.UnitId == 0)
         {
-            errorMessage = "Unit is required.";
+            ShowErrorMessage("Unit is required.");
             return false;
         }
 
         if (item.ReturnType==0)
         {
-            errorMessage = "Return Type Required";
+            ShowErrorMessage("Return Type Required");
             return false;
         }
-
         errorMessage = "";
         return true;
     }

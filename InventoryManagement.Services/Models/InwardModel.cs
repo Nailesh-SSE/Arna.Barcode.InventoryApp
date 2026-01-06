@@ -18,6 +18,7 @@ public class InwardModel
     public int? CategoryId { get; set; }
     public string? Remarks { get; set; }
     public bool IsActive { get; set; }
+    public bool IsSalesReturn { get; set; } = false;
     public int CreatedBy { get; set; }
     public DateTime CreatedOn { get; set; }
     public int? UpdatedBy { get; set; }
