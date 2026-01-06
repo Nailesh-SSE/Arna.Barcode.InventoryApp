@@ -251,7 +251,7 @@ else
 
             if (!isCompanyNameUnique)
             {
-                validationMessage.Add(() => companyModel.Name, "Company is Already Exist");
+                validationMessage.Add(() => companyModel.Name, "Brand is Already Exist");
             }
             editContext.NotifyValidationStateChanged();
         }
@@ -261,7 +261,7 @@ else
         validationMessage.Clear();
         if (string.IsNullOrWhiteSpace(companyModel.Name))
         {
-            validationMessage.Add(() => companyModel.Name, "Company name is required");
+            validationMessage.Add(() => companyModel.Name, "Brand name is required");
             editContext.NotifyValidationStateChanged();
         }
     }

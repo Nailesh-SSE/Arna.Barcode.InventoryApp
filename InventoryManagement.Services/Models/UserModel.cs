@@ -2,7 +2,7 @@
 
 namespace InventoryManagement.Services.Models;
 
-public class UserModel:CommonModel
+public class UserModel : CommonModel
 {
     public int Id { get; set; }
 
@@ -18,9 +18,11 @@ public class UserModel:CommonModel
 
     public string Password { get; set; } = string.Empty;
 
+    public string ConfirmPassword { get; set; } = string.Empty;
+
     public bool IsActive { get; set; } = true;
 
     public string RoleName { get; set; }
     public int RoleId { get; set; }
- 
+
 }
