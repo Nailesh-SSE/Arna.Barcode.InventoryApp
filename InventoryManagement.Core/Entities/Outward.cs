@@ -20,6 +20,9 @@ public class Outward : Common
     [Required]
     public int PlatformId { get; set; }
 
+    [Required]
+    public string LotNo { get; set; } = string.Empty;
+
     [StringLength(500)]
     public string? Remarks { get; set; }
     public bool IsFinished { get; set; }=false;
