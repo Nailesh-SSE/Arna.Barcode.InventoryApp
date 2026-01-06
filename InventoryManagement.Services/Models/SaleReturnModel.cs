@@ -13,7 +13,7 @@ namespace InventoryManagement.Services.Models
         public int BillToCompanyId { get; set; }
 
         [Required(ErrorMessage = "Sale Return Date is required.")]
-        public DateTime SaleReturnDate { get; set; } = DateTime.UtcNow;
+        public DateTime SaleReturnDate { get; set; } = DateTime.Now;
 
         public List<SaleReturnItemsModel> SaleReturnItemsList { get; set; } = new();
     }
@@ -60,7 +60,7 @@ namespace InventoryManagement.Services.Models
         [StringLength(200, ErrorMessage = "Reason cannot exceed 200 characters.")]
         public string? ReasonToReturn { get; set; } = null;
 
-        public DateTime? ReturnDate { get; set; } = DateTime.UtcNow;
+        public DateTime? ReturnDate { get; set; } = DateTime.Now;
         public string? ProductSearchText { get; set; } = string.Empty;
         public string? OutwardSearchText { get; set; } = string.Empty;
         public List<ProductModel> ProductLIst { get; set; } = new();
