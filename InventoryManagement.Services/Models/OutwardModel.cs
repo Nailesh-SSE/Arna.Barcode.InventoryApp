@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InventoryManagement.Services.Models;
 
@@ -12,7 +13,9 @@ public class OutwardModel:CommonModel
     public string? Remarks { get; set; }
     public List<OutWardItemModel> OutwardItems { get; set; } = new();
     public bool IsFinished { get; set; } = false;
-
+    public DateOnly OutwardDateOnly => DateOnly.FromDateTime(OutwardDate);
+    public string BillToCompanyName { get; set; } = string.Empty;
+    public string platformName { get; set; } = string.Empty;
 }
 
 public class OutWardItemModel

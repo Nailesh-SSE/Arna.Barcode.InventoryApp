@@ -54,29 +54,31 @@ else
                   AllowPaging="true"
                   PageSize="10"
                   Responsive=true
+                  AllowFiltering="true"
+                  AllowSorting="true"
                   @ref="userGrid">
 
-                <GridColumn TItem="UserModel" HeaderText="No">
+                <GridColumn TItem="UserModel" HeaderText="No" Filterable=false>
                     @(users.IndexOf(context) + 1)
                 </GridColumn>
 
-                <GridColumn TItem="UserModel" HeaderText="Name">
+                <GridColumn TItem="UserModel" HeaderText="Name" Filterable=false>
                     @($"{context.FirstName} {context.LastName}")
                 </GridColumn>
 
-                <GridColumn TItem="UserModel" HeaderText="Username" PropertyName="UserName">
+                <GridColumn TItem="UserModel" HeaderText="Username" PropertyName="UserName" SortString="UserName" SortKeySelector="item => item.UserName" FilterTextboxWidth="200">
                     @context.UserName
                 </GridColumn>
 
-                <GridColumn TItem="UserModel" HeaderText="Email" PropertyName="Email">
+                <GridColumn TItem="UserModel" HeaderText="Email" PropertyName="Email" SortString="Email" SortKeySelector="item => item.Email" FilterTextboxWidth="200">
                     @context.Email
                 </GridColumn>
 
-                <GridColumn TItem="UserModel" HeaderText="Phone" PropertyName="ContactNo">
+                <GridColumn TItem="UserModel" HeaderText="Phone" PropertyName="ContactNo" SortString="ContactNo" SortKeySelector="item => item.ContactNo" FilterTextboxWidth="200">
                     @context.ContactNo
                 </GridColumn>
 
-                <GridColumn TItem="UserModel" HeaderText="Status" PropertyName="IsActive">
+                <GridColumn TItem="UserModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive">
                     @if (context.IsActive)
                     {
                         <Badge Color="BadgeColor.Success">Active</Badge>
@@ -87,7 +89,7 @@ else
                     }
                 </GridColumn>
 
-                <GridColumn TItem="UserModel" HeaderText="Actions">
+                <GridColumn TItem="UserModel" HeaderText="Actions" Filterable=false>
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {

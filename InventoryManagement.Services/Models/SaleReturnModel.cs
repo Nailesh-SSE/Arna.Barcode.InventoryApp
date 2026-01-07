@@ -14,6 +14,8 @@ namespace InventoryManagement.Services.Models
 
         [Required(ErrorMessage = "Sale Return Date is required.")]
         public DateTime SaleReturnDate { get; set; } = DateTime.Now;
+        public DateOnly SaleReturnDateOnly => DateOnly.FromDateTime(SaleReturnDate);
+        public string BillToCompanyName { get; set; } = string.Empty;
 
         public List<SaleReturnItemsModel> SaleReturnItemsList { get; set; } = new();
     }
@@ -79,6 +81,6 @@ namespace InventoryManagement.Services.Models
         public int? UnitId { get; set; }
         public int? OutwardId { get; set;}
         public string? BarcodeNo { get;set; }
-        
+
     }
 }

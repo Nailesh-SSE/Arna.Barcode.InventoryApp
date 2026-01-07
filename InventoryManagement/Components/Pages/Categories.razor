@@ -41,22 +41,24 @@ else
                   Data="categoryList"
                   AllowPaging="true"
                   PageSize="10"
-                  Responsive="true">
+                  Responsive="true"
+                  AllowSorting="true"
+                  AllowFiltering="true">
 
 
-                <GridColumn TItem="CategoryModel" HeaderText="No">
+                <GridColumn TItem="CategoryModel" HeaderText="No" Filterable=false>
                     @(categoryList.IndexOf(context) + 1)
                 </GridColumn>
 
-                <GridColumn TItem="CategoryModel" HeaderText="Name" PropertyName="Name">
+                <GridColumn TItem="CategoryModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="200">
                     @context.Name
                 </GridColumn>
 
-                <GridColumn TItem="CategoryModel" HeaderText="Description" PropertyName="Description">
+                <GridColumn TItem="CategoryModel" HeaderText="Description" PropertyName="Description" Filterable=false>
                     @context.Description
                 </GridColumn>
 
-                <GridColumn TItem="CategoryModel" HeaderText="Status" PropertyName="IsActive">
+                <GridColumn TItem="CategoryModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive">
                     @if (context.IsActive)
                     {
                         <Badge Color="BadgeColor.Success">Active</Badge>
@@ -67,7 +69,7 @@ else
                     }
                 </GridColumn>
 
-                <GridColumn TItem="CategoryModel" HeaderText="Actions">
+                <GridColumn TItem="CategoryModel" HeaderText="Actions" Filterable=false>
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {

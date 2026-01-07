@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InventoryManagement.Services.Models;
 
@@ -24,6 +25,10 @@ public class InwardModel
     public int? UpdatedBy { get; set; }
     public DateTime? UpdatedOn { get; set; }
     public List<InwardItemModel> InwardItems { get; set; } = new();
+
+    public DateOnly InwardDateOnly => DateOnly.FromDateTime(InwardDate);
+
+    public string ShipMentCompanyName { get; set; } = string.Empty;
 }
 
 public class InwardItemModel
