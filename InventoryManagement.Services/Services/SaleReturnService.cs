@@ -227,13 +227,22 @@ public class SaleReturnService : ISaleReturnService
         try
         {
             var itemRepo = _unitOfWork.GetRepository<SaleReturnItems>();
-            await itemRepo.DeleteAsync(id);
+            var item = await itemRepo.GetQueryable()
+                                 .AsNoTracking()
+                                 .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (item == null) return false;
+            await itemRepo.DeleteAsync(id);                   
             await _unitOfWork.SaveChangesAsync();
+
+            var saleToInwardDto = await ConvertToDto(item);
+            await _inwardService.DeleteSalesReturnInwardItemAsync(saleToInwardDto);
+
             return true;
         }
         catch
         {
-            return false;
+            return false;           
         }
     }
     #endregion

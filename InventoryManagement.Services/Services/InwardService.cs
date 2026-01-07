@@ -223,8 +223,9 @@ public class InwardService : IInwardService
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
-        catch
+        catch(Exception ex)
         {
+            Console.WriteLine($"Error Deleting inward item: {ex.Message}");
             return false;
         }
     }
@@ -305,6 +306,34 @@ public class InwardService : IInwardService
             // TODO: log exception
             return false;
         }
+    }
+    public async Task<bool> DeleteSalesReturnInwardItemAsync(SaleToInwardDto saleReturnItems) 
+    {
+        try 
+        {
+            var inwardRepo = _unitOfWork.GetRepository<Inward>();
+            var date = saleReturnItems.ReturnDate.Date;
+
+            var existingReturnInward = await inwardRepo.GetQueryable()
+                .FirstOrDefaultAsync(i =>
+                    i.IsSalesReturn &&
+                    i.InwardDate.Date == date &&
+                    i.ShipMentCompanyId == saleReturnItems.ShipToCompanyId &&
+                    i.CategoryId == saleReturnItems.CategoryId);
+
+            var inwardId = existingReturnInward?.Id ?? 0;
+
+            if (inwardId == 0)
+                return false;
+            await FindSalesReturnInwardAsync(inwardId, saleReturnItems);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting inward item: {ex.Message}");
+            throw;
+        }     
     }
     public async Task RemoveReturnedReturnedItemFromStockAsync(int inwardItemId)
     {
@@ -646,6 +675,26 @@ public class InwardService : IInwardService
             throw;
         }
      
+    }
+    private async Task<bool> FindSalesReturnInwardAsync(int inwardId,SaleToInwardDto saleToInwardDto) 
+    {
+        try 
+        {
+            var itemRepo = _unitOfWork.GetRepository<InwardItem>();
+            var item = itemRepo.GetQueryable().FirstOrDefault(i => i.InwardId == inwardId &&
+                                                            i.ProductId == saleToInwardDto.ProductId &&
+                                                            i.InwardUnitId == saleToInwardDto.UnitId &&
+                                                            i.ItemQuantity == saleToInwardDto.ReturnQuantity);
+            if (item == null) return false;
+
+            var result = await DeleteInwardItemAsync(item.Id);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting inward item: {ex.Message}");
+            throw;
+        }     
     }
     #endregion
 

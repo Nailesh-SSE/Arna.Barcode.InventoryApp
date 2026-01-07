@@ -264,9 +264,13 @@ else
 
     private async Task DeleteSaleReturnItem(int itemId)
     {
-        await SaleReturnService.DeleteSaleReturnItem(itemId);
+        var result = await SaleReturnService.DeleteSaleReturnItem(itemId);
         SaleReturnItems = await SaleReturnService.GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
 
+        await SendOperationResponse(
+           result,
+           result ? "Deleted successfully" : "Task Failed "
+        );
     }
     private async Task AddEmptyItemRow()
     {
@@ -297,7 +301,7 @@ else
     private async Task AddNewItemRow(SaleReturnValidationResult? data)
     {
         SaleReturnItems ??= new List<SaleReturnItemsModel>();
-     //   bool hasUnsavedRow = SaleReturnItems.Any(item => item.Id == 0);
+        //   bool hasUnsavedRow = SaleReturnItems.Any(item => item.Id == 0);
 
         var lastRow = SaleReturnItems.LastOrDefault(x => x.Id == 0);
         bool isBarcodeScan = data != null && data.ProductId > 0;
@@ -307,13 +311,13 @@ else
             bool hasAnyData =
                 lastRow.ProductId != 0 ||
                 !string.IsNullOrWhiteSpace(lastRow.BarCodeNo);
-      
+
             if (hasAnyData)
             {
                 await SendOperationResponse(false, "Please save the previous item first.");
                 return;
             }
-         
+
             if (!hasAnyData && isBarcodeScan)
             {
                 SaleReturnItems.Remove(lastRow);

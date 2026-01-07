@@ -76,7 +76,11 @@
                         <tbody>
                             @foreach (var item in ItemsList)
                             {
-                                <tr>
+                                bool isLocked = item.Id > 0 && item.IsTakeInStock;
+
+                                <tr class="@(isLocked ? "table-success text-muted" : "")"
+                                    title="@(isLocked ? "This item is already taken in stock. You cannot edit it." : "")">
+
                                     <!-- PRODUCT -->
                                     @* <td>
                                         <InputSelect class="form-select" @bind-Value="@item.ProductId">
@@ -99,7 +103,7 @@
                                                             Placeholder="Search product..."
                                                             OnItemSelected="@(p => OnProductDropdownSelected(item, p))"
                                                             ShowValidationMessage="@(showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))"
-                                                             />
+                                                            IsDisabled="@isLocked" />
                                         @if (showValidation && item.ProductId == 0)
                                         {
                                             <small class="text-danger">Required</small>
@@ -108,7 +112,7 @@
 
                                     <!-- SHIP TO -->
                                     <td>
-                                        <InputSelect class="form-select" @bind-Value="@item.ShipToCompanyId">
+                                        <InputSelect class="form-select" @bind-Value="@item.ShipToCompanyId" disabled="@isLocked">
                                             <option value="0">Select</option>
                                             @foreach (var ship in CompanyList)
                                             {
@@ -123,7 +127,7 @@
 
                                     <!-- UNIT -->
                                     <td>
-                                        <InputSelect class="form-select" @bind-Value="@item.UnitId">
+                                        <InputSelect class="form-select" @bind-Value="@item.UnitId" disabled="@isLocked">
                                             <option value="0">Select</option>
                                             @foreach (var unit in Units)
                                             {
@@ -138,7 +142,7 @@
 
                                     <!-- QTY (NARROW) -->
                                     <td class="col-1">
-                                        <InputNumber class="form-control p-1" min="1" @bind-Value="@item.ReturnQuantity" />
+                                        <InputNumber class="form-control p-1" min="1" @bind-Value="@item.ReturnQuantity" disabled="@isLocked" />
                                         @if (showValidation && item.ReturnQuantity <= 0 && IsLastUnsavedItem(item))
                                         {
                                             <small class="text-danger">Min 1</small>
@@ -162,12 +166,12 @@
                                                             SelectedText="@item.OutwardSearchText"
                                                             Placeholder="Search Outward..."
                                                             OnItemSelected="@(o => OnOutwardDropdownSelected(item, o))"
-                                                              />
+                                                            IsDisabled="@isLocked" />
                                     </td>
 
                                     <!-- RETURN TYPE -->
                                     <td>
-                                        <InputSelect class="form-select" @bind-Value="@item.ReturnType">
+                                        <InputSelect class="form-select" @bind-Value="@item.ReturnType" disabled="@isLocked">
                                             <option value="0">Select</option>
                                             @foreach (var type in Enum.GetValues(typeof(ReturnType)))
                                             {
@@ -184,7 +188,8 @@
                                     <td>
                                         <InputSelect TValue="bool"
                                                      class="form-select"
-                                                     @bind-Value="item.IsTakeInStock">
+                                                     @bind-Value="item.IsTakeInStock"
+                                                     disabled="@isLocked">
 
                                             <option value="true">Yes</option>
                                             <option value="false">No</option>
@@ -194,33 +199,34 @@
 
                                     <!-- REASON -->
                                     <td class="col-1">
-                                        <InputText class="form-control" @bind-Value="@item.ReasonToReturn" />
+                                        <InputText class="form-control" @bind-Value="@item.ReasonToReturn" disabled="@isLocked" />
                                     </td>
 
                                     <!-- ACTION (ONE LINE, TIGHT) -->
                                     <td class="text-center">
                                         <div class="d-flex align-items-center justify-content-center gap-1">
-                                            <Button Class="btn btn-success btn-sm p-1" title="Save"
-                                                    @onclick="(() => HandleSubmit(item))">
-                                                <Icon Name="IconName.Floppy" />
-                                            </Button>
-
-                                            @if (item.Id > 0)
-                                            {
-
-                                                <Button Class="btn btn-danger btn-sm p-1" title="Delete"
-                                                        @onclick="(() => HandleDelete(item.Id))">
-                                                    <Icon Name="IconName.Trash" />
+                                         
+                                                <Button Class="btn btn-success btn-sm p-1" title="Save" 
+                                                @onclick="(() => HandleSubmit(item))" disabled="@isLocked">
+                                                    <Icon Name="IconName.Floppy" />
                                                 </Button>
-                                            }
-                                            else
-                                            {
-                                                <Button Class="btn btn-secondary btn-sm p-1" title="Cancel"
-                                                        @onclick="(() => RemoveUnSaveItem(item))">
-                                                    <Icon Name="IconName.XCircle" />
-                                                </Button>
-                                            }
 
+                                                @if (item.Id > 0)
+                                                {
+
+                                                    <Button Class="btn btn-danger btn-sm p-1" title="Delete"
+                                                    @onclick="(() => HandleDelete(item.Id))">
+                                                        <Icon Name="IconName.Trash" />
+                                                    </Button>
+                                                }
+                                                else
+                                                {
+                                                    <Button Class="btn btn-secondary btn-sm p-1" title="Cancel"
+                                                    @onclick="(() => RemoveUnSaveItem(item))">
+                                                        <Icon Name="IconName.XCircle" />
+                                                    </Button>
+                                                }
+                                            
                                         </div>
                                     </td>
                                 </tr>
@@ -345,6 +351,9 @@
 
     private async Task HandleDelete(int itemId)
     {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Delete this item?");
+
+        if (!confirmed) return;
         if (itemId == 0)
         {
             return;
