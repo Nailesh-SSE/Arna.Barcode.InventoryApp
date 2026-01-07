@@ -10,35 +10,41 @@
 
 @inherits InventoryManagement.Components.Auth.AuthComponentBase
 <PageTitle>Sale Return Management</PageTitle>
-
-<div>
-
-    <div class="row mb-3">
-        <div class="col">
-            <h3>Sale Return Management</h3>
-        </div>
-        <div class="col-auto">
-            <button class="btn btn-primary" @onclick="ShowAddModal">
-                <Icon Name="IconName.Plus" />  Add New Sale Return
-            </button>
-        </div>
-    </div>
-</div>
-
-@if (isLoading)
+@if (!CanView(Route))
 {
-    <div>
-        <div class="spinner-border text-light" role="status"></div>
-    </div>
+    <AccessDenied />
 }
 else
 {
-    <SaleReturnTable SaleReturns="saleReturnList"
-                     BillToCompanies="BillToCompanyList"
-                     OnEditSaleReturn="ShowEditModal"
-                     OnAddItems="OpenItemModel" CanEdit="CanEdit(Route)" CanDelete="CanDelete(Route)" />
-}
+    <div>
 
+        <div class="row mb-3">
+            <div class="col">
+                <h3>Sale Return Management</h3>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" @onclick="ShowAddModal" disabled="@(!CanCreate(Route))">
+                    <Icon Name="IconName.Plus"/>  Add New Sale Return
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-50"
+        style="z-index: 1050;">
+            <div class="spinner-border text-light" role="status"></div>
+        </div>
+    }
+    else
+    {
+        <SaleReturnTable SaleReturns="saleReturnList"
+        BillToCompanies="BillToCompanyList"
+        OnEditSaleReturn="ShowEditModal"
+        OnAddItems="OpenItemModel" CanEdit="CanEdit(Route)" CanDelete="CanDelete(Route)" CanCreate="CanCreate(Route)" />
+    }
+}
 <SaleReturnFormModal @ref="saleReturnFormModal"
                      Title="@modalTitle"
                      SaleReturnModel="saleReturn"
@@ -61,7 +67,10 @@ else
                           OnSave="SaveSaleReturnItem"
                           OnSaveResponse="HandleResponse"
                           AddItemRow="AddEmptyItemRow"
-                          RemoveItemRow="RemoveItemrow" />
+                          RemoveItemRow="RemoveItemrow" 
+                          CanCreate="CanCreate(Route)"
+                          CanDelete="CanDelete(Route)"
+                          CanEdit="CanEdit(Route)" />
 
 @code
 {
@@ -92,6 +101,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        isLoading = true;
         await base.OnInitializedAsync();
         if (!IsAuthenticated)
         {
@@ -99,6 +109,7 @@ else
             return;
         }
         await LoadData();
+        isLoading = false;
     }
 
     private async Task LoadData()
@@ -266,6 +277,7 @@ else
     {
         var result = await SaleReturnService.DeleteSaleReturnItem(itemId);
         SaleReturnItems = await SaleReturnService.GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
+        await SyncSearchText();
 
         await SendOperationResponse(
            result,
