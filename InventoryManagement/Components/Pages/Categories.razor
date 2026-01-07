@@ -93,7 +93,7 @@ else
                 <DataAnnotationsValidator />
 
                 <div class="mb-3">
-                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                    <label class="form-label">Category Name <span class="text-danger">*</span></label>
                     <InputText class="form-control" @bind-Value="categoryModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
                     <ValidationMessage For="@(() => categoryModel.Name)" />
                 </div>
@@ -267,7 +267,7 @@ else
         messageStore.Clear();
         if (string.IsNullOrWhiteSpace(categoryModel.Name))
         {
-            messageStore.Add(() => categoryModel.Name, "Name is required.");
+            messageStore.Add(() => categoryModel.Name, "Category name is required.");
             editContext.NotifyValidationStateChanged();
         }
 

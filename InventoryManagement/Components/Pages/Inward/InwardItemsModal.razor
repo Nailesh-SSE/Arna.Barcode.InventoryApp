@@ -44,9 +44,11 @@
                                         var itemQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "itemQuantity")} w-auto";
                                         var unitsClass = $"form-control form-control-sm {GetValidationClass(item, "units")} w-auto";
                                         var boxQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "boxQuantity")} w-auto";
-                                        var rowClasses = $"{(item.Id == 0 ? "table-warning" : "")} {(item.HasOutOfStockBarcodes ? "opacity-30 text-muted" : "")}";
+                                        var rowClasses = $"{(item.Id == 0 ? "table-warning" : "")} {(item.HasOutOfStockBarcodes ? "table-success opacity-30" : "")}";
 
-                                        <tr class="@rowClasses">
+                                        <tr class="@rowClasses"
+                                            data-bs-toggle="@(item.HasOutOfStockBarcodes ? "tooltip" : null)"
+                                            title="@(item.HasOutOfStockBarcodes ? "TThis item is used in outward and cannot be edited." : null)">
                                             <td>
                                                 <select class="@brandClass"
                                                         value="@item.BrandId"
@@ -116,7 +118,7 @@
                                                                  style="max-width: 80px;"
                                                                  @bind-Value="item.BoxQuantity"
                                                                  @onchange="@(() => ClearMessages())"
-                                                                 disabled="@item.HasOutOfStockBarcodes" />
+                                                                 disabled="@isRequired" />
 
                                                     @if (showValidation && item.BoxQuantity == 0 && IsRequired(item) && IsLastUnsavedItem(item))
                                                     {
@@ -208,6 +210,7 @@
     private string successMessage = "";
     private bool showValidation = false;
     private bool isSaving = false;
+    private bool isRequired = false;
     private bool hideAddNewButton = false;
     private InwardItemModel? currentSavingItem = null;
 
@@ -226,6 +229,11 @@
 
     public List<UnitModel> Units => CommonUtils.UnitList;
     public int brandId;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JSRuntime.InvokeVoidAsync("initTooltips");
+    }
 
     public async Task Show()
     {
@@ -445,7 +453,17 @@
     private bool IsRequired(InwardItemModel item)
     {
         var inwardUnitName = Units.FirstOrDefault(u => u.Id == item.InwardUnitId)?.Name ?? string.Empty;
-        return inwardUnitName == "BOX";
+        var isrequired= inwardUnitName == "BOX";
+        isRequired = isrequired;
+        if(isrequired)
+        {
+            item.BoxQuantity = 1;
+        }
+        else
+        {
+            item.BoxQuantity = 0;
+        }
+        return isrequired;
     }
 
     private void OnProductDropdownSelected(InwardItemModel inwardItem, ProductModel product)
@@ -486,3 +504,11 @@
         successMessage = "";
     }
 }
+<script>
+    window.initTooltips = () => {
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipTriggerList.forEach(el => {
+            new bootstrap.Tooltip(el);
+        });
+    };
+</script>

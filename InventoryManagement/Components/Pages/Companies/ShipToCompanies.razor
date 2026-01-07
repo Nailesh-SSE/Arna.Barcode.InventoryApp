@@ -92,7 +92,7 @@ else
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <label class="form-label">Ship Company Name <span class="text-danger">*</span></label>
                         <InputText class="form-control" @bind-Value="companyModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
                         <ValidationMessage For="@(() => companyModel.Name)" />
                     </div>
@@ -255,7 +255,7 @@ else
             var isCompanyNameUnique = await CompanyService.IsCompanyNameUniqueAsync(companyModel.Name, companyModel.CompanyType = CompanyType.ShipTo, companyModel.Id);
             if (!isCompanyNameUnique)
             {
-                validationMessage.Add(() => companyModel.Name, "Name is Already Exist");
+                validationMessage.Add(() => companyModel.Name, "Ship Company name Already Exist");
             }
             editContext.NotifyValidationStateChanged();
         }
@@ -266,7 +266,7 @@ else
         validationMessage.Clear();
         if (string.IsNullOrWhiteSpace(companyModel.Name))
         {
-            validationMessage.Add(() => companyModel.Name, "Company name is required");
+            validationMessage.Add(() => companyModel.Name, "Ship Company name is required");
             editContext.NotifyValidationStateChanged();
         }
     }
