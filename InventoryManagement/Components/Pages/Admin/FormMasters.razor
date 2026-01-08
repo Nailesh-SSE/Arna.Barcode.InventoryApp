@@ -68,19 +68,19 @@ else
                         @(formList.IndexOf(context) + 1)
                     </GridColumn>
 
-                    <GridColumn TItem="FormMasterModel" HeaderText="Form Name" PropertyName="FormName" SortString="FormName" SortKeySelector="item => item.FormName" FilterTextboxWidth="200">
+                    <GridColumn TItem="FormMasterModel" HeaderText="Form Name" PropertyName="FormName" SortString="FormName" SortKeySelector="item => item.FormName" FilterTextboxWidth="100">
                         @context.FormName
                     </GridColumn>
 
-                    <GridColumn TItem="FormMasterModel" HeaderText="Route" PropertyName="Route" SortString="Route" SortKeySelector="item => item.Route" FilterTextboxWidth="200">
+                    <GridColumn TItem="FormMasterModel" HeaderText="Route" PropertyName="Route" SortString="Route" SortKeySelector="item => item.Route" FilterTextboxWidth="100">
                         @context.Route
                     </GridColumn>
 
-                    <GridColumn TItem="FormMasterModel" HeaderText="ParentForm" PropertyName="ParentName" SortString="ParentName" SortKeySelector="item => item.ParentName" FilterTextboxWidth="200">
+                    <GridColumn TItem="FormMasterModel" HeaderText="ParentForm" PropertyName="ParentName" SortString="ParentName" SortKeySelector="item => item.ParentName" FilterTextboxWidth="100">
                         @context.ParentName
                     </GridColumn>
 
-                    <GridColumn TItem="FormMasterModel" HeaderText="DisplayIndex" PropertyName="DisplayIndex" SortString="DisplayIndex" SortKeySelector="item => item.DisplayIndex" FilterTextboxWidth="200">
+                    <GridColumn TItem="FormMasterModel" HeaderText="DisplayIndex" PropertyName="DisplayIndex" SortString="DisplayIndex" SortKeySelector="item => item.DisplayIndex" FilterTextboxWidth="60">
                         @context.DisplayIndex
                     </GridColumn>
 
@@ -88,7 +88,7 @@ else
                         <div class="d-flex gap-1 justify-content-start">
                             @if (CanEdit(Route))
                             {
-                                <Button Color="ButtonColor.Warning"
+                                <Button class="text-nowrap" Color="ButtonColor.Warning"
                                         Size="ButtonSize.Small"
                                         @onclick="() => ShowEditModal(context)">
                                     <Icon Name="IconName.PencilSquare" /> Edit
@@ -96,7 +96,7 @@ else
                             }
                             @if (CanDelete(Route))
                             {
-                                <Button Color="ButtonColor.Danger"
+                                <Button class="text-nowrap" Color="ButtonColor.Danger"
                                         Size="ButtonSize.Small"
                                         @onclick="() => DeleteForm(context.Id)">
                                     <Icon Name="IconName.Trash" /> Delete

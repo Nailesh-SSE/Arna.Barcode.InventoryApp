@@ -50,19 +50,19 @@ else
                     @(outwards.IndexOf(context) + 1)
                 </GridColumn>
 
-                <GridColumn TItem="OutwardModel" HeaderText="Outward No" PropertyName="OutwardNo" SortString="OutwardNo" SortKeySelector="item => item.OutwardNo" FilterTextboxWidth="200">
+                <GridColumn TItem="OutwardModel" HeaderText="Outward No" PropertyName="OutwardNo" SortString="OutwardNo" SortKeySelector="item => item.OutwardNo" FilterTextboxWidth="80">
                     @context.OutwardNo
                 </GridColumn>
 
-                <GridColumn TItem="OutwardModel" HeaderText="Outward Date" PropertyName="OutwardDateOnly" SortString="OutwardDateOnly" SortKeySelector="item => item.OutwardDateOnly">
+                <GridColumn TItem="OutwardModel" HeaderText="Outward Date" PropertyName="OutwardDateOnly" SortString="OutwardDateOnly" SortKeySelector="item => item.OutwardDateOnly" FilterTextboxWidth="130">
                     @context.OutwardDate.ToString("dd/MM/yyyy")
                 </GridColumn>
 
-                <GridColumn TItem="OutwardModel" HeaderText="Bill To Company" PropertyName="BillToCompanyName" SortString="BillToCompanyName" SortKeySelector="item => item.BillToCompanyName" FilterTextboxWidth="200">
+                <GridColumn TItem="OutwardModel" HeaderText="Bill To Company" PropertyName="BillToCompanyName" SortString="BillToCompanyName" SortKeySelector="item => item.BillToCompanyName" FilterTextboxWidth="80">
                     @context.BillToCompanyName
                 </GridColumn>
 
-                <GridColumn TItem="OutwardModel" HeaderText="Platform" PropertyName="platformName" SortString="platformName" SortKeySelector="item => item.platformName" FilterTextboxWidth="200">
+                <GridColumn TItem="OutwardModel" HeaderText="Platform" PropertyName="platformName" SortString="platformName" SortKeySelector="item => item.platformName" FilterTextboxWidth="80">
                     @context.platformName
                 </GridColumn>
 
@@ -78,9 +78,10 @@ else
                 </GridColumn>
 
                 <GridColumn TItem="OutwardModel" HeaderText="Actions" Filterable=false>
+                    <div class="d-flex gap-1">
                     @if (CanEdit(Route))
                     {
-                        <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
+                        <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
                             @if (context.IsFinished)
                             {
                                 <Icon Name="IconName.Eye" />
@@ -92,10 +93,11 @@ else
                                 @: &nbsp;Add Item
                             }
                         </Button>
-                        <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                        <Button class="text-nowrap" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                             <Icon Name="IconName.Eye" /> View
                         </Button>
                     }
+                    </div>
                 </GridColumn>
             </Grid>
         }
