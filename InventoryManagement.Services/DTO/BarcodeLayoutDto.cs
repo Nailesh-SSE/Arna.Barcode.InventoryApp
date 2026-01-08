@@ -6,4 +6,6 @@ public  class BarcodeLayoutDto
     public int BarcodeTextX { get; set; }
     public int ProductTextX { get; set; }
     public int DateTextX { get; set; }
-}
+    public int BatchTextX { get; set; }
+    public int TotaQtyX { get; set; }
+    }

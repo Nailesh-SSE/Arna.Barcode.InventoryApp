@@ -385,8 +385,8 @@ public class InwardService : IInwardService
 
         var barcodeItems = (await barcodeRepo.FindAsync(
                 b => b.InwardItemId == inwardItemId && !b.IsDeleted && b.IsActive))
-            .OrderBy(b => b.BarcodeNo)
-            .ToList();
+                .OrderBy(b => b.BarcodeNo)
+                .ToList();
 
         if (!barcodeItems.Any())
             return null;
@@ -399,6 +399,7 @@ public class InwardService : IInwardService
             return null;
 
         var productName = item.Product?.SKU ?? "N/A";
+        var batchNo = item.BatchNo;
 
         var sb = new StringBuilder();
 
@@ -407,12 +408,23 @@ public class InwardService : IInwardService
         for (int i = 0; i < barcodeItems.Count; i += 2)
         {
             sb.AppendLine("CLS");
-
-            AddBarcodeLabel(sb, barcodeItems[i], productName, BarcodePositionType.Left);
+            AddBarcodeLabel(
+                sb,
+                barcodeItems[i],
+                productName,
+                BatchNo(barcodeItems[i], item, batchNo),
+                TotalQty(barcodeItems[i], item, item.ItemQuantity),
+                BarcodePositionType.Left);
 
             if (i + 1 < barcodeItems.Count)
             {
-                AddBarcodeLabel(sb, barcodeItems[i + 1], productName, BarcodePositionType.Right);
+                AddBarcodeLabel(
+                    sb,
+                    barcodeItems[i + 1],
+                    productName,
+                    BatchNo(barcodeItems[i + 1], item, batchNo),
+                    TotalQty(barcodeItems[i + 1], item, item.ItemQuantity),
+                    BarcodePositionType.Right);
             }
 
             sb.AppendLine("PRINT 1,1");
@@ -420,7 +432,20 @@ public class InwardService : IInwardService
 
         return Encoding.UTF8.GetBytes(sb.ToString());
     }
-
+    private static bool IsParentBarcode(InwardBarcodeItem barcode, InwardItem inward)
+    {
+        return (barcode.ParentId == null || barcode.ParentId == 0)
+            && inward.InwardUnitId == (int)UnitType.BOX
+            && inward.BoxQuantity > 0;
+    }
+    private static string BatchNo(InwardBarcodeItem barcode, InwardItem item, string batchNo)
+    {
+        return IsParentBarcode(barcode, item) ? batchNo : string.Empty;
+    }
+    private static string TotalQty(InwardBarcodeItem barcode, InwardItem item, decimal totalQty)
+    {
+        return IsParentBarcode(barcode, item) ? $"QTY: {totalQty.ToString()}" : string.Empty;
+    }
     private static void AppendPrnHeader(StringBuilder sb)
     {
         sb.AppendLine("SIZE 108 mm, 25 mm");
@@ -440,7 +465,9 @@ public class InwardService : IInwardService
             BarcodeX = 820,
             BarcodeTextX = 728,
             ProductTextX = 820,
-            DateTextX = 656
+            DateTextX = 656,
+            BatchTextX = 820,
+            TotaQtyX = 570
         };
 
         public static readonly BarcodeLayoutDto Right = new BarcodeLayoutDto
@@ -448,14 +475,16 @@ public class InwardService : IInwardService
             BarcodeX = 420,
             BarcodeTextX = 305,
             ProductTextX = 420,
-            DateTextX = 256
+            DateTextX = 256,
+            BatchTextX = 420,
+            TotaQtyX = 170
         };
     }
 
     /// <summary>
     /// barcode label with dynamic data to the PRN content
     /// </summary>
-    private void AddBarcodeLabel(StringBuilder sb, InwardBarcodeItem barcodeItem, string productName, BarcodePositionType position)
+    private void AddBarcodeLabel(StringBuilder sb, InwardBarcodeItem barcodeItem, string productName, string batchNo, string totalQty, BarcodePositionType position)
     {
         var date = DateTime.Now;
 
@@ -469,6 +498,18 @@ public class InwardService : IInwardService
 
         sb.AppendLine(
             $"TEXT {layout.ProductTextX},43,\"ROMAN.TTF\",180,1,8,\"{productName}\"");
+
+        if (!string.IsNullOrEmpty(batchNo))
+        {
+            sb.AppendLine(
+                $"TEXT {layout.BatchTextX},188,\"ROMAN.TTF\",180,0,8,\"BATCH: {batchNo}\"");
+        }
+
+        if (!string.IsNullOrEmpty(totalQty))
+        {
+            sb.AppendLine(
+                $"TEXT {layout.TotaQtyX},43,\"ROMAN.TTF\",180,1,9,\"{totalQty}\"");
+        }
 
         sb.AppendLine(
             $"TEXT {layout.DateTextX},188,\"0\",180,0,8,\"DT:{date:dd-MM-yyyy hh:mm tt}\"");
@@ -690,7 +731,9 @@ public class InwardService : IInwardService
 
     private async Task CreateBarcodesForItemsAsync(List<InwardItem> items, DateTime transactionDate)
     {
-        var barcodes = new List<InwardBarcodeItem>();
+        var parentBarcodes = new List<InwardBarcodeItem>();
+        var childBarcodes = new List<InwardBarcodeItem>();
+        var parentId = parentBarcodes.Any() ? parentBarcodes.First().Id : 0;
         int barcodeCounter = 0;
 
         foreach (var item in items)
@@ -700,23 +743,27 @@ public class InwardService : IInwardService
                 for (int i = 0; i < item.BoxQuantity; i++)
                 {
                     barcodeCounter++;
-                    barcodes.Add(CreateBarcodeEntity(item, barcodeCounter, transactionDate));
+                    parentBarcodes.Add(CreateBarcodeEntity(item, barcodeCounter, transactionDate, 0));
+                }
+                if (parentBarcodes.Any())
+                {
+                    var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+                    await barcodeRepo.AddRangeAsync(parentBarcodes);
+                    await _unitOfWork.SaveChangesAsync();
                 }
             }
-            else
+
+            for (int i = 0; i < item.ItemQuantity; i++)
             {
-                for (int i = 0; i < item.ItemQuantity; i++)
-                {
-                    barcodeCounter++;
-                    barcodes.Add(CreateBarcodeEntity(item, barcodeCounter, transactionDate));
-                }
+                barcodeCounter++;
+                childBarcodes.Add(CreateBarcodeEntity(item, barcodeCounter, transactionDate, parentId));
             }
         }
 
-        if (barcodes.Any())
+        if (childBarcodes.Any())
         {
             var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
-            await barcodeRepo.AddRangeAsync(barcodes);
+            await barcodeRepo.AddRangeAsync(childBarcodes);
             await _unitOfWork.SaveChangesAsync();
         }
     }
@@ -733,37 +780,42 @@ public class InwardService : IInwardService
             b.TransactionDate.Date == transactionDate.Date &&
             b.IsActive && !b.IsDeleted);
 
-            int startCounter = 1; // Default start
+            int maxCounter = 1; // Default start
 
             if (existingBarcodes != null && existingBarcodes.Any())
             {
-                var maxCounter = existingBarcodes
-               .Select(b => int.Parse(b.BarcodeNo[^6..]))
-               .Max();
-
-                startCounter = maxCounter + 1;
+                maxCounter = existingBarcodes
+                               .Select(b => int.Parse(b.BarcodeNo[^6..]))
+                               .Max() + 1;
             }
 
-            var barcodes = new List<InwardBarcodeItem>();
+            var parentBarcodes = new List<InwardBarcodeItem>();
 
             if (item.InwardUnitId == (int)UnitType.BOX)
             {
                 for (int i = 0; i < item.BoxQuantity; i++)
                 {
-                    barcodes.Add(CreateBarcodeEntity(item, startCounter + i, transactionDate));
+                    parentBarcodes.Add(CreateBarcodeEntity(item, maxCounter, transactionDate, 0));
+                    maxCounter++;
                 }
-            }
-            else
-            {
-                for (int i = 0; i < item.ItemQuantity; i++)
+                if (parentBarcodes.Any())
                 {
-                    barcodes.Add(CreateBarcodeEntity(item, startCounter + i, transactionDate));
+                    await barcodeRepo.AddRangeAsync(parentBarcodes);
+                    await _unitOfWork.SaveChangesAsync();
                 }
             }
 
-            if (barcodes.Any())
+            var childBarcodes = new List<InwardBarcodeItem>();
+            var parentId = parentBarcodes.Any() ? parentBarcodes.First().Id : 0;
+            for (int i = 0; i < item.ItemQuantity; i++)
             {
-                await barcodeRepo.AddRangeAsync(barcodes);
+                childBarcodes.Add(CreateBarcodeEntity(item, maxCounter, transactionDate, parentId));
+                maxCounter++;
+            }
+
+            if (childBarcodes.Any())
+            {
+                await barcodeRepo.AddRangeAsync(childBarcodes);
                 await _unitOfWork.SaveChangesAsync();
             }
         }
@@ -786,7 +838,7 @@ public class InwardService : IInwardService
         }
     }
 
-    private InwardBarcodeItem CreateBarcodeEntity(InwardItem item, int counter, DateTime transactionDate)
+    private InwardBarcodeItem CreateBarcodeEntity(InwardItem item, int counter, DateTime transactionDate, int parentId)
     {
         return new InwardBarcodeItem
         {
@@ -795,7 +847,8 @@ public class InwardService : IInwardService
             InwardItemId = item.Id,
             BarcodeNo = GenerateBarcodeNumber(transactionDate, item.InwardId, counter),
             TransactionDate = transactionDate,
-            IsInStock = true
+            IsInStock = true,
+            ParentId = parentId
         };
     }
 

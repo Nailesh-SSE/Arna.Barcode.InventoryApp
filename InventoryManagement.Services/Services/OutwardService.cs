@@ -1,4 +1,6 @@
+using EnumsNET;
 using InventoryManagement.Core.Entities;
+using InventoryManagement.Core.Enums;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
@@ -55,7 +57,7 @@ public class OutwardService : IOutwardService
                 OutwardDate = model.OutwardDate,
                 BillToCompanyId = model.BillToCompanyId,
                 PlatformId = model.PlatformId,
-                Remarks = model.Remarks,    
+                Remarks = model.Remarks,
                 IsActive = true,
                 IsDeleted = false,
                 IsFinished =false,
@@ -252,7 +254,7 @@ public class OutwardService : IOutwardService
                 OutwardId = outwardId,
                 ProductId = inwardItem.ProductId,
                 Quantity = 1,
-                Unit = inwardItem.InwardUnitName,
+                Unit = barcodeItem.ParentId > 0 ? UnitType.PCS.GetName() : inwardItem.InwardUnitName,
                 BarcodeNo = barcodeNo,
                 CreatedOn=DateTime.UtcNow,
                 CreatedBy=userid,
@@ -276,7 +278,7 @@ public class OutwardService : IOutwardService
                 ProductName = product?.SKU?? "Unknown",
                 BarcodeNo = barcodeNo,
                 Quantity = 1,
-                Unit = inwardItem.InwardUnitName
+                Unit = newDetail.Unit
             };
         }
         catch
@@ -322,6 +324,18 @@ public class OutwardService : IOutwardService
         var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
         var barcodeItem = (await barcodeItemRepository.FindAsync(bi =>
             bi.BarcodeNo == barcodeNo && !bi.IsDeleted)).FirstOrDefault();
+        if ((barcodeItem?.ParentId == 0 || barcodeItem?.ParentId == null) 
+            && barcodeItem?.InwardItem.InwardUnitId == (int)UnitType.BOX 
+            && barcodeItem.InwardItem.BoxQuantity >= 0)
+        {
+            var childBarcode = await barcodeItemRepository.FindAsync(bi =>
+             bi.ParentId == barcodeItem.Id && !bi.IsDeleted);
+            foreach (var item in childBarcode)
+            {
+                item.IsInStock = isInStock;
+                barcodeItemRepository.Update(item);
+            }
+        }
 
         if (barcodeItem != null)
         {
