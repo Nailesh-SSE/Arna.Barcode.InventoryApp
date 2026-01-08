@@ -81,11 +81,11 @@ public class InwardReportGenerator : IInwardReportService
         // Header row
         IRow headerRow = sheet.CreateRow(0);
         string[] headers = new string[]
-        {
-        "Inward Number", "Date", "Product", "SKU", "Category",
-        "Quantity", "Unit", "Supplier",
-        "Batch", "Status"
-        };
+           {
+         "Inward Number", "Date", "Brand" , "Product" ,"SKU", "Category",
+         "Quantity", "Unit", "Supplier",
+         "Batch", "Status"
+           };
 
         for (int i = 0; i < headers.Length; i++)
         {
@@ -97,17 +97,18 @@ public class InwardReportGenerator : IInwardReportService
         {
             var item = report.Items[i];
             IRow row = sheet.CreateRow(i + 1);
-
+          
             row.CreateCell(0).SetCellValue(item.InwardNumber);
             row.CreateCell(1).SetCellValue(item.InwardDate.ToString("dd/MM/yyyy"));
-            row.CreateCell(2).SetCellValue(item.ProductName);
-            row.CreateCell(3).SetCellValue(item.SKU);
-            row.CreateCell(4).SetCellValue(item.CategoryName);
-            row.CreateCell(5).SetCellValue((double)item.Quantity);
-            row.CreateCell(6).SetCellValue(item.Unit);
-            row.CreateCell(7).SetCellValue(item.ShipmentCompanyName);
-            row.CreateCell(8).SetCellValue(item.BatchNumber);
-            row.CreateCell(9).SetCellValue(item.IsActive ? "Active" : "Inactive");
+            row.CreateCell(2).SetCellValue(item.BrandName);
+            row.CreateCell(3).SetCellValue(item.ProductName);
+            row.CreateCell(4).SetCellValue(item.SKU);
+            row.CreateCell(5).SetCellValue(item.CategoryName);
+            row.CreateCell(6).SetCellValue((double)item.Quantity);
+            row.CreateCell(7).SetCellValue(item.Unit);
+            row.CreateCell(8).SetCellValue(item.ShipmentCompanyName);
+            row.CreateCell(9).SetCellValue(item.BatchNumber);
+            row.CreateCell(10).SetCellValue(item.IsActive ? "Active" : "Inactive");
         }
 
         // Autosize all columns
@@ -276,7 +277,7 @@ public class InwardReportGenerator : IInwardReportService
         var inwards = await query.ToListAsync();
         var items = new List<InwardReportItem>();
         var companies = _unitOfWork.GetRepository<Company>();
-        var brands= await companies.GetAllAsync(); 
+        var brands = await companies.GetAllAsync();
         foreach (var inward in inwards)
         {
             foreach (var item in inward.InwardItems.Where(ii => !ii.IsDeleted))

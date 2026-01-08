@@ -45,32 +45,34 @@ else
                   Data="@products"
                   AllowPaging="true"
                   PageSize="10"
+                  AllowFiltering="true"
+                  AllowSorting="true"
                   Responsive="true">
 
-                <GridColumn TItem="ProductModel" HeaderText="No" PropertyName="Id">
+                <GridColumn TItem="ProductModel" HeaderText="No" PropertyName="Id" Filterable=false>
                     @{
                         var index = products.IndexOf(context) + 1;
                     }
                     @index
                 </GridColumn>
 
-                <GridColumn TItem="ProductModel" HeaderText="SKU" PropertyName="SKU">
+                <GridColumn TItem="ProductModel" HeaderText="SKU" PropertyName="SKU" SortKeySelector="item => item.SKU" SortString="SKU">
                     @context.SKU
                 </GridColumn>
 
-                <GridColumn TItem="ProductModel" HeaderText="Name" PropertyName="Name">
+                <GridColumn TItem="ProductModel" HeaderText="Name" PropertyName="Name" SortKeySelector="item => item.Name" SortString="Name">
                     @context.Name
                 </GridColumn>
 
-                <GridColumn TItem="ProductModel" HeaderText="Category" PropertyName="CategoryId">
-                    @(categories.FirstOrDefault(c => c.Id == context.CategoryId)?.Name ?? "N/A")
+                <GridColumn TItem="ProductModel" HeaderText="Category" PropertyName="CategoryName" SortKeySelector="item => item.CategoryName" SortString="CategoryName">
+                    @context.CategoryName
                 </GridColumn>
 
-                <GridColumn TItem="ProductModel" HeaderText="Unit" PropertyName="Unit">
+                <GridColumn TItem="ProductModel" HeaderText="Unit" PropertyName="Unit" SortKeySelector="item => item.Unit" SortString="Unit">
                     @context.Unit
                 </GridColumn>
 
-                <GridColumn TItem="ProductModel" HeaderText="Status" PropertyName="IsActive">
+                <GridColumn TItem="ProductModel" HeaderText="Status" PropertyName="IsActive" SortKeySelector="item => item.IsActive" SortString="IsActive">
                     @if (context.IsActive)
                     {
                         <Badge Color="BadgeColor.Success">Active</Badge>
@@ -81,7 +83,7 @@ else
                     }
                 </GridColumn>
 
-                <GridColumn TItem="ProductModel" HeaderText="Actions">
+                <GridColumn TItem="ProductModel" HeaderText="Actions" Filterable=false>
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {
@@ -229,7 +231,10 @@ else
         categories = (await CategoryService.GetAllCategoriesAsync()).Where(x => x.IsActive).ToList();
         companies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo)).Where(x => x.IsActive).ToList();
         Colours = (await ColourService.GetAllColourAsync()).Where(x => x.IsActive).ToList();
-        InitializeEditContext();
+        foreach(var product in products)
+        {
+            product.CategoryName = categories.FirstOrDefault(c => c.Id == product.CategoryId)?.Name ?? string.Empty;
+        }
         isLoading = false;
     }
 

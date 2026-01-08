@@ -44,29 +44,29 @@ else
         else
         {
             <Grid TItem="OutwardModel" Class="table table-hover table-bordered table-striped" Data="outwards" AllowPaging="true" PageSize="10" AllowSorting="true"
-                  Responsive="true">
+                  Responsive="true" AllowFiltering=true>
 
-                <GridColumn TItem="OutwardModel" HeaderText="Sr. No." Sortable="false" HeaderTextAlignment="Alignment.Center" TextAlignment="Alignment.Center">
+                <GridColumn TItem="OutwardModel" HeaderText="Sr. No." Sortable="false" HeaderTextAlignment="Alignment.Center" TextAlignment="Alignment.Center" Filterable=false>
                     @(outwards.IndexOf(context) + 1)
                 </GridColumn>
 
-                <GridColumn TItem="OutwardModel" HeaderText="Outward No" PropertyName="OutwardNo">
+                <GridColumn TItem="OutwardModel" HeaderText="Outward No" PropertyName="OutwardNo" SortString="OutwardNo" SortKeySelector="item => item.OutwardNo" FilterTextboxWidth="200">
                     @context.OutwardNo
                 </GridColumn>
 
-                <GridColumn TItem="OutwardModel" HeaderText="Outward Date" PropertyName="OutwardDate">
+                <GridColumn TItem="OutwardModel" HeaderText="Outward Date" PropertyName="OutwardDateOnly" SortString="OutwardDateOnly" SortKeySelector="item => item.OutwardDateOnly">
                     @context.OutwardDate.ToString("dd/MM/yyyy")
                 </GridColumn>
 
-                <GridColumn TItem="OutwardModel" HeaderText="Bill To Company" PropertyName="BillToCompanyId">
-                    @(billCompanies.FirstOrDefault(c => c.Id == context.BillToCompanyId)?.Name ?? "N/A")
+                <GridColumn TItem="OutwardModel" HeaderText="Bill To Company" PropertyName="BillToCompanyName" SortString="BillToCompanyName" SortKeySelector="item => item.BillToCompanyName" FilterTextboxWidth="200">
+                    @context.BillToCompanyName
                 </GridColumn>
 
-                <GridColumn TItem="OutwardModel" HeaderText="Platform" PropertyName="PlatformId">
-                    @(platforms.FirstOrDefault(p => p.Id == context.PlatformId)?.Name ?? "N/A")
+                <GridColumn TItem="OutwardModel" HeaderText="Platform" PropertyName="platformName" SortString="platformName" SortKeySelector="item => item.platformName" FilterTextboxWidth="200">
+                    @context.platformName
                 </GridColumn>
 
-                <GridColumn TItem="OutwardModel" HeaderText="Status" PropertyName="IsActive">
+                <GridColumn TItem="OutwardModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive">
                     @if (context.IsActive)
                     {
                         <Badge Color="BadgeColor.Success">Active</Badge>
@@ -77,7 +77,7 @@ else
                     }
                 </GridColumn>
 
-                <GridColumn TItem="OutwardModel" HeaderText="Actions">
+                <GridColumn TItem="OutwardModel" HeaderText="Actions" Filterable=false>
                     @if (CanEdit(Route))
                     {
                         <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
@@ -93,7 +93,7 @@ else
                             }
                         </Button>
                         <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                            <Icon Name="IconName.Eye"/> View
+                            <Icon Name="IconName.Eye" /> View
                         </Button>
                     }
                 </GridColumn>
@@ -242,7 +242,7 @@ else
                                 <tbody>
                                     @if (itemList.Any())
                                     {
-                                        @for (int i = 0; i < itemList.Count; i++)
+                                        @for (int i = itemList.Count - 1; i >= 0; i--)
                                         {
                                             var index = i;
                                             var item = itemList[i];
@@ -361,6 +361,13 @@ else
             outwards = await OutwardService.GetAllOutwardsAsync();
             billCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
             platforms = (await PlatformService.GetAllPlatformAsync()).ToList();
+            foreach (var outwardItem in outwards)
+            {
+                var company = billCompanies.FirstOrDefault(c => c.Id == outwardItem.BillToCompanyId);
+                outwardItem.BillToCompanyName = company?.Name ?? "N/A";
+                var platform = platforms.FirstOrDefault(c => c.Id == outwardItem.PlatformId);
+                outwardItem.platformName = platform?.Name ?? "N/A";
+            }
             InitializeEditContext();
         }
         catch (Exception)

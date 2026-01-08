@@ -59,7 +59,7 @@ public class InwardService : IInwardService
 
             if (string.IsNullOrEmpty(model.InwardNo))
             {
-                model.InwardNo = await GenerateInwardNoAsync(model.InwardDate);
+                model.InwardNo = await GenerateInwardNoAsync(model.InwardDate,model.IsSalesReturn);
             }
 
             var inward = await CreateInwardEntityAsync(model);
@@ -223,8 +223,9 @@ public class InwardService : IInwardService
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
-        catch
+        catch(Exception ex)
         {
+            Console.WriteLine($"Error Deleting inward item: {ex.Message}");
             return false;
         }
     }
@@ -276,7 +277,64 @@ public class InwardService : IInwardService
             throw;
         }
     }
+    public async Task<bool> AddReturnItemToSaleInwardAsync(SaleToInwardDto saleReturnItems)
+    {
+        try
+        {
+            var inwardRepo = _unitOfWork.GetRepository<Inward>();
 
+            var Date = saleReturnItems.ReturnDate.Date;
+            var existingReturnInward = await inwardRepo.GetQueryable()
+                .FirstOrDefaultAsync(i =>
+                    i.IsSalesReturn &&
+                    i.InwardDate.Date == Date &&
+                    i.ShipMentCompanyId == saleReturnItems.ShipToCompanyId &&
+                    i.CategoryId == saleReturnItems.CategoryId);
+
+            var inwardId = existingReturnInward?.Id
+                           ?? await CreateSalesReturnInwardAsync(saleReturnItems);
+
+            if (inwardId == 0)
+                return false;
+
+            await CreateSalesReturnInwardItemAsync(inwardId, saleReturnItems);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // TODO: log exception
+            return false;
+        }
+    }
+    public async Task<bool> DeleteSalesReturnInwardItemAsync(SaleToInwardDto saleReturnItems) 
+    {
+        try 
+        {
+            var inwardRepo = _unitOfWork.GetRepository<Inward>();
+            var date = saleReturnItems.ReturnDate.Date;
+
+            var existingReturnInward = await inwardRepo.GetQueryable()
+                .FirstOrDefaultAsync(i =>
+                    i.IsSalesReturn &&
+                    i.InwardDate.Date == date &&
+                    i.ShipMentCompanyId == saleReturnItems.ShipToCompanyId &&
+                    i.CategoryId == saleReturnItems.CategoryId);
+
+            var inwardId = existingReturnInward?.Id ?? 0;
+
+            if (inwardId == 0)
+                return false;
+            await FindSalesReturnInwardAsync(inwardId, saleReturnItems);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting inward item: {ex.Message}");
+            throw;
+        }     
+    }
     public async Task RemoveReturnedReturnedItemFromStockAsync(int inwardItemId)
     {
         var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
@@ -424,7 +482,8 @@ public class InwardService : IInwardService
             IsActive = model.IsActive,
             IsDeleted = false,
             CreatedBy = model.CreatedBy,
-            CreatedOn = model.CreatedOn
+            CreatedOn = model.CreatedOn,
+            IsSalesReturn = model.IsSalesReturn
         };
 
         await inwardRepo.AddAsync(inward);
@@ -529,7 +588,114 @@ public class InwardService : IInwardService
             await itemRepo.DeleteAsync(item.Id);
         }
     }
+    private async Task<int> GetBrandIdByProductId(int productId)
+    {
+        var productRepo = _unitOfWork.GetRepository<Product>();
+        var product = await productRepo.GetByIdAsync(productId);
+        if (product == null) return 0;
 
+        return product.MakeCompanyId;
+    }
+    #endregion
+    #region SaleReturn
+
+    private async Task<int> CreateSalesReturnInwardAsync(SaleToInwardDto saleReturnItems)
+    {
+        try 
+        {
+            var inwardModel = new InwardModel()
+            {
+                InwardDate = saleReturnItems.ReturnDate,
+                CategoryId = saleReturnItems.CategoryId,
+                ShipMentCompanyId = saleReturnItems.ShipToCompanyId,
+                IsActive = true,
+                CreatedBy = saleReturnItems.CreatedBy,
+                CreatedOn = saleReturnItems.CreatedOn,
+                UpdatedBy = saleReturnItems.UpdatedBy,
+                UpdatedOn = saleReturnItems.UpdatedOn,
+                IsSalesReturn = true
+
+            };
+
+            if (string.IsNullOrEmpty(inwardModel.InwardNo))
+            {
+                inwardModel.InwardNo = await GenerateInwardNoAsync(inwardModel.InwardDate, inwardModel.IsSalesReturn);
+            }
+
+            var inward = await CreateInwardEntityAsync(inwardModel);
+            //   await CreateInwardItemsWithBarcodesAsync(inward.Id, inwardModel.InwardItems, inward.InwardDate);
+
+            return inward.Id;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating SaleReturn Inward : {ex.Message}");
+            throw; 
+        }
+
+    }
+    private async Task<bool> CreateSalesReturnInwardItemAsync(int inwardId, SaleToInwardDto items)
+    {
+        try 
+        {
+            var brandId = await GetBrandIdByProductId(items.ProductId);
+            var unitName = CommonUtils.UnitList
+                .FirstOrDefault(u => u.Id == items.UnitId)?.Name ?? string.Empty;
+            var model = new InwardItemModel()
+            {
+                ProductId = items.ProductId,
+                BrandId = brandId,
+                InwardId = inwardId,
+                InwardUnitId = items.UnitId,
+                InwardUnitName = unitName,
+                CreatedBy = items.CreatedBy,
+                CreatedOn = items.CreatedOn,
+                UpdatedBy = items.UpdatedBy,
+                UpdatedOn = items.UpdatedOn,
+
+            };
+
+            if (items.UnitId == (int)UnitType.BOX)
+            {
+                model.BoxQuantity = 1;
+                model.ItemQuantity = items.ReturnQuantity;
+            }
+            else
+            {
+                model.ItemQuantity = items.ReturnQuantity;
+                model.BoxQuantity = 0;
+            }
+            var entity = await CreateInwardItemEntityAsync(model);
+            await CreateBarcodesForSingleItemAsync(entity, DateTime.UtcNow);
+            return true;
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Error creating SaleReturn Inward Items: {ex.Message}");
+            throw;
+        }
+     
+    }
+    private async Task<bool> FindSalesReturnInwardAsync(int inwardId,SaleToInwardDto saleToInwardDto) 
+    {
+        try 
+        {
+            var itemRepo = _unitOfWork.GetRepository<InwardItem>();
+            var item = itemRepo.GetQueryable().FirstOrDefault(i => i.InwardId == inwardId &&
+                                                            i.ProductId == saleToInwardDto.ProductId &&
+                                                            i.InwardUnitId == saleToInwardDto.UnitId &&
+                                                            i.ItemQuantity == saleToInwardDto.ReturnQuantity);
+            if (item == null) return false;
+
+            var result = await DeleteInwardItemAsync(item.Id);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting inward item: {ex.Message}");
+            throw;
+        }     
+    }
     #endregion
 
     #region Barcode Operations
@@ -649,14 +815,14 @@ public class InwardService : IInwardService
 
     #region Number Generators
 
-    private async Task<string> GenerateInwardNoAsync(DateTime inwardDate)
+    private async Task<string> GenerateInwardNoAsync(DateTime inwardDate,bool isSaleReturn)
     {
         var inwardRepo = _unitOfWork.GetRepository<Inward>();
         var (startYear, endYear) = GetFinancialYear(inwardDate);
         var count = await inwardRepo.CountAsync();
         count++;
-
-        return $"IN-{startYear % 100}-{endYear % 100}/{count}";
+        var prefix = isSaleReturn ? "SRIN" : "IN";
+        return $"{prefix}-{startYear % 100}-{endYear % 100}/{count}";
     }
 
     private string GenerateBarcodeNumber(DateTime TransactionDate, int inwardId, int counter)
@@ -693,6 +859,7 @@ public class InwardService : IInwardService
             InwardDate = entity.InwardDate,
             ShipMentCompanyId = entity.ShipMentCompanyId,
             Remarks = entity.Remarks,
+            IsSalesReturn = entity.IsSalesReturn,
             IsActive = entity.IsActive,
             CategoryId = entity.CategoryId,
             CreatedBy = entity.CreatedBy,

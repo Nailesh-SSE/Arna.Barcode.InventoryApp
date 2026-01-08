@@ -40,19 +40,21 @@ else
                   AllowPaging="true"
                   PageSize="10"
                   Responsive="true"
+                  AllowFiltering="true"
+                  AllowSorting="true"
                   @ref=ColourGrid>
 
-                <GridColumn TItem="ColourModel" HeaderText="No">
+                <GridColumn TItem="ColourModel" HeaderText="No" Filterable=false>
                     @(colourList.IndexOf(context) + 1)
                 </GridColumn>
-                <GridColumn TItem="ColourModel" HeaderText="Name" PropertyName="Name">
+                <GridColumn TItem="ColourModel" HeaderText="Name" PropertyName="Name" SortKeySelector="item => item.Name" SortString="Name" FilterTextboxWidth="200">
                     @context.Name
                 </GridColumn>
-                <GridColumn TItem="ColourModel" HeaderText="Code" PropertyName="Code">
+                <GridColumn TItem="ColourModel" HeaderText="Code" PropertyName="Code" SortKeySelector="item => item.Code" SortString="Code" FilterTextboxWidth="200">
                     @context.Code
                 </GridColumn>
 
-                <GridColumn TItem="ColourModel" HeaderText="Status" PropertyName="IsActive">
+                <GridColumn TItem="ColourModel" HeaderText="Status" PropertyName="IsActive" SortKeySelector="item => item.IsActive" SortString="IsActive">
                     @if (context.IsActive)
                     {
                         <Badge Color="BadgeColor.Success">Active</Badge>
@@ -63,7 +65,7 @@ else
                     }
                 </GridColumn>
 
-                <GridColumn TItem="ColourModel" HeaderText="Actions">
+                <GridColumn TItem="ColourModel" HeaderText="Actions" Filterable=false>
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {

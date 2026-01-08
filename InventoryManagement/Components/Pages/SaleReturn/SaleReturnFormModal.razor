@@ -111,7 +111,7 @@
     public async Task ValidateDate()
     {
         validationMessage.Clear(() => SaleReturnModel.SaleReturnDate);
-        if (SaleReturnModel.SaleReturnDate > DateTime.UtcNow)
+        if (SaleReturnModel.SaleReturnDate.Date > DateTime.Now.Date)
         {
             validationMessage.Add(() => SaleReturnModel.SaleReturnDate, "Sale Return date cannot be in the future.");
         }

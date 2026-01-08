@@ -7,7 +7,7 @@ public class SaleReturn : Common
     public int Id { get; set; }
     public string SaleReturnNo { get; set; }
     public int BillToCompanyId { get; set; } 
-    public DateTime SaleReturnDate { get; set; } = DateTime.UtcNow;
+    public DateTime SaleReturnDate { get; set; } = DateTime.Now;
 
     public virtual Company BillToCompany { get; set; }
     public virtual ICollection<SaleReturnItems> SaleReturnItems { get; set; } =  new List<SaleReturnItems>();

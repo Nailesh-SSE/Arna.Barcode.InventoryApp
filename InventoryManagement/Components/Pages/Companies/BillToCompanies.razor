@@ -39,21 +39,23 @@ else
                   Data="companyList"
                   AllowPaging="true"
                   PageSize="10"
+                  AllowSorting="true"
+                  AllowFiltering="true"
                   Responsive="true"
                   @ref=billToCompanyGrid>
 
-                <GridColumn TItem="CompanyModel" HeaderText="No">
+                <GridColumn TItem="CompanyModel" HeaderText="No" Filterable=false>
                     @(companyList.IndexOf(context) + 1)
                 </GridColumn>
-                <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name">
+                <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="200">
                     @context.Name
                 </GridColumn>
 
-                <GridColumn TItem="CompanyModel" HeaderText="Remark" PropertyName="Remark">
+                <GridColumn TItem="CompanyModel" HeaderText="Remark" PropertyName="Remark" Filterable=false>
                     @context.Remark
                 </GridColumn>
 
-                <GridColumn TItem="CompanyModel" HeaderText="Status" PropertyName="IsActive">
+                <GridColumn TItem="CompanyModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive">
                     @if (context.IsActive)
                     {
                         <Badge Color="BadgeColor.Success">Active</Badge>
@@ -64,7 +66,7 @@ else
                     }
                 </GridColumn>
 
-                <GridColumn TItem="CompanyModel" HeaderText="Actions">
+                <GridColumn TItem="CompanyModel" HeaderText="Actions" Filterable=false>
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {
