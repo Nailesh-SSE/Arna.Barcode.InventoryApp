@@ -22,6 +22,8 @@ public class InwardBarcodeItem : Common
 
     public bool IsInStock { get; set; } = true;
 
+    public int ParentId { get; set; } = 0;
+
     public virtual Inward Inward { get; set; } = null!;
     public virtual InwardItem InwardItem { get; set; } = null!;
 }
