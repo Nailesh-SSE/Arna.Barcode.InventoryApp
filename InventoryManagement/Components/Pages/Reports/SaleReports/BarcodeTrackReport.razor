@@ -74,13 +74,7 @@ else
                                     <label class="form-label">Barcode No</label>
                                     <InputText class="form-control"
                                                @bind-Value="filter.barcode"
-                                               @oninput="HandleInput" />
-                                    <button type="button"
-                                            class="btn btn-secondary d-flex align-items-center gap-1"
-                                            @onclick="StartCameraScan"
-                                            disabled="@isScanning">
-                                        <Icon Name="IconName.Camera" /> Scan
-                                    </button>
+                                               @oninput="HandleInput" />                                 
                                     @if (barcodeError != null)
                                     {
                                         <div class="text-danger small mt-1">
@@ -89,6 +83,12 @@ else
                                     }
                                 </div>
                                 <div class="col-12 d-grid gap-2">
+                                     <button type="button"
+                                            class="btn btn-secondary"
+                                            @onclick="StartCameraScan"
+                                            disabled="@isScanning">
+                                        <Icon Name="IconName.Camera" /> Scan
+                                    </button>
                                     <button type="submit" class="btn btn-primary">
                                         <Icon Name="IconName.Search" /> Generate Report
                                     </button>
