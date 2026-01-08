@@ -13,7 +13,7 @@
             @(Inwards.IndexOf(context) + 1)
         </GridColumn>
 
-        <GridColumn TItem="InwardModel" HeaderText="Inward No" PropertyName="InwardNo" SortString="InwardNo" SortKeySelector="item => item.InwardNo" FilterTextboxWidth="200">
+        <GridColumn TItem="InwardModel" HeaderText="Inward No" PropertyName="InwardNo" SortString="InwardNo" SortKeySelector="item => item.InwardNo" >
             @context.InwardNo
         </GridColumn>
 
@@ -21,7 +21,7 @@
             @context.InwardDate.ToString("dd/MM/yyyy hh:mm tt")
         </GridColumn>
 
-        <GridColumn TItem="InwardModel" HeaderText="Ship Company" PropertyName="ShipMentCompanyName" SortString="ShipMentCompanyName" SortKeySelector="item => item.ShipMentCompanyName" FilterTextboxWidth="200">
+        <GridColumn TItem="InwardModel" HeaderText="Ship Company" PropertyName="ShipMentCompanyName" SortString="ShipMentCompanyName" SortKeySelector="item => item.ShipMentCompanyName" >
             @context.ShipMentCompanyName.ToUpper()
         </GridColumn>
 

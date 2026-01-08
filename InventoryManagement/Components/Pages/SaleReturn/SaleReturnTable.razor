@@ -5,28 +5,26 @@
           Data="SaleReturns"
           AllowPaging="true"
           PageSize="10"
-          Responsive="true"
-          AllowFiltering="true"
-          AllowSorting="true"
+          Responsive="true"    
           @ref="SaleReturnGrid">
 
         <GridColumn TItem="SaleReturnModel" HeaderText="No" Filterable=false>
             @(SaleReturns.IndexOf(context) + 1)
         </GridColumn>
 
-        <GridColumn TItem="SaleReturnModel" HeaderText="SaleReturn No" PropertyName="SaleReturnNo" SortString="SaleReturnNo" SortKeySelector="item => item.SaleReturnNo" FilterTextboxWidth="200">
+        <GridColumn TItem="SaleReturnModel" HeaderText="SaleReturn No" PropertyName="SaleReturnNo" >
             @context.SaleReturnNo
         </GridColumn>
 
-        <GridColumn TItem="SaleReturnModel" HeaderText="Inward Date/Time" PropertyName="SaleReturnDateOnly" SortString="SaleReturnDateOnly" SortKeySelector="item => item.SaleReturnDateOnly" FilterTextboxWidth="200">
+        <GridColumn TItem="SaleReturnModel" HeaderText="Inward Date/Time" PropertyName="SaleReturnDateOnly">
             @context.SaleReturnDate.ToString("dd/MM/yyyy hh:mm tt")
         </GridColumn>
 
-        <GridColumn TItem="SaleReturnModel" HeaderText="Ship Company" PropertyName="BillToCompanyName" SortString="BillToCompanyName" SortKeySelector="item => item.BillToCompanyName" FilterTextboxWidth="200">
+        <GridColumn TItem="SaleReturnModel" HeaderText="Ship Company" PropertyName="BillToCompanyName"   >
             @context.BillToCompanyName.ToUpper()
         </GridColumn>
 
-        <GridColumn TItem="SaleReturnModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive">
+        <GridColumn TItem="SaleReturnModel" HeaderText="Status" PropertyName="IsActive" >
             @if (context.IsActive)
             {
                 <Badge Color="BadgeColor.Success">Active</Badge>
@@ -37,7 +35,7 @@
             }
         </GridColumn>
 
-        <GridColumn TItem="SaleReturnModel" HeaderText="Actions" Filterable=false>
+        <GridColumn TItem="SaleReturnModel" HeaderText="Actions" >
             <div class="d-flex flex-wrap gap-1">
                 <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
                     <Icon Name="IconName.Plus" /> Add Items
@@ -71,6 +69,7 @@
     [Parameter] public EventCallback<SaleReturnModel?> OnAddItems { get; set; }
     [Parameter] public bool CanEdit { get; set; }
     [Parameter] public bool CanDelete { get; set; }
+    [Parameter] public bool CanCreate { get; set; }
 
     protected override void OnParametersSet()
     {
