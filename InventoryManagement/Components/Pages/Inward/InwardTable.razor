@@ -25,7 +25,7 @@
             @context.ShipMentCompanyName.ToUpper()
         </GridColumn>
 
-        <GridColumn TItem="InwardModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive">
+        <GridColumn TItem="InwardModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive" Sortable=false>
             @if (context.IsActive)
             {
                 <Badge Color="BadgeColor.Success">Active</Badge>
@@ -38,9 +38,12 @@
 
         <GridColumn TItem="InwardModel" HeaderText="Actions" Filterable=false>
             <div class="d-flex gap-1">
+                @if (CanCreate)
+                {
                 <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
                     <Icon Name="IconName.Plus" /> Add Items
                 </Button>
+                }
                 @if (CanEdit)
                 {
                     <Button class="text-nowrap" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => OnEdit.InvokeAsync(context)">
@@ -69,6 +72,7 @@
     [Parameter] public EventCallback<InwardModel?> OnAddItems { get; set; }
     [Parameter] public bool CanEdit { get; set; }
     [Parameter] public bool CanDelete { get; set; }
+    [Parameter] public bool CanCreate { get; set; }
 
     protected override void OnParametersSet()
     {

@@ -74,16 +74,16 @@ else
             <GridColumn TItem="FormPermissionModel" HeaderText="Form" PropertyName="FormName" SortString="FormName" SortKeySelector="item => item.FormName" FilterTextboxWidth="80">
                 @context.FormName
             </GridColumn>
-            <GridColumn TItem="FormPermissionModel" HeaderText="View" PropertyName="CanView" SortString="CanView" SortKeySelector="item => item.CanView">
+            <GridColumn TItem="FormPermissionModel" HeaderText="View" PropertyName="CanView" SortString="CanView" SortKeySelector="item => item.CanView" Sortable=false>
                 @context.CanView
             </GridColumn>
-            <GridColumn TItem="FormPermissionModel" HeaderText="Create" PropertyName="CanCreate" SortString="CanCreate" SortKeySelector="item => item.CanCreate">
+            <GridColumn TItem="FormPermissionModel" HeaderText="Create" PropertyName="CanCreate" SortString="CanCreate" SortKeySelector="item => item.CanCreate" Sortable=false>
                 @context.CanCreate
             </GridColumn>
-            <GridColumn TItem="FormPermissionModel" HeaderText="Edit" PropertyName="CanEdit" SortString="CanEdit" SortKeySelector="item => item.CanEdit">
+            <GridColumn TItem="FormPermissionModel" HeaderText="Edit" PropertyName="CanEdit" SortString="CanEdit" SortKeySelector="item => item.CanEdit" Sortable=false>
                 @context.CanEdit
             </GridColumn>
-            <GridColumn TItem="FormPermissionModel" HeaderText="Delete" PropertyName="CanDelete" SortString="CanDelete" SortKeySelector="item => item.CanDelete">
+            <GridColumn TItem="FormPermissionModel" HeaderText="Delete" PropertyName="CanDelete" SortString="CanDelete" SortKeySelector="item => item.CanDelete" Sortable=false>
                 @context.CanDelete
             </GridColumn>
             <GridColumn TItem="FormPermissionModel" HeaderText="Action" Filterable=false>

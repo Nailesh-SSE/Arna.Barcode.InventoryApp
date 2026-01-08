@@ -54,7 +54,7 @@ else
                     @context.Code
                 </GridColumn>
 
-                <GridColumn TItem="ColourModel" HeaderText="Status" PropertyName="IsActive" SortKeySelector="item => item.IsActive" SortString="IsActive">
+                <GridColumn TItem="ColourModel" HeaderText="Status" PropertyName="IsActive" SortKeySelector="item => item.IsActive" SortString="IsActive" Sortable=false>
                     @if (context.IsActive)
                     {
                         <Badge Color="BadgeColor.Success">Active</Badge>
