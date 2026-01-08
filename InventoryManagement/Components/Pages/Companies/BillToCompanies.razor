@@ -47,7 +47,7 @@ else
                 <GridColumn TItem="CompanyModel" HeaderText="No" Filterable=false>
                     @(companyList.IndexOf(context) + 1)
                 </GridColumn>
-                <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="200">
+                <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="100">
                     @context.Name
                 </GridColumn>
 
@@ -70,13 +70,13 @@ else
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {
-                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                            <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                                 <Icon Name="IconName.PencilSquare" /> Edit
                             </Button>
                         }
                         @if (CanDelete(Route))
                         {
-                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCompany(context.Id)">
+                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCompany(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
                             </Button>
                         }
@@ -93,7 +93,7 @@ else
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <label class="form-label">Bill Company Name <span class="text-danger">*</span></label>
                         <InputText class="form-control" @bind-Value="companyModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
                         <ValidationMessage For="@(() => companyModel.Name)" />
                     </div>
@@ -250,7 +250,7 @@ else
 
             if (!isCompanyNameUnique)
             {
-                validationMessage.Add(() => companyModel.Name, "Company is Already Exist");
+                validationMessage.Add(() => companyModel.Name, "Bill Company name Already Exist");
             }
             editContext.NotifyValidationStateChanged();
         }
@@ -260,7 +260,7 @@ else
         validationMessage.Clear();
         if (string.IsNullOrWhiteSpace(companyModel.Name))
         {
-            validationMessage.Add(() => companyModel.Name, "Company name is required");
+            validationMessage.Add(() => companyModel.Name, "Bill Company name is required");
             editContext.NotifyValidationStateChanged();
         }
     }

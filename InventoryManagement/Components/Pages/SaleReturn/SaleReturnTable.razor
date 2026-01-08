@@ -5,22 +5,24 @@
           Data="SaleReturns"
           AllowPaging="true"
           PageSize="10"
-          Responsive="true"    
+          Responsive="true" 
+          AllowFiltering="true"
+          AllowSorting="true"
           @ref="SaleReturnGrid">
 
         <GridColumn TItem="SaleReturnModel" HeaderText="No" Filterable=false>
             @(SaleReturns.IndexOf(context) + 1)
         </GridColumn>
 
-        <GridColumn TItem="SaleReturnModel" HeaderText="SaleReturn No" PropertyName="SaleReturnNo" >
+        <GridColumn TItem="SaleReturnModel" HeaderText="SaleReturn No" PropertyName="SaleReturnNo" SortString="SaleReturnNo" SortKeySelector="item => item.SaleReturnNo" FilterTextboxWidth="100">
             @context.SaleReturnNo
         </GridColumn>
 
-        <GridColumn TItem="SaleReturnModel" HeaderText="Inward Date/Time" PropertyName="SaleReturnDateOnly">
+        <GridColumn TItem="SaleReturnModel" HeaderText="Inward Date/Time" PropertyName="SaleReturnDateOnly" SortString="SaleReturnDateOnly" SortKeySelector="item => item.SaleReturnDateOnly" FilterTextboxWidth="130">
             @context.SaleReturnDate.ToString("dd/MM/yyyy hh:mm tt")
         </GridColumn>
 
-        <GridColumn TItem="SaleReturnModel" HeaderText="Ship Company" PropertyName="BillToCompanyName"   >
+        <GridColumn TItem="SaleReturnModel" HeaderText="Ship Company" PropertyName="BillToCompanyName" SortString="BillToCompanyName" SortKeySelector="item => item.BillToCompanyName" FilterTextboxWidth="100">
             @context.BillToCompanyName.ToUpper()
         </GridColumn>
 
@@ -35,14 +37,14 @@
             }
         </GridColumn>
 
-        <GridColumn TItem="SaleReturnModel" HeaderText="Actions" >
-            <div class="d-flex flex-wrap gap-1">
-                <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
+        <GridColumn TItem="SaleReturnModel" HeaderText="Actions" Filterable=false>
+            <div class="d-flex gap-1">
+                <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
                     <Icon Name="IconName.Plus" /> Add Items
                 </Button>
                 @if (CanEdit)
                 {
-                    <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => OnEditSaleReturn.InvokeAsync(context)">
+                    <Button class="text-nowrap" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => OnEditSaleReturn.InvokeAsync(context)">
                         <Icon Name="IconName.Eye" /> View
                     </Button>
                 }

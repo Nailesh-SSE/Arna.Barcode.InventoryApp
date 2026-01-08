@@ -66,15 +66,15 @@ else
                     @($"{context.FirstName} {context.LastName}")
                 </GridColumn>
 
-                <GridColumn TItem="UserModel" HeaderText="Username" PropertyName="UserName" SortString="UserName" SortKeySelector="item => item.UserName" FilterTextboxWidth="200">
+                <GridColumn TItem="UserModel" HeaderText="Username" PropertyName="UserName" SortString="UserName" SortKeySelector="item => item.UserName" FilterTextboxWidth="80">
                     @context.UserName
                 </GridColumn>
 
-                <GridColumn TItem="UserModel" HeaderText="Email" PropertyName="Email" SortString="Email" SortKeySelector="item => item.Email" FilterTextboxWidth="200">
+                <GridColumn TItem="UserModel" HeaderText="Email" PropertyName="Email" SortString="Email" SortKeySelector="item => item.Email" FilterTextboxWidth="80">
                     @context.Email
                 </GridColumn>
 
-                <GridColumn TItem="UserModel" HeaderText="Phone" PropertyName="ContactNo" SortString="ContactNo" SortKeySelector="item => item.ContactNo" FilterTextboxWidth="200">
+                <GridColumn TItem="UserModel" HeaderText="Phone" PropertyName="ContactNo" SortString="ContactNo" SortKeySelector="item => item.ContactNo" FilterTextboxWidth="80">
                     @context.ContactNo
                 </GridColumn>
 
@@ -93,14 +93,14 @@ else
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {
-                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small"
+                            <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small"
                                     @onclick="() => ShowEditModal(context)">
                                 <Icon Name="IconName.PencilSquare" /> Edit
                             </Button>
                         }
                         @if (CanDelete(Route))
                         {
-                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small"
+                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small"
                                     @onclick="() => DeleteUser(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
                             </Button>

@@ -68,10 +68,10 @@ else
                 @(list.IndexOf(context) + 1)
             </GridColumn>
 
-            <GridColumn TItem="FormPermissionModel" HeaderText="Role" PropertyName="RoleName" SortString="RoleName" SortKeySelector="item => item.RoleName" FilterTextboxWidth="200">
+            <GridColumn TItem="FormPermissionModel" HeaderText="Role" PropertyName="RoleName" SortString="RoleName" SortKeySelector="item => item.RoleName" FilterTextboxWidth="80">
                 @context.RoleName
             </GridColumn>
-            <GridColumn TItem="FormPermissionModel" HeaderText="Form" PropertyName="FormName" SortString="FormName" SortKeySelector="item => item.FormName" FilterTextboxWidth="200">
+            <GridColumn TItem="FormPermissionModel" HeaderText="Form" PropertyName="FormName" SortString="FormName" SortKeySelector="item => item.FormName" FilterTextboxWidth="80">
                 @context.FormName
             </GridColumn>
             <GridColumn TItem="FormPermissionModel" HeaderText="View" PropertyName="CanView" SortString="CanView" SortKeySelector="item => item.CanView">
@@ -90,7 +90,7 @@ else
                 <div class="d-flex gap-1 justify-content-start">
                     @if (CanEdit(Route))
                     {
-                        <Button Color="ButtonColor.Warning"
+                        <Button class="text-nowrap" Color="ButtonColor.Warning"
                                 Size="ButtonSize.Small"
                                 @onclick="() => Edit(context)">
                             <Icon Name="IconName.PencilSquare" /> Edit
@@ -98,7 +98,7 @@ else
                     }
                     @if (CanDelete(Route))
                     {
-                        <Button Color="ButtonColor.Danger"
+                        <Button class="text-nowrap" Color="ButtonColor.Danger"
                                 Size="ButtonSize.Small"
                                 @onclick="() => Delete(context.Id)">
                             <Icon Name="IconName.Trash" /> Delete

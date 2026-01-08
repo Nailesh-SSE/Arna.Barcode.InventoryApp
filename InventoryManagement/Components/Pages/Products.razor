@@ -56,19 +56,19 @@ else
                     @index
                 </GridColumn>
 
-                <GridColumn TItem="ProductModel" HeaderText="SKU" PropertyName="SKU" SortKeySelector="item => item.SKU" SortString="SKU">
+                <GridColumn TItem="ProductModel" HeaderText="SKU" PropertyName="SKU" SortKeySelector="item => item.SKU" SortString="SKU" FilterTextboxWidth="98">
                     @context.SKU
                 </GridColumn>
 
-                <GridColumn TItem="ProductModel" HeaderText="Name" PropertyName="Name" SortKeySelector="item => item.Name" SortString="Name">
+                <GridColumn TItem="ProductModel" HeaderText="Name" PropertyName="Name" SortKeySelector="item => item.Name" SortString="Name" FilterTextboxWidth="98">
                     @context.Name
                 </GridColumn>
 
-                <GridColumn TItem="ProductModel" HeaderText="Category" PropertyName="CategoryName" SortKeySelector="item => item.CategoryName" SortString="CategoryName">
+                <GridColumn TItem="ProductModel" HeaderText="Category" PropertyName="CategoryName" SortKeySelector="item => item.CategoryName" SortString="CategoryName" FilterTextboxWidth="98">
                     @context.CategoryName
                 </GridColumn>
 
-                <GridColumn TItem="ProductModel" HeaderText="Unit" PropertyName="Unit" SortKeySelector="item => item.Unit" SortString="Unit">
+                <GridColumn TItem="ProductModel" HeaderText="Unit" PropertyName="Unit" Filterable="false">
                     @context.Unit
                 </GridColumn>
 
@@ -87,13 +87,13 @@ else
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {
-                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                            <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                                 <Icon Name="IconName.PencilSquare" /> Edit
                             </Button>
                         }
                         @if (CanDelete(Route))
                         {
-                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteProduct(context.Id)">
+                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteProduct(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
                             </Button>
                         }
@@ -109,7 +109,7 @@ else
                 <DataAnnotationsValidator />
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <label class="form-label">Product Name <span class="text-danger">*</span></label>
                         <InputText class="form-control" @bind-Value="productModel.Name" @oninput="HandleNameChange" />
                         <ValidationMessage For="@(() => productModel.Name)" />
                     </div>
