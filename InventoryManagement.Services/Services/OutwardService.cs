@@ -45,8 +45,10 @@ public class OutwardService : IOutwardService
             await _unitOfWork.BeginTransactionAsync();
 
             var outwardRepository = _unitOfWork.GetRepository<Outward>();
-            await GenerateOutwardNumberAsync(model);
-
+            if (string.IsNullOrEmpty(model.OutwardNo))
+            {
+                model.OutwardNo = await GenerateOutwardNumberAsync(model.OutwardDate);
+            }
             var newOutward = new Outward
             {
                 OutwardNo = model.OutwardNo,
@@ -328,25 +330,23 @@ public class OutwardService : IOutwardService
         }
     }
 
-    private async Task GenerateOutwardNumberAsync(OutwardModel model)
+    private async Task<string> GenerateOutwardNumberAsync(DateTime outwardDate)
     {
-        var repository = _unitOfWork.GetRepository<Outward>();
-        var outwards = await repository.GetAllAsync();
-        var lastOutward = outwards
-            .Where(a => a.IsActive && !a.IsDeleted)
-            .OrderByDescending(a => a.Id)
-            .FirstOrDefault();
+        var outwardRepo = _unitOfWork.GetRepository<Outward>();
+        var (startYear, endYear) = GetFinancialYear(outwardDate);
+        var count = await outwardRepo.CountAsync();
+        count++;
 
-        if (lastOutward != null && int.TryParse(lastOutward.OutwardNo, out int lastNumber))
-        {
-            model.OutwardNo = (lastNumber + 1).ToString("D6");
-        }
-        else
-        {
-            model.OutwardNo = "000001";
-        }
+        return $"OT-{startYear % 100}-{endYear % 100}/{count}";
     }
-
+    private (int startYear, int endYear) GetFinancialYear(DateTime date)
+    {
+        int year = date.Year;
+        if (date.Month < 4)
+            return (year - 1, year);
+        else
+            return (year, year + 1);
+    }
     private OutwardModel MapToModel(Outward entity)
     {
         return new OutwardModel
