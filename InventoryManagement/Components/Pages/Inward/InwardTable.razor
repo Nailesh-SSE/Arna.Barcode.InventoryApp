@@ -13,15 +13,15 @@
             @(Inwards.IndexOf(context) + 1)
         </GridColumn>
 
-        <GridColumn TItem="InwardModel" HeaderText="Inward No" PropertyName="InwardNo" SortString="InwardNo" SortKeySelector="item => item.InwardNo" >
+        <GridColumn TItem="InwardModel" HeaderText="Inward No" PropertyName="InwardNo" SortString="InwardNo" SortKeySelector="item => item.InwardNo" FilterTextboxWidth="100">
             @context.InwardNo
         </GridColumn>
 
-        <GridColumn TItem="InwardModel" HeaderText="Inward Date/Time" PropertyName="InwardDateOnly" SortString="InwardDateOnly" SortKeySelector="item => item.InwardDateOnly">
+        <GridColumn TItem="InwardModel" HeaderText="Inward Date/Time" PropertyName="InwardDateOnly" SortString="InwardDateOnly" SortKeySelector="item => item.InwardDateOnly" FilterTextboxWidth="130">
             @context.InwardDate.ToString("dd/MM/yyyy hh:mm tt")
         </GridColumn>
 
-        <GridColumn TItem="InwardModel" HeaderText="Ship Company" PropertyName="ShipMentCompanyName" SortString="ShipMentCompanyName" SortKeySelector="item => item.ShipMentCompanyName" >
+        <GridColumn TItem="InwardModel" HeaderText="Ship Company" PropertyName="ShipMentCompanyName" SortString="ShipMentCompanyName" SortKeySelector="item => item.ShipMentCompanyName" FilterTextboxWidth="100">
             @context.ShipMentCompanyName.ToUpper()
         </GridColumn>
 
@@ -37,13 +37,13 @@
         </GridColumn>
 
         <GridColumn TItem="InwardModel" HeaderText="Actions" Filterable=false>
-            <div class="d-flex flex-wrap gap-1">
-                <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
+            <div class="d-flex gap-1">
+                <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
                     <Icon Name="IconName.Plus" /> Add Items
                 </Button>
                 @if (CanEdit)
                 {
-                    <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => OnEdit.InvokeAsync(context)">
+                    <Button class="text-nowrap" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => OnEdit.InvokeAsync(context)">
                         <Icon Name="IconName.Eye" /> View
                     </Button>
                 }

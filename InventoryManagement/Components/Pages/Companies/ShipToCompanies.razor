@@ -48,7 +48,7 @@ else
                     @(companyList?.IndexOf(context) + 1)
                 </GridColumn>
 
-                <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="200">
+                <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="100">
                     @context.Name
                 </GridColumn>
 
@@ -71,13 +71,13 @@ else
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {
-                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                            <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                                 <Icon Name="IconName.PencilSquare" /> Edit
                             </Button>
                         }
                         @if (CanDelete(Route))
                         {
-                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCompany(context.Id)">
+                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCompany(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
                             </Button>
                         }

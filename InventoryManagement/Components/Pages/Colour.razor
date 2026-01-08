@@ -47,10 +47,10 @@ else
                 <GridColumn TItem="ColourModel" HeaderText="No" Filterable=false>
                     @(colourList.IndexOf(context) + 1)
                 </GridColumn>
-                <GridColumn TItem="ColourModel" HeaderText="Name" PropertyName="Name" SortKeySelector="item => item.Name" SortString="Name" FilterTextboxWidth="200">
+                <GridColumn TItem="ColourModel" HeaderText="Name" PropertyName="Name" SortKeySelector="item => item.Name" SortString="Name" FilterTextboxWidth="100">
                     @context.Name
                 </GridColumn>
-                <GridColumn TItem="ColourModel" HeaderText="Code" PropertyName="Code" SortKeySelector="item => item.Code" SortString="Code" FilterTextboxWidth="200">
+                <GridColumn TItem="ColourModel" HeaderText="Code" PropertyName="Code" SortKeySelector="item => item.Code" SortString="Code" FilterTextboxWidth="100">
                     @context.Code
                 </GridColumn>
 
@@ -69,14 +69,14 @@ else
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {
-                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                            <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                                 <Icon Name="IconName.PencilSquare" /> Edit
                             </Button>
                         }
 
                         @if (CanDelete(Route))
                         {
-                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteColour(context.Id)">
+                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteColour(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
                             </Button>
                         }

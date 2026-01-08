@@ -59,7 +59,7 @@ else
                 <GridColumn TItem="RoleModel" HeaderText="No" Filterable=false>
                     @(roleList.IndexOf(context) + 1)
                 </GridColumn>
-                <GridColumn TItem="RoleModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="200">
+                <GridColumn TItem="RoleModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="100">
                     @context.Name
                 </GridColumn>
                 <GridColumn TItem="RoleModel" HeaderText="Description" PropertyName="Description" Filterable=false>
@@ -67,7 +67,7 @@ else
                 </GridColumn>
                 @if (isShowRoleLevel)
                 {
-                    <GridColumn TItem="RoleModel" HeaderText="Role Level" PropertyName="RoleLevel" SortString="RoleLevel" SortKeySelector="item => item.RoleLevel" FilterTextboxWidth="200">
+                    <GridColumn TItem="RoleModel" HeaderText="Role Level" PropertyName="RoleLevel" SortString="RoleLevel" SortKeySelector="item => item.RoleLevel" FilterTextboxWidth="80">
                         <span style="color:@(context.RoleLevel < 5 ? "red" : "")">
                             @context.RoleLevel
                         </span>
@@ -88,14 +88,14 @@ else
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {
-                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                            <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                                 <Icon Name="IconName.PencilSquare" /> Edit
                             </Button>
                         }
 
                         @if (CanDelete(Route))
                         {
-                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteRole(context.Id)">
+                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteRole(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
                             </Button>
                         }
