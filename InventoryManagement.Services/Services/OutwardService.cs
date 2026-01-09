@@ -60,7 +60,7 @@ public class OutwardService : IOutwardService
                 Remarks = model.Remarks,
                 IsActive = true,
                 IsDeleted = false,
-                IsFinished =false,
+                IsFinished = false,
                 CreatedBy = model.CreatedBy,
                 CreatedOn = model.CreatedOn
             };
@@ -226,7 +226,7 @@ public class OutwardService : IOutwardService
         return new BarcodeValidationResult { IsValid = true };
     }
 
-    public async Task<OutWardItemModel?> AddOutwardItemAsync(int outwardId, string barcodeNo,int userid)
+    public async Task<OutWardItemModel?> AddOutwardItemAsync(int outwardId, string barcodeNo, int userid)
     {
         try
         {
@@ -256,10 +256,10 @@ public class OutwardService : IOutwardService
                 Quantity = 1,
                 Unit = barcodeItem.ParentId > 0 ? UnitType.PCS.GetName() : inwardItem.InwardUnitName,
                 BarcodeNo = barcodeNo,
-                CreatedOn=DateTime.UtcNow,
-                CreatedBy=userid,
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = userid,
                 IsDeleted = false,
-                IsActive= true
+                IsActive = true
             };
 
             await detailRepository.AddAsync(newDetail);
@@ -275,7 +275,7 @@ public class OutwardService : IOutwardService
                 Id = newDetail.Id,
                 OutwardId = outwardId,
                 ProductId = inwardItem.ProductId,
-                ProductName = product?.SKU?? "Unknown",
+                ProductName = product?.SKU ?? "Unknown",
                 BarcodeNo = barcodeNo,
                 Quantity = 1,
                 Unit = newDetail.Unit
@@ -320,12 +320,17 @@ public class OutwardService : IOutwardService
     }
 
     private async Task UpdateBarcodeStockStatus(string barcodeNo, bool isInStock)
-    {
+        {
         var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
-        var barcodeItem = (await barcodeItemRepository.FindAsync(bi =>
-            bi.BarcodeNo == barcodeNo && !bi.IsDeleted)).FirstOrDefault();
-        if ((barcodeItem?.ParentId == 0 || barcodeItem?.ParentId == null) 
-            && barcodeItem?.InwardItem.InwardUnitId == (int)UnitType.BOX 
+        var barcodeItem = (await barcodeItemRepository.FindWithIncludesAsync(
+            bi => bi.BarcodeNo == barcodeNo && !bi.IsDeleted,
+            bi => bi.InwardItem
+        )).FirstOrDefault();
+
+        if (barcodeItem == null) return;
+
+        if ((barcodeItem?.ParentId == 0 || barcodeItem?.ParentId == null)
+            && barcodeItem?.InwardItem.InwardUnitId == (int)UnitType.BOX
             && barcodeItem.InwardItem.BoxQuantity >= 0)
         {
             var childBarcode = await barcodeItemRepository.FindAsync(bi =>
@@ -372,7 +377,7 @@ public class OutwardService : IOutwardService
             PlatformId = entity.PlatformId,
             Remarks = entity.Remarks,
             IsActive = entity.IsActive,
-            IsFinished=entity.IsFinished
+            IsFinished = entity.IsFinished
         };
     }
 }

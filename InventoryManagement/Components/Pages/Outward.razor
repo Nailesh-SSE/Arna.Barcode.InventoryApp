@@ -46,7 +46,7 @@ else
             <Grid TItem="OutwardModel" Class="table table-hover table-bordered table-striped" Data="outwards" AllowPaging="true" PageSize="10" AllowSorting="true"
                   Responsive="true" AllowFiltering=true>
 
-                <GridColumn TItem="OutwardModel" HeaderText="Sr. No." Sortable="false" HeaderTextAlignment="Alignment.Center" TextAlignment="Alignment.Center" Filterable=false>
+                <GridColumn TItem="OutwardModel" HeaderText="No." Sortable="false" HeaderTextAlignment="Alignment.Center" TextAlignment="Alignment.Center" Filterable=false>
                     @(outwards.IndexOf(context) + 1)
                 </GridColumn>
 
