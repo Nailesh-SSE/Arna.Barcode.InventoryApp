@@ -322,6 +322,7 @@ public class OutwardService : IOutwardService
     private async Task UpdateBarcodeStockStatus(string barcodeNo, bool isInStock)
         {
         var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
+    
         var barcodeItem = (await barcodeItemRepository.FindWithIncludesAsync(
             bi => bi.BarcodeNo == barcodeNo && !bi.IsDeleted,
             bi => bi.InwardItem
@@ -329,19 +330,25 @@ public class OutwardService : IOutwardService
 
         if (barcodeItem == null) return;
 
+        //Only if Box and it has Child Items
         if ((barcodeItem?.ParentId == 0 || barcodeItem?.ParentId == null)
             && barcodeItem?.InwardItem.InwardUnitId == (int)UnitType.BOX
             && barcodeItem.InwardItem.BoxQuantity >= 0)
         {
-            var childBarcode = await barcodeItemRepository.FindAsync(bi =>
-             bi.ParentId == barcodeItem.Id && !bi.IsDeleted);
-            foreach (var item in childBarcode)
+            var detailRepository = _unitOfWork.GetRepository<OutwardDetail>();
+            var childBarcodes = await barcodeItemRepository.FindAsync(bi =>
+               bi.ParentId == barcodeItem.Id
+               && !bi.IsDeleted
+               && !detailRepository.GetQueryable().Any(od => od.BarcodeNo == bi.BarcodeNo && !od.IsDeleted)
+           );
+
+            foreach (var item in childBarcodes)
             {
                 item.IsInStock = isInStock;
                 barcodeItemRepository.Update(item);
             }
         }
-
+        //Update Single Barcode
         if (barcodeItem != null)
         {
             barcodeItem.IsInStock = isInStock;
