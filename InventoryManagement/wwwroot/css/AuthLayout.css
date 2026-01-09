@@ -132,3 +132,8 @@
         transform: translateY(0);
     }
 }
+
+.dropdown-menu {
+    transform: none !important;
+    position: static !important;
+}
