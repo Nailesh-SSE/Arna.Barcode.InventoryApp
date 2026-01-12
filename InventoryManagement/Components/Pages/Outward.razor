@@ -79,27 +79,27 @@ else
 
                 <GridColumn TItem="OutwardModel" HeaderText="Actions" Filterable=false>
                     <div class="d-flex gap-1">
-                    @if (CanCreate(Route))
-                    {
-                        <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
-                            @if (context.IsFinished)
-                            {
-                                <Icon Name="IconName.Eye" />
-                                @: &nbsp;View Item
-                            }
-                            else
-                            {
-                                <Icon Name="IconName.PlusCircle" />
-                                @: &nbsp;Add Item
-                            }
-                        </Button>
-                    }
-                    @if (CanEdit(Route))
-                    {
-                        <Button class="text-nowrap" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                            <Icon Name="IconName.Eye" /> View
-                        </Button>
-                    }
+                        @if (CanCreate(Route))
+                        {
+                            <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
+                                @if (context.IsFinished)
+                                {
+                                    <Icon Name="IconName.Eye" />
+                                    @: &nbsp;View Item
+                                }
+                                else
+                                {
+                                    <Icon Name="IconName.PlusCircle" />
+                                    @: &nbsp;Add Item
+                                }
+                            </Button>
+                        }
+                        @if (CanEdit(Route))
+                        {
+                            <Button class="text-nowrap" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                                <Icon Name="IconName.Eye" /> View
+                            </Button>
+                        }
                     </div>
                 </GridColumn>
             </Grid>
@@ -364,15 +364,6 @@ else
         try
         {
             outwards = await OutwardService.GetAllOutwardsAsync();
-            billCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
-            platforms = (await PlatformService.GetAllPlatformAsync()).ToList();
-            foreach (var outwardItem in outwards)
-            {
-                var company = billCompanies.FirstOrDefault(c => c.Id == outwardItem.BillToCompanyId);
-                outwardItem.BillToCompanyName = company?.Name ?? "N/A";
-                var platform = platforms.FirstOrDefault(c => c.Id == outwardItem.PlatformId);
-                outwardItem.platformName = platform?.Name ?? "N/A";
-            }
             InitializeEditContext();
         }
         catch (Exception)

@@ -900,6 +900,7 @@ public class InwardService : IInwardService
             InwardDate = entity.InwardDate,
             ShipMentCompanyId = entity.ShipMentCompanyId,
             Remarks = entity.Remarks,
+            ShipMentCompanyName = entity.ShipMentCompany?.Name ?? string.Empty,
             IsSalesReturn = entity.IsSalesReturn,
             IsActive = entity.IsActive,
             CategoryId = entity.CategoryId,
