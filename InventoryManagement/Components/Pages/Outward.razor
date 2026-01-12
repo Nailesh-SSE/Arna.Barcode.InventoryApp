@@ -46,7 +46,7 @@ else
             <Grid TItem="OutwardModel" Class="table table-hover table-bordered table-striped" Data="outwards" AllowPaging="true" PageSize="10" AllowSorting="true"
                   Responsive="true" AllowFiltering=true>
 
-                <GridColumn TItem="OutwardModel" HeaderText="Sr. No." Sortable="false" HeaderTextAlignment="Alignment.Center" TextAlignment="Alignment.Center" Filterable=false>
+                <GridColumn TItem="OutwardModel" HeaderText="No." Sortable="false" HeaderTextAlignment="Alignment.Center" TextAlignment="Alignment.Center" Filterable=false>
                     @(outwards.IndexOf(context) + 1)
                 </GridColumn>
 
@@ -66,7 +66,7 @@ else
                     @context.platformName
                 </GridColumn>
 
-                <GridColumn TItem="OutwardModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive">
+                <GridColumn TItem="OutwardModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive" Sortable=false>
                     @if (context.IsActive)
                     {
                         <Badge Color="BadgeColor.Success">Active</Badge>
@@ -79,7 +79,7 @@ else
 
                 <GridColumn TItem="OutwardModel" HeaderText="Actions" Filterable=false>
                     <div class="d-flex gap-1">
-                    @if (CanEdit(Route))
+                    @if (CanCreate(Route))
                     {
                         <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
                             @if (context.IsFinished)
@@ -93,6 +93,9 @@ else
                                 @: &nbsp;Add Item
                             }
                         </Button>
+                    }
+                    @if (CanEdit(Route))
+                    {
                         <Button class="text-nowrap" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                             <Icon Name="IconName.Eye" /> View
                         </Button>

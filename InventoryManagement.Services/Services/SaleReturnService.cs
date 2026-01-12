@@ -42,15 +42,10 @@ public class SaleReturnService : ISaleReturnService
     public async Task<int> CreateSaleReturnAsync(SaleReturnModel model)
     {
         try
-        {
-            var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
+        {  
             model.SaleReturnNo = await GenerateSaleReturnNumberAsync(model.SaleReturnDate);
-
             var newSaleReturn = await CreateSaleReturnEntityAsync(model);
-
-            await saleReturnRepo.AddAsync(newSaleReturn);
-            await _unitOfWork.SaveChangesAsync();
-
+         
             return newSaleReturn.Id;
         }
         catch (Exception ex)
@@ -96,7 +91,7 @@ public class SaleReturnService : ISaleReturnService
         entity.BillToCompanyId = model.BillToCompanyId;
         entity.SaleReturnDate = model.SaleReturnDate;
         entity.UpdatedBy = model.UpdatedBy;
-        entity.UpdatedOn = DateTime.UtcNow;
+        entity.UpdatedOn = DateTime.Now;
     }
     #endregion
 

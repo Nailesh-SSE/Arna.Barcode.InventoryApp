@@ -59,7 +59,7 @@ public class InwardService : IInwardService
 
             if (string.IsNullOrEmpty(model.InwardNo))
             {
-                model.InwardNo = await GenerateInwardNoAsync(model.InwardDate,model.IsSalesReturn);
+                model.InwardNo = await GenerateInwardNoAsync(model.InwardDate, model.IsSalesReturn);
             }
 
             var inward = await CreateInwardEntityAsync(model);
@@ -223,7 +223,7 @@ public class InwardService : IInwardService
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Console.WriteLine($"Error Deleting inward item: {ex.Message}");
             return false;
@@ -312,22 +312,30 @@ public class InwardService : IInwardService
         try
         {
             var inwardRepo = _unitOfWork.GetRepository<Inward>();
-            var date = saleReturnItems.ReturnDate.Date;
+            var date = saleReturnItems.ReturnDate.Date; 
 
             var existingReturnInward = await inwardRepo.GetQueryable()
+                .Include(i => i.InwardItems)
                 .FirstOrDefaultAsync(i =>
                     i.IsSalesReturn &&
                     i.InwardDate.Date == date &&
                     i.ShipMentCompanyId == saleReturnItems.ShipToCompanyId &&
                     i.CategoryId == saleReturnItems.CategoryId);
 
-            var inwardId = existingReturnInward?.Id ?? 0;
-
-            if (inwardId == 0)
+            if (existingReturnInward == null)
                 return false;
-            await FindSalesReturnInwardAsync(inwardId, saleReturnItems);
 
-            return true;
+            var items = existingReturnInward.InwardItems.FirstOrDefault(i =>
+            i.ProductId == saleReturnItems.ProductId &&
+            i.InwardUnitId == saleReturnItems.UnitId &&
+            i.ItemQuantity == saleReturnItems.ReturnQuantity);
+                             
+            if (items == null)
+                return false;
+
+            var result = await DeleteInwardItemAsync(items.Id);
+
+            return result;
         }
         catch (Exception ex)
         {
@@ -710,32 +718,12 @@ public class InwardService : IInwardService
             await CreateBarcodesForSingleItemAsync(entity, DateTime.UtcNow);
             return true;
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Console.WriteLine($"Error creating SaleReturn Inward Items: {ex.Message}");
             throw;
         }
 
-    }
-    private async Task<bool> FindSalesReturnInwardAsync(int inwardId,SaleToInwardDto saleToInwardDto) 
-    {
-        try
-        {
-            var itemRepo = _unitOfWork.GetRepository<InwardItem>();
-            var item = itemRepo.GetQueryable().FirstOrDefault(i => i.InwardId == inwardId &&
-                                                            i.ProductId == saleToInwardDto.ProductId &&
-                                                            i.InwardUnitId == saleToInwardDto.UnitId &&
-                                                            i.ItemQuantity == saleToInwardDto.ReturnQuantity);
-            if (item == null) return false;
-
-            var result = await DeleteInwardItemAsync(item.Id);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error deleting inward item: {ex.Message}");
-            throw;
-        }
     }
     #endregion
 

@@ -38,21 +38,24 @@
                     </div>
                 }
             </div>
-            <!-- BARCODE SECTION -->
-            <div class="d-flex align-items-center gap-2 mb-3 flex-nowrap">
-                <InputText class="form-control flex-grow-1"
-                           placeholder="Enter Barcode"
-                           @bind-Value="ItemsModel.BarCodeNo" />
+            @if (CanCreate)
+            {
+                <!-- BARCODE SECTION -->
+                <div class="d-flex align-items-center gap-2 mb-3 flex-nowrap">
+                    <InputText class="form-control flex-grow-1"
+                               placeholder="Enter Barcode"
+                               @bind-Value="ItemsModel.BarCodeNo" />
 
-                <button type="button"
-                        class="btn btn-secondary d-flex align-items-center gap-1"
-                        @onclick="StartCameraScan"
-                        disabled="@isScanning">
-                    <Icon Name="IconName.Camera" /> Scan
-                </button>
+                    <button type="button"
+                            class="btn btn-secondary d-flex align-items-center gap-1"
+                            @onclick="StartCameraScan"
+                            disabled="@isScanning">
+                        <Icon Name="IconName.Camera" /> Scan
+                    </button>
 
-                <Button Class="btn btn-dark" @onclick="HandleBarcode">Validate</Button>
-            </div>
+                    <Button Class="btn btn-dark" @onclick="HandleBarcode">Validate</Button>
+                </div>          
+            }       
 
             <!-- ITEMS TABLE -->
             @if (ItemsList.Any())
