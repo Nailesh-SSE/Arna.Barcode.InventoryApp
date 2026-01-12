@@ -45,15 +45,15 @@
                                         var itemQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "itemQuantity")} w-auto";
                                         var unitsClass = $"form-control form-control-sm {GetValidationClass(item, "units")} w-auto";
                                         var boxQuantityClass = $"form-control form-control-sm {GetValidationClass(item, "boxQuantity")} w-auto";
-                                        var rowClasses = $"{(item.Id == 0 ? "table-warning" : "")} {(item.HasOutOfStockBarcodes ? "table-success opacity-30" : "")}";
+                                        var rowClasses = $"{(item.Id == 0 ? "table-warning" : "")} {(item.HasOutOfStockBarcodes ? "table-success opacity-30" : "")} {(SelectedInward.IsSalesReturn ? "table-secondary opacity-30" : "")}";
 
                                         <tr class="@rowClasses"
-                                            title="@(item.HasOutOfStockBarcodes ? "This item is used in outward and cannot be edited." : null)">
+                                            title="@(item.HasOutOfStockBarcodes ? "This item is used in outward and cannot be edited." : SelectedInward.IsSalesReturn ? "Sale Return Inward Can not be Edited " : "")">
                                             <td>
                                                 <select class="@brandClass"
                                                         value="@item.BrandId"
                                                         @onchange="(e => onChangeBrand(item, int.Parse(e.Value.ToString())))"
-                                                        disabled="@item.HasOutOfStockBarcodes">
+                                                        disabled="@( SelectedInward.IsSalesReturn || item.HasOutOfStockBarcodes)">
                                                     <option value="0">-- Select --</option>
                                                     @foreach (var brand in Brands)
                                                     {
@@ -73,7 +73,7 @@
                                                                     Placeholder="Search product..."
                                                                     OnItemSelected="@(p => OnProductDropdownSelected(item, p))"
                                                                     ShowValidationMessage="@(showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))"
-                                                                    IsRequired="true" IsDisabled="@item.HasOutOfStockBarcodes" />
+                                                                    IsRequired="true" IsDisabled="@(SelectedInward.IsSalesReturn || item.HasOutOfStockBarcodes)" />
 
                                                 @if (showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))
                                                 {
@@ -83,7 +83,7 @@
                                             <td>
                                                 <InputSelect class="@unitsClass"
                                                              @bind-Value="item.InwardUnitId"
-                                                             disabled="@item.HasOutOfStockBarcodes">
+                                                             disabled="@( SelectedInward.IsSalesReturn || item.HasOutOfStockBarcodes)">
                                                     <option value="0">-- Select --</option>
                                                     @foreach (var unit in Units)
                                                     {
@@ -100,7 +100,7 @@
                                                              style="max-width: 80px;"
                                                              @bind-Value="item.ItemQuantity"
                                                              @onchange="@(() => ClearMessages())"
-                                                             disabled="@item.HasOutOfStockBarcodes" />
+                                                             disabled="@( SelectedInward.IsSalesReturn || item.HasOutOfStockBarcodes)" />
 
                                                 @if (showValidation && item.ItemQuantity == 0 && IsLastUnsavedItem(item))
                                                 {
@@ -135,7 +135,7 @@
                                                     <button type="button"
                                                             class="btn btn-primary btn-sm"
                                                             @onclick="@(() => HandleSaveItem(item))"
-                                                            disabled="@item.HasOutOfStockBarcodes">
+                                                            disabled="@( SelectedInward.IsSalesReturn || item.HasOutOfStockBarcodes)">
                                                         Save
                                                     </button>
                                                     @if (item.Id > 0)
@@ -143,7 +143,7 @@
                                                         <button type="button"
                                                                 class="btn btn-danger btn-sm"
                                                                 @onclick="@(() => HandleDeleteItem(item.Id))"
-                                                                disabled="@item.HasOutOfStockBarcodes">
+                                                                disabled="@( SelectedInward.IsSalesReturn || item.HasOutOfStockBarcodes)">
                                                             Delete
                                                         </button>
 
@@ -168,7 +168,7 @@
                                 </tbody>
                             </table>
                             <div class="text-end mt-2">
-                                <button type="button" disabled="@hideAddNewButton" class="btn btn-success btn-sm" @onclick="HandleAddItem">
+                                <button type="button" disabled="@(hideAddNewButton || SelectedInward.IsSalesReturn)" class="btn btn-success btn-sm" @onclick="HandleAddItem">
                                     <i class="bi bi-plus-circle me-1"></i>Add New Item
                                 </button>
                             </div>
@@ -184,7 +184,7 @@
                         </div>
                         <div class="text-center mt-2">
                             <button type="button"
-                                    disabled="@hideAddNewButton"
+                                    disabled="@(hideAddNewButton || SelectedInward.IsSalesReturn)"
                                     class="btn btn-success btn-sm"
                                     @onclick="HandleAddItem">
                                 <i class="bi bi-plus-circle me-1"></i>Add New Item
@@ -452,9 +452,9 @@
     private bool IsRequired(InwardItemModel item)
     {
         var inwardUnitName = Units.FirstOrDefault(u => u.Id == item.InwardUnitId)?.Name ?? string.Empty;
-        var isrequired= inwardUnitName == "BOX";
+        var isrequired = inwardUnitName == "BOX";
         isRequired = isrequired;
-        if(isrequired)
+        if (isrequired)
         {
             item.BoxQuantity = 1;
         }

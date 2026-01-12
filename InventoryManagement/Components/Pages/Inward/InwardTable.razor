@@ -84,16 +84,4 @@
     [Parameter] public bool CanEdit { get; set; }
     [Parameter] public bool CanDelete { get; set; }
     [Parameter] public bool CanCreate { get; set; }
-
-    protected override void OnParametersSet()
-    {
-        // Populate the ShipToCompany property
-        foreach (var inwards in Inwards)
-        {
-            var company = ShipCompanies.FirstOrDefault(c => c.Id == inwards.ShipMentCompanyId);
-            inwards.ShipMentCompanyName = company?.Name ?? "N/A";
-        }
-
-        base.OnParametersSet();
-    }
 }

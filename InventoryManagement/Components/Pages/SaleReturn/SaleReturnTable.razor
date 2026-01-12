@@ -82,16 +82,4 @@
     [Parameter] public bool CanCreate { get; set; }
     [Parameter] public bool CanDelete { get; set; }
 
-    protected override void OnParametersSet()
-    {
-        // Populate the BillToCompanyName property
-        foreach (var saleReturn in SaleReturns)
-        {
-            var company = BillToCompanies.FirstOrDefault(c => c.Id == saleReturn.BillToCompanyId);
-            saleReturn.BillToCompanyName = company?.Name ?? "N/A";
-        }
-
-        base.OnParametersSet();
-    }
-
 }

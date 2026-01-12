@@ -384,15 +384,8 @@ else
         try
         {
             outwards = await OutwardService.GetAllOutwardsAsync();
-            billCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
-            platforms = (await PlatformService.GetAllPlatformAsync()).ToList();
-            foreach (var outwardItem in outwards)
-            {
-                var company = billCompanies.FirstOrDefault(c => c.Id == outwardItem.BillToCompanyId);
-                outwardItem.BillToCompanyName = company?.Name ?? "N/A";
-                var platform = platforms.FirstOrDefault(c => c.Id == outwardItem.PlatformId);
-                outwardItem.platformName = platform?.Name ?? "N/A";
-            }
+            billCompanies = await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo);
+            platforms = await PlatformService.GetAllPlatformAsync();
             InitializeEditContext();
         }
         catch (Exception)
@@ -445,7 +438,9 @@ else
             OutwardNo = editOutward.OutwardNo,
             OutwardDate = editOutward.OutwardDate,
             BillToCompanyId = editOutward.BillToCompanyId,
+            BillToCompanyName = editOutward.BillToCompanyName,
             PlatformId = editOutward.PlatformId,
+            platformName = editOutward.platformName,
             Remarks = editOutward.Remarks,
             IsActive = editOutward.IsActive,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
