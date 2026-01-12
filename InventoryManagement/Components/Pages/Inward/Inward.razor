@@ -95,7 +95,7 @@ else
     private async Task LoadData()
     {
         isLoading = true;
-        isAdmin = IsAdmin() || IsFactoryAdmin() || CanView(Route);
+        isAdmin = IsAdmin() || IsFactoryAdmin();
         inwards = (await InwardService.GetAllAsync(isAdmin)).ToList();
         shipCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
         MakeCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo)).ToList();
