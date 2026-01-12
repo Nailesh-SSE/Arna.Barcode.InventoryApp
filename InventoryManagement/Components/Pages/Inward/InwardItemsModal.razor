@@ -47,7 +47,6 @@
                                         var rowClasses = $"{(item.Id == 0 ? "table-warning" : "")} {(item.HasOutOfStockBarcodes ? "table-success opacity-30" : "")}";
 
                                         <tr class="@rowClasses"
-                                            data-bs-toggle="@(item.HasOutOfStockBarcodes ? "tooltip" : null)"
                                             title="@(item.HasOutOfStockBarcodes ? "This item is used in outward and cannot be edited." : null)">
                                             <td>
                                                 <select class="@brandClass"
@@ -229,11 +228,6 @@
 
     public List<UnitModel> Units => CommonUtils.UnitList;
     public int brandId;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        await JSRuntime.InvokeVoidAsync("initTooltips");
-    }
 
     public async Task Show()
     {
@@ -504,11 +498,3 @@
         successMessage = "";
     }
 }
-<script>
-    window.initTooltips = () => {
-        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-        tooltipTriggerList.forEach(el => {
-            new bootstrap.Tooltip(el);
-        });
-    };
-</script>
