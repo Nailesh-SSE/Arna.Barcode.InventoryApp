@@ -23,17 +23,19 @@ else
                 <h3>Sale Return Management</h3>
             </div>
             <div class="col-auto">
-                <button class="btn btn-primary" @onclick="ShowAddModal" disabled="@(!CanCreate(Route))">
-                    <Icon Name="IconName.Plus"/>  Add New Sale Return
-                </button>
+                @if (CanCreate(Route))
+                {
+                    <button class="btn btn-primary" @onclick="ShowAddModal">
+                        <Icon Name="IconName.Plus" />  Add New Sale Return
+                    </button>
+                }
             </div>
         </div>
     </div>
 
     @if (isLoading)
     {
-        <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-50"
-        style="z-index: 1050;">
+        <div>
             <div class="spinner-border text-light" role="status"></div>
         </div>
     }
@@ -44,34 +46,36 @@ else
         OnEditSaleReturn="ShowEditModal"
         OnAddItems="OpenItemModel" CanEdit="CanEdit(Route)" CanDelete="CanDelete(Route)" CanCreate="CanCreate(Route)" />
     }
+
+    <SaleReturnFormModal @ref="saleReturnFormModal"
+    Title="@modalTitle"
+    SaleReturnModel="saleReturn"
+    BillToCompanyList="BillToCompanyList"
+    OnSave="SaveSaleReturn"
+    OnCancel="HideModal"
+    OnEditMode="isEditMode" 
+    Disablefields="disablefields"/>
+
+    <SaleReturnItemsFormModal @ref="saleReturnItemsFormModal"
+    Title="@itemTitle"
+    SelectedSaleReturn="selectedSaleReturn"
+    ItemsList="SaleReturnItems"
+    ItemsModel="itemsModel"
+    ProductList="ProductList"
+    CompanyList="ShipToCompanyList"
+    OutwardList="OutwardList"
+    OnBarcodeVal="ValidateBarcode"
+    OnClose="HideItemModal"
+    OnDelete="DeleteSaleReturnItem"
+    OnSave="SaveSaleReturnItem"
+    OnSaveResponse="HandleResponse"
+    AddItemRow="AddEmptyItemRow"
+    RemoveItemRow="RemoveItemrow" 
+    DisableFields="@disableitemfields"
+    CanCreate = "CanCreate(Route)"
+    CanDelete = "CanDelete(Route)"
+    CanEdit = "CanEdit(Route)" />
 }
-<SaleReturnFormModal @ref="saleReturnFormModal"
-                     Title="@modalTitle"
-                     SaleReturnModel="saleReturn"
-                     BillToCompanyList="BillToCompanyList"
-                     OnSave="SaveSaleReturn"
-                     OnCancel="HideModal"
-                     OnEditMode="isEditMode" />
-
-<SaleReturnItemsFormModal @ref="saleReturnItemsFormModal"
-                          Title="@itemTitle"
-                          SelectedSaleReturn="selectedSaleReturn"
-                          ItemsList="SaleReturnItems"
-                          ItemsModel="itemsModel"
-                          ProductList="ProductList"
-                          CompanyList="ShipToCompanyList"
-                          OutwardList="OutwardList"
-                          OnBarcodeVal="ValidateBarcode"
-                          OnClose="HideItemModal"
-                          OnDelete="DeleteSaleReturnItem"
-                          OnSave="SaveSaleReturnItem"
-                          OnSaveResponse="HandleResponse"
-                          AddItemRow="AddEmptyItemRow"
-                          RemoveItemRow="RemoveItemrow" 
-                          CanCreate="CanCreate(Route)"
-                          CanDelete="CanDelete(Route)"
-                          CanEdit="CanEdit(Route)" />
-
 @code
 {
     private bool isLoading = true;
@@ -98,6 +102,8 @@ else
     private string validationMessage = string.Empty;
     private bool validationIsValid = false;
     private string Route = "/sale-returns";
+    private bool disablefields;
+    private bool disableitemfields;
 
     protected override async Task OnInitializedAsync()
     {
@@ -139,6 +145,7 @@ else
     {
         modalTitle = "Add New Sale Return";
         isEditMode = false;
+        disablefields = false;
         saleReturn = new SaleReturnModel
         {
             SaleReturnDate = DateTime.Now,
@@ -152,8 +159,18 @@ else
 
     private void ShowEditModal(SaleReturnModel editSaleReturn)
     {
-        modalTitle = $"Edit Sale Return - {editSaleReturn.SaleReturnNo}";
-        isEditMode = true;
+        if (CanEdit(Route) == true)
+        {
+            modalTitle = $"Edit Sale Return - {editSaleReturn.SaleReturnNo}";
+            isEditMode = true;
+            disablefields = false;
+        }
+        else
+        {
+            modalTitle = $"View Sale Return - {editSaleReturn.SaleReturnNo}";
+            isEditMode = true;
+            disablefields = true;
+        }
         saleReturn = new SaleReturnModel
         {
             Id = editSaleReturn.Id,
@@ -204,6 +221,14 @@ else
     #region ItemModal
     private async Task OpenItemModel(SaleReturnModel data)
     {
+        if(CanCreate(Route))
+        {
+            disableitemfields = false;
+        }
+        else
+        {
+            disableitemfields = true;
+        }
         itemsModel.BarCodeNo = string.Empty;
         selectedSaleReturn = saleReturnList.FirstOrDefault(s => s.Id == data.Id);
         if (selectedSaleReturn == null) return;

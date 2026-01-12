@@ -1,7 +1,7 @@
 ﻿@inject IJSRuntime JSRuntime
 @inject IInwardService inwardService
 <Modal @ref="modal" Title="@Title" Size="ModalSize.ExtraLarge" UseStaticBackdrop>
-    <BodyTemplate>
+    <BodyTemplate>        
         @if (SelectedInward != null)
         {
             <div class="modal-content-custom">
@@ -24,6 +24,7 @@
 
                     @if (InwardItems.Any())
                     {
+                        <fieldset disabled="@DisableFields">
                         <div class="table-responsive" style="height: 750px; overflow-y: auto;">
                             <table class="table table-bordered align-middle">
                                 <thead class="table-light">
@@ -172,9 +173,11 @@
                                 </button>
                             </div>
                         </div>
+                        </fieldset>
                     }
                     else
                     {
+                        <fieldset disabled="@DisableFields">
                         <div class="text-center py-3 text-muted">
                             <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                             No items added yet. Click "Add Item" to get started.
@@ -187,6 +190,7 @@
                                 <i class="bi bi-plus-circle me-1"></i>Add New Item
                             </button>
                         </div>
+                        </fieldset>
                     }
                 </div>
 
@@ -225,6 +229,7 @@
     [Parameter] public EventCallback<InwardItemModel> OnRemoveUnsaved { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<InwardItemModel> OnDownloadPdf { get; set; }
+    [Parameter] public bool DisableFields { get; set; }
 
     public List<UnitModel> Units => CommonUtils.UnitList;
     public int brandId;

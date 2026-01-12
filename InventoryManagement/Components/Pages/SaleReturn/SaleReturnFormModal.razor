@@ -4,7 +4,7 @@
     <BodyTemplate>
         <EditForm EditContext="editContext" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator />
-            <fieldset disabled="@OnEditMode">
+            <fieldset disabled="@DisableFields">
                 <div class="container-fluid">
                     <div class="row m-2">
                         <div class="col-md-6 mb-3">
@@ -28,13 +28,13 @@
                         </div>
                     </div>
                 </div>
-            </fieldset>
                 <div class="modal-footer-section mt-3 text-end">
                     <button type="button" class="btn btn-secondary me-2" @onclick="HandleCancel">Cancel</button>
-                <button type="submit" class="btn btn-primary" disabled="@OnEditMode">
+                    <button type="submit" class="btn btn-primary" disabled="@DisableFields">
                     @(SaleReturnModel.Id > 0 ? "Update" : "Next")
                 </button>
                 </div>         
+            </fieldset>
         </EditForm>
     </BodyTemplate>
 
@@ -51,6 +51,7 @@
     [Parameter] public EventCallback OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool OnEditMode { get; set; }
+    [Parameter] public bool DisableFields { get; set; }
 
     protected override void OnParametersSet()
     {

@@ -21,8 +21,9 @@
                 </div>
             }
         </div>
-        <div class="col-12 mb-2">
-            <div class="position-relative">
+        <fieldset disabled="@DisableFields">
+            <div class="col-12 mb-2">
+                <div class="position-relative">
 
                 @if (isScanning)
                 {
@@ -275,6 +276,7 @@
                 <button type="button" class="btn btn-secondary me-2" @onclick="HandleClose">Close</button>
             </div>
         </div>
+        </fieldset>
     </BodyTemplate>
 </Modal>
 
@@ -315,7 +317,9 @@
     [Parameter] public EventCallback AddItemRow { get; set; }
     [Parameter] public EventCallback OnBarcodeVal { get; set; }
     [Parameter] public EventCallback<SaleReturnItemsModel> RemoveItemRow { get; set; }
-
+    
+    [Parameter] public bool DisableFields { get; set; }
+    
     // protected override void OnParametersSet()
     // {
     //     InitializeEditContext();

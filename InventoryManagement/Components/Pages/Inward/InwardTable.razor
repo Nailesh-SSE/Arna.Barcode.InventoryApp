@@ -25,6 +25,10 @@
             @context.ShipMentCompanyName.ToUpper()
         </GridColumn>
 
+        <GridColumn TItem="InwardModel" HeaderText="Category">
+            @(Categories.FirstOrDefault(c => c.Id == context.CategoryId)?.Name.ToUpper() ?? "All")
+        </GridColumn>
+
         <GridColumn TItem="InwardModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive" Sortable=false>
             @if (context.IsActive)
             {
@@ -40,14 +44,20 @@
             <div class="d-flex gap-1">
                 @if (CanCreate)
                 {
-                <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
-                    <Icon Name="IconName.Plus" /> Add Items
-                </Button>
+                    <Button Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
+                        <Icon Name="IconName.Plus" /> Add Items
+                    </Button>
+                }
+                else
+                {
+                    <Button Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
+                        <Icon Name="IconName.Eye" /> View Items
+                    </Button>
                 }
                 @if (CanEdit)
                 {
-                    <Button class="text-nowrap" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => OnEdit.InvokeAsync(context)">
-                        <Icon Name="IconName.Eye" /> View
+                    <Button Class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => OnEdit.InvokeAsync(context)">
+                        <Icon Name="IconName.PencilSquare" /> Edit
                     </Button>
                 }
                 @*
@@ -67,6 +77,7 @@
     private Grid<InwardModel>? InwardGrid;
     [Parameter] public List<InwardModel> Inwards { get; set; } = new();
     [Parameter] public List<CompanyModel> ShipCompanies { get; set; } = new();
+    [Parameter] public List<CategoryModel> Categories { get; set; } = new();
     [Parameter] public EventCallback<InwardModel> OnEdit { get; set; }
     [Parameter] public EventCallback<int> OnDelete { get; set; }
     [Parameter] public EventCallback<InwardModel?> OnAddItems { get; set; }

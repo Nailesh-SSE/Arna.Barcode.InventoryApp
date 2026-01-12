@@ -79,101 +79,109 @@ else
 
                 <GridColumn TItem="OutwardModel" HeaderText="Actions" Filterable=false>
                     <div class="d-flex gap-1">
-                    @if (CanCreate(Route))
-                    {
-                        <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
-                            @if (context.IsFinished)
-                            {
-                                <Icon Name="IconName.Eye" />
-                                @: &nbsp;View Item
-                            }
-                            else
-                            {
-                                <Icon Name="IconName.PlusCircle" />
-                                @: &nbsp;Add Item
-                            }
-                        </Button>
-                    }
-                    @if (CanEdit(Route))
-                    {
-                        <Button class="text-nowrap" Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                            <Icon Name="IconName.Eye" /> View
-                        </Button>
-                    }
+                        @if (CanCreate(Route))
+                        {
+                            <Button Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
+                                @if (context.IsFinished)
+                                {
+                                    <Icon Name="IconName.Eye" />
+                                    @: &nbsp;View Item
+                                }
+                                else
+                                {
+                                    <Icon Name="IconName.PlusCircle" />
+                                    @: &nbsp;Add Item
+                                }
+                            </Button>
+                        }
+                        else
+                        {
+                            <Button Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
+                                <Icon Name="IconName.Eye" />View Item
+                            </Button>
+                        }
+                        @if (CanEdit(Route))
+                        {
+                            <Button Class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                                <Icon Name="IconName.PencilSquare" />Edit
+                            </Button>
+                        }
                     </div>
                 </GridColumn>
             </Grid>
         }
     </div>
+}
 
-    @* --- Add/Edit Outward Modal --- *@
-    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large" UseStaticBackdrop>
-        <BodyTemplate>
-            <EditForm EditContext="@editContext" OnValidSubmit="SaveOutward">
-                <DataAnnotationsValidator />
-                <fieldset disabled="@isEditMode">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Outward Date <span class="text-danger">*</span></label>
-                            <InputDate class="form-control" @bind-Value="outward.OutwardDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
-                            <ValidationMessage For="@(() => outward.OutwardDate)" />
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
-                            <DropDown TItem="CompanyModel"
-                                      Items="@billCompanies"
-                                      SelectedId="@outward.BillToCompanyId"
-                                      ValueSelector="x => x.Id"
-                                      TextSelector="x => x.Name"
-                                      Placeholder="-- Select Company --"
-                                      OnValueChanged="OnBillToCompanySelected" />
-                            <ValidationMessage For="@(() => outward.BillToCompanyId)" />
-                        </div>
+@* --- Add/Edit Outward Modal --- *@
+<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large" UseStaticBackdrop>
+    <BodyTemplate>
+        <EditForm EditContext="@editContext" OnValidSubmit="SaveOutward">
+            <DataAnnotationsValidator />
+            <fieldset disabled="@disablefields">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Outward Date <span class="text-danger">*</span></label>
+                        <InputDate class="form-control" @bind-Value="outward.OutwardDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        <ValidationMessage For="@(() => outward.OutwardDate)" />
                     </div>
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label">Platform <span class="text-danger">*</span></label>
-                        <DropDown TItem="PlatformModel"
-                                  Items="@platforms"
-                                  SelectedId="@outward.PlatformId"
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
+                        <DropDown TItem="CompanyModel"
+                                  Items="@billCompanies"
+                                  SelectedId="@outward.BillToCompanyId"
                                   ValueSelector="x => x.Id"
                                   TextSelector="x => x.Name"
-                                  Placeholder="-- Select Platform --"
-                                  OnValueChanged="OnPlatformSelected" />
-                        <ValidationMessage For="@(() => outward.PlatformId)" />
+                                  Placeholder="-- Select Company --"
+                                  OnValueChanged="OnBillToCompanySelected" />
+                        <ValidationMessage For="@(() => outward.BillToCompanyId)" />
                     </div>
+                </div>
+                <div class="col-md-12 mb-3">
+                    <label class="form-label">Platform <span class="text-danger">*</span></label>
+                    <DropDown TItem="PlatformModel"
+                              Items="@platforms"
+                              SelectedId="@outward.PlatformId"
+                              ValueSelector="x => x.Id"
+                              TextSelector="x => x.Name"
+                              Placeholder="-- Select Platform --"
+                              OnValueChanged="OnPlatformSelected" />
+                    <ValidationMessage For="@(() => outward.PlatformId)" />
+                </div>
 
+                <div class="mb-3">
+                    <label class="form-label">Remarks</label>
+                    <InputTextArea class="form-control" rows="3" @bind-Value="outward.Remarks" />
+                </div>
+
+                @if (outward.Id > 0)
+                {
                     <div class="mb-3">
-                        <label class="form-label">Remarks</label>
-                        <InputTextArea class="form-control" rows="3" @bind-Value="outward.Remarks" />
-                    </div>
-
-                    @if (outward.Id > 0)
-                    {
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <InputCheckbox class="form-check-input" @bind-Value="outward.IsActive" id="isActive" />
-                                <label class="form-check-label" for="isActive">Active</label>
-                            </div>
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="outward.IsActive" id="isActive" />
+                            <label class="form-check-label" for="isActive">Active</label>
                         </div>
-                    }
-                    <div class="text-end mt-3">
-                        <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                        <Button Color="ButtonColor.Primary" Type="ButtonType.Submit"> @(outward.Id > 0 ? "Update" : "Next")</Button>
                     </div>
-                </fieldset>
-            </EditForm>
-        </BodyTemplate>
-    </Modal>
+                }
+                <div class="text-end mt-3">
+                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit"> @(outward.Id > 0 ? "Update" : "Next")</Button>
+                </div>
+            </fieldset>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
 
-    <Modal @ref="itemModal" Title="@($"Manage Items - {selectedOutward?.OutwardNo}")" Size="ModalSize.Regular" OnHidden="HideItemModal" UseStaticBackdrop>
-        <BodyTemplate>
-            @if (selectedOutward != null)
-            {
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <EditForm EditContext="@itemEditContext" OnValidSubmit="AddItemToList">
-                            <DataAnnotationsValidator />
+<Modal @ref="itemModal" Title="@($"Manage Items - {selectedOutward?.OutwardNo}")" Size="ModalSize.Regular" OnHidden="HideItemModal" UseStaticBackdrop>
+    <BodyTemplate>
+        @if (selectedOutward != null)
+        {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <EditForm EditContext="@itemEditContext" OnValidSubmit="AddItemToList">
+                        <DataAnnotationsValidator />
+                        <fieldset disabled="@disableitemfields">
                             @if (!selectedOutward.IsFinished)
                             {
                                 <div class="row">
@@ -221,73 +229,77 @@ else
                                     }
                                 </div>
                             }
-                        </EditForm>
-                    </div>
+                        </fieldset>
+                    </EditForm>
                 </div>
+            </div>
 
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Items List (@itemList.Count)</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                            <table class="table table-bordered table-striped table-hover mb-0">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 5%">#</th>
-                                        <th style="width: 15%">Barcode</th>
-                                        <th style="width: 45%">Product Name</th>
-                                        <th style="width: 10%">Unit</th>
-                                        @if (!selectedOutward.IsFinished)
-                                        {
-                                            <th style="width: 10%">Action</th>
-                                        }
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @if (itemList.Any())
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Items List (@itemList.Count)</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-bordered table-striped table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%">#</th>
+                                    <th style="width: 15%">Barcode</th>
+                                    <th style="width: 45%">Product Name</th>
+                                    <th style="width: 10%">Unit</th>
+                                    @if (!selectedOutward.IsFinished)
                                     {
-                                        @for (int i = itemList.Count - 1; i >= 0; i--)
-                                        {
-                                            var index = i;
-                                            var item = itemList[i];
-                                            <tr>
-                                                <td>@(index + 1)</td>
-                                                <td>@item.BarcodeNo</td>
-                                                <td>@item.ProductName</td>
-                                                <td>@item.Unit</td>
-                                                @if (!selectedOutward.IsFinished)
-                                                {
-                                                    <td>
-                                                        <Button Color="ButtonColor.Danger"
-                                                                Size="ButtonSize.Small"
-                                                                @onclick="() => RemoveItem(item)">
-                                                            <Icon Name="IconName.Trash" />
-                                                        </Button>
-                                                    </td>
-                                                }
-                                                else
-                                                {
-                                                    <td></td>
-                                                }
-                                            </tr>
-                                        }
+                                        <th style="width: 10%">Action</th>
                                     }
-                                    else
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (itemList.Any())
+                                {
+                                    @for (int i = 0; i<itemList.Count(); i++)
                                     {
+                                        var index = itemList.Count()-i;
+                                        var item = itemList[i];
                                         <tr>
-                                            <td colspan="6" class="text-center text-muted py-4">
-                                                No items added yet. Scan barcode to add items.
-                                            </td>
+                                            <td>@(index)</td>
+                                            <td>@item.BarcodeNo</td>
+                                            <td>@item.ProductName</td>
+                                            <td>@item.Unit</td>
+                                            @if (!selectedOutward.IsFinished)
+                                            {
+                                                <td>
+                                                    <fieldset disabled="@disableitemfields">
+                                                    <Button Color="ButtonColor.Danger"
+                                                            Size="ButtonSize.Small"
+                                                            @onclick="() => RemoveItem(item)">
+                                                        <Icon Name="IconName.Trash" />
+                                                    </Button>
+                                                    </fieldset>
+                                                </td>
+                                            }
+                                            else
+                                            {
+                                                <td></td>
+                                            }
                                         </tr>
                                     }
-                                </tbody>
-                            </table>
-                        </div>
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">
+                                            No items added yet. Scan barcode to add items.
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
                     </div>
                 </div>
+            </div>
 
-                <div class="d-flex justify-content-end gap-2 mt-3">
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <fieldset disabled="@disableitemfields">
                     @if (!selectedOutward.IsFinished)
                     {
                         <Button Color="ButtonColor.Primary" @onclick="() => FinalizeOutward(selectedOutward)">Finish</Button>
@@ -296,11 +308,12 @@ else
                     {
                         <Button Color="ButtonColor.Success" data-bs-toggle="tooltip" title="This outward is already finished">Finished</Button>
                     }
-                    <Button Color="ButtonColor.Secondary" @onclick="HideItemModal">Close</Button>
-                </div>
-            }
-        </BodyTemplate>
-    </Modal>
+                </fieldset>
+                <Button Color="ButtonColor.Secondary" @onclick="HideItemModal">Close</Button>
+            </div>
+        }
+    </BodyTemplate>
+</Modal>
 }
 @code {
     private Modal modal = default!;
@@ -324,6 +337,9 @@ else
     private bool isLoading = true;
     private string modalTitle = "Add Outward";
     private bool isEditMode = false;
+    private bool disablefields = true;
+    private bool disableitemfields = true;
+
     private bool isScanning = false;
 
     private bool showErrorMessage = false;
@@ -386,6 +402,7 @@ else
     {
         modalTitle = "Add New Outward";
         isEditMode = false;
+        disablefields = false;
         outward = new OutwardModel
         {
             OutwardDate = DateTime.Now,
@@ -399,8 +416,18 @@ else
 
     private async Task ShowEditModal(OutwardModel editOutward)
     {
-        modalTitle = "Edit Outward";
-        isEditMode = true;
+        if (CanEdit(Route) == true)
+        {
+            modalTitle = $"Edit Outward";
+            isEditMode = true;
+            disablefields = false;
+        }
+        else
+        {
+            modalTitle = $"View Outward";
+            isEditMode = true;
+            disablefields = true;
+        }
         outward = new OutwardModel
         {
             Id = editOutward.Id,
@@ -516,8 +543,16 @@ else
     {
         try
         {
+            if (CanCreate(Route))
+            {
+                disableitemfields = false;
+            }
+            else
+            {
+                disableitemfields = true;
+            }
             selectedOutward = outward;
-            itemList = await OutwardService.GetOutwardDetailsByOutwardIdAsync(outward.Id);
+            itemList = (await OutwardService.GetOutwardDetailsByOutwardIdAsync(outward.Id)).OrderByDescending(x => x.Id).ToList();
             newItem = new OutWardItemModel();
             barcodeErrorMessage = string.Empty;
             isScanning = false;
@@ -574,6 +609,7 @@ else
             if (item != null)
             {
                 itemList.Add(item);
+                itemList = itemList.OrderByDescending(x => x.Id).ToList();
                 newItem = new OutWardItemModel();
                 InitializeItemEditContext();
 
