@@ -10,10 +10,16 @@
 .nav-scrollable {
     height: calc(100vh - 3.5rem);
     overflow-y: auto;
+    overflow-x: visible; /* <-- IMPORTANT */
+}
+
+/*.nav-scrollable {
+    height: calc(100vh - 3.5rem);
+    overflow-y: auto;
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
-}
+}*/
 
     /* Custom scrollbar for nav */
     .nav-scrollable::-webkit-scrollbar {

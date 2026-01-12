@@ -41,22 +41,24 @@ else
                   Data="categoryList"
                   AllowPaging="true"
                   PageSize="10"
-                  Responsive="true">
+                  Responsive="true"
+                  AllowSorting="true"
+                  AllowFiltering="true">
 
 
-                <GridColumn TItem="CategoryModel" HeaderText="No">
+                <GridColumn TItem="CategoryModel" HeaderText="No" Filterable=false>
                     @(categoryList.IndexOf(context) + 1)
                 </GridColumn>
 
-                <GridColumn TItem="CategoryModel" HeaderText="Name" PropertyName="Name">
+                <GridColumn TItem="CategoryModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="100">
                     @context.Name
                 </GridColumn>
 
-                <GridColumn TItem="CategoryModel" HeaderText="Description" PropertyName="Description">
+                <GridColumn TItem="CategoryModel" HeaderText="Description" PropertyName="Description" Filterable=false>
                     @context.Description
                 </GridColumn>
 
-                <GridColumn TItem="CategoryModel" HeaderText="Status" PropertyName="IsActive">
+                <GridColumn TItem="CategoryModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive" Sortable=false>
                     @if (context.IsActive)
                     {
                         <Badge Color="BadgeColor.Success">Active</Badge>
@@ -67,17 +69,17 @@ else
                     }
                 </GridColumn>
 
-                <GridColumn TItem="CategoryModel" HeaderText="Actions">
+                <GridColumn TItem="CategoryModel" HeaderText="Actions" Filterable=false>
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {
-                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                            <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                                 <Icon Name="IconName.PencilSquare" /> Edit
                             </Button>
                         }
                         @if (CanDelete(Route))
                         {
-                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCategory(context.Id)">
+                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCategory(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
                             </Button>
                         }
@@ -93,7 +95,7 @@ else
                 <DataAnnotationsValidator />
 
                 <div class="mb-3">
-                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                    <label class="form-label">Category Name <span class="text-danger">*</span></label>
                     <InputText class="form-control" @bind-Value="categoryModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
                     <ValidationMessage For="@(() => categoryModel.Name)" />
                 </div>
@@ -267,7 +269,7 @@ else
         messageStore.Clear();
         if (string.IsNullOrWhiteSpace(categoryModel.Name))
         {
-            messageStore.Add(() => categoryModel.Name, "Name is required.");
+            messageStore.Add(() => categoryModel.Name, "Category name is required.");
             editContext.NotifyValidationStateChanged();
         }
 

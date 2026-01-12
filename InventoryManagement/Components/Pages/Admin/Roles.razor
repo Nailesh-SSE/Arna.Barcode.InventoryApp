@@ -52,26 +52,28 @@ else
                   AllowPaging="true"
                   PageSize="10"
                   Responsive="true"
+                  AllowFiltering="true"
+                  AllowSorting="true"
                   @ref=roleGrid>
 
-                <GridColumn TItem="RoleModel" HeaderText="No">
+                <GridColumn TItem="RoleModel" HeaderText="No" Filterable=false>
                     @(roleList.IndexOf(context) + 1)
                 </GridColumn>
-                <GridColumn TItem="RoleModel" HeaderText="Name" PropertyName="Name">
+                <GridColumn TItem="RoleModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="100">
                     @context.Name
                 </GridColumn>
-                <GridColumn TItem="RoleModel" HeaderText="Description" PropertyName="Description">
+                <GridColumn TItem="RoleModel" HeaderText="Description" PropertyName="Description" Filterable=false>
                     @context.Description
                 </GridColumn>
                 @if (isShowRoleLevel)
                 {
-                    <GridColumn TItem="RoleModel" HeaderText="Role Level">
+                    <GridColumn TItem="RoleModel" HeaderText="Role Level" PropertyName="RoleLevel" SortString="RoleLevel" SortKeySelector="item => item.RoleLevel" FilterTextboxWidth="80">
                         <span style="color:@(context.RoleLevel < 5 ? "red" : "")">
                             @context.RoleLevel
                         </span>
                     </GridColumn>
                 }
-                <GridColumn TItem="RoleModel" HeaderText="Status" PropertyName="IsActive">
+                <GridColumn TItem="RoleModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive" Sortable=false>
                     @if (context.IsActive)
                     {
                         <Badge Color="BadgeColor.Success">Active</Badge>
@@ -82,18 +84,18 @@ else
                     }
                 </GridColumn>
 
-                <GridColumn TItem="RoleModel" HeaderText="Actions">
+                <GridColumn TItem="RoleModel" HeaderText="Actions" Filterable=false>
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {
-                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                            <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                                 <Icon Name="IconName.PencilSquare" /> Edit
                             </Button>
                         }
 
                         @if (CanDelete(Route))
                         {
-                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteRole(context.Id)">
+                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteRole(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
                             </Button>
                         }
@@ -119,7 +121,7 @@ else
                 {
                     <div class="row">
                         <div class="col-12 mb-3">
-                            <label class="form-label">Role Level <span class="text-danger">*</span></label>
+                            <label class="form-label">Role Level </label>
                             <InputNumber class="form-control" @bind-Value="roleModel.RoleLevel" min="0" />
                         </div>
                     </div>

@@ -1,4 +1,6 @@
+using EnumsNET;
 using InventoryManagement.Core.Entities;
+using InventoryManagement.Core.Enums;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
@@ -18,9 +20,10 @@ public class OutwardService : IOutwardService
     public async Task<List<OutwardModel>> GetAllOutwardsAsync()
     {
         var outwardRepository = _unitOfWork.GetRepository<Outward>();
-
         var outwards = await outwardRepository
                              .GetQueryable()
+                             .Include(x=>x.BillToCompany)
+                             .Include(x=>x.Platform)
                              .Where(o => !o.IsDeleted)
                              .OrderByDescending(o => o.OutwardDate)
                              .ThenByDescending(o => o.Id)
@@ -45,18 +48,20 @@ public class OutwardService : IOutwardService
             await _unitOfWork.BeginTransactionAsync();
 
             var outwardRepository = _unitOfWork.GetRepository<Outward>();
-            await GenerateOutwardNumberAsync(model);
-
+            if (string.IsNullOrEmpty(model.OutwardNo))
+            {
+                model.OutwardNo = await GenerateOutwardNumberAsync(model.OutwardDate);
+            }
             var newOutward = new Outward
             {
                 OutwardNo = model.OutwardNo,
                 OutwardDate = model.OutwardDate,
                 BillToCompanyId = model.BillToCompanyId,
                 PlatformId = model.PlatformId,
-                Remarks = model.Remarks,    
+                Remarks = model.Remarks,
                 IsActive = true,
                 IsDeleted = false,
-                IsFinished =false,
+                IsFinished = false,
                 CreatedBy = model.CreatedBy,
                 CreatedOn = model.CreatedOn
             };
@@ -222,7 +227,7 @@ public class OutwardService : IOutwardService
         return new BarcodeValidationResult { IsValid = true };
     }
 
-    public async Task<OutWardItemModel?> AddOutwardItemAsync(int outwardId, string barcodeNo,int userid)
+    public async Task<OutWardItemModel?> AddOutwardItemAsync(int outwardId, string barcodeNo, int userid)
     {
         try
         {
@@ -250,12 +255,12 @@ public class OutwardService : IOutwardService
                 OutwardId = outwardId,
                 ProductId = inwardItem.ProductId,
                 Quantity = 1,
-                Unit = inwardItem.InwardUnitName,
+                Unit = barcodeItem.ParentId > 0 ? UnitType.PCS.GetName() : inwardItem.InwardUnitName,
                 BarcodeNo = barcodeNo,
-                CreatedOn=DateTime.UtcNow,
-                CreatedBy=userid,
+                CreatedOn = DateTime.UtcNow,
+                CreatedBy = userid,
                 IsDeleted = false,
-                IsActive= true
+                IsActive = true
             };
 
             await detailRepository.AddAsync(newDetail);
@@ -271,10 +276,10 @@ public class OutwardService : IOutwardService
                 Id = newDetail.Id,
                 OutwardId = outwardId,
                 ProductId = inwardItem.ProductId,
-                ProductName = product?.SKU?? "Unknown",
+                ProductName = product?.SKU ?? "Unknown",
                 BarcodeNo = barcodeNo,
                 Quantity = 1,
-                Unit = inwardItem.InwardUnitName
+                Unit = newDetail.Unit
             };
         }
         catch
@@ -316,11 +321,35 @@ public class OutwardService : IOutwardService
     }
 
     private async Task UpdateBarcodeStockStatus(string barcodeNo, bool isInStock)
-    {
+        {
         var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
-        var barcodeItem = (await barcodeItemRepository.FindAsync(bi =>
-            bi.BarcodeNo == barcodeNo && !bi.IsDeleted)).FirstOrDefault();
+    
+        var barcodeItem = (await barcodeItemRepository.FindWithIncludesAsync(
+            bi => bi.BarcodeNo == barcodeNo && !bi.IsDeleted,
+            bi => bi.InwardItem
+        )).FirstOrDefault();
 
+        if (barcodeItem == null) return;
+
+        //Only if Box and it has Child Items
+        if ((barcodeItem?.ParentId == 0 || barcodeItem?.ParentId == null)
+            && barcodeItem?.InwardItem.InwardUnitId == (int)UnitType.BOX
+            && barcodeItem.InwardItem.BoxQuantity >= 0)
+        {
+            var detailRepository = _unitOfWork.GetRepository<OutwardDetail>();
+            var childBarcodes = await barcodeItemRepository.FindAsync(bi =>
+               bi.ParentId == barcodeItem.Id
+               && !bi.IsDeleted
+               && !detailRepository.GetQueryable().Any(od => od.BarcodeNo == bi.BarcodeNo && !od.IsDeleted)
+           );
+
+            foreach (var item in childBarcodes)
+            {
+                item.IsInStock = isInStock;
+                barcodeItemRepository.Update(item);
+            }
+        }
+        //Update Single Barcode
         if (barcodeItem != null)
         {
             barcodeItem.IsInStock = isInStock;
@@ -328,25 +357,23 @@ public class OutwardService : IOutwardService
         }
     }
 
-    private async Task GenerateOutwardNumberAsync(OutwardModel model)
+    private async Task<string> GenerateOutwardNumberAsync(DateTime outwardDate)
     {
-        var repository = _unitOfWork.GetRepository<Outward>();
-        var outwards = await repository.GetAllAsync();
-        var lastOutward = outwards
-            .Where(a => a.IsActive && !a.IsDeleted)
-            .OrderByDescending(a => a.Id)
-            .FirstOrDefault();
+        var outwardRepo = _unitOfWork.GetRepository<Outward>();
+        var (startYear, endYear) = GetFinancialYear(outwardDate);
+        var count = await outwardRepo.CountAsync();
+        count++;
 
-        if (lastOutward != null && int.TryParse(lastOutward.OutwardNo, out int lastNumber))
-        {
-            model.OutwardNo = (lastNumber + 1).ToString("D6");
-        }
-        else
-        {
-            model.OutwardNo = "000001";
-        }
+        return $"OT-{startYear % 100}-{endYear % 100}/{count}";
     }
-
+    private (int startYear, int endYear) GetFinancialYear(DateTime date)
+    {
+        int year = date.Year;
+        if (date.Month < 4)
+            return (year - 1, year);
+        else
+            return (year, year + 1);
+    }
     private OutwardModel MapToModel(Outward entity)
     {
         return new OutwardModel
@@ -356,9 +383,11 @@ public class OutwardService : IOutwardService
             OutwardDate = entity.OutwardDate,
             BillToCompanyId = entity.BillToCompanyId,
             PlatformId = entity.PlatformId,
+            platformName = entity.Platform.Name ?? string.Empty,
             Remarks = entity.Remarks,
+            BillToCompanyName = entity.BillToCompany.Name ?? string.Empty,
             IsActive = entity.IsActive,
-            IsFinished=entity.IsFinished
+            IsFinished = entity.IsFinished
         };
     }
 }

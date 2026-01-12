@@ -132,3 +132,16 @@
         transform: translateY(0);
     }
 }
+
+/*.modal,
+.modal-dialog,
+.modal-content {
+    overflow: visible !important;
+}*/
+
+.dropdown-menu {
+    position: fixed !important;
+    z-index: 2050 !important;
+    min-width: max-content;
+    white-space: nowrap;
+}

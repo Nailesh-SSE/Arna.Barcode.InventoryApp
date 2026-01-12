@@ -5,25 +5,31 @@
           AllowPaging="true"
           PageSize="10"
           Responsive="true"
+          AllowFiltering="true"
+          AllowSorting="true"
           @ref="InwardGrid">
 
-        <GridColumn TItem="InwardModel" HeaderText="No">
+        <GridColumn TItem="InwardModel" HeaderText="No" Filterable=false>
             @(Inwards.IndexOf(context) + 1)
         </GridColumn>
 
-        <GridColumn TItem="InwardModel" HeaderText="Inward No" PropertyName="InwardNo">
+        <GridColumn TItem="InwardModel" HeaderText="Inward No" PropertyName="InwardNo" SortString="InwardNo" SortKeySelector="item => item.InwardNo" FilterTextboxWidth="100">
             @context.InwardNo
         </GridColumn>
 
-        <GridColumn TItem="InwardModel" HeaderText="Inward Date/Time">
+        <GridColumn TItem="InwardModel" HeaderText="Inward Date/Time" PropertyName="InwardDateOnly" SortString="InwardDateOnly" SortKeySelector="item => item.InwardDateOnly" FilterTextboxWidth="130">
             @context.InwardDate.ToString("dd/MM/yyyy hh:mm tt")
         </GridColumn>
 
-        <GridColumn TItem="InwardModel" HeaderText="Ship Company">
-            @(ShipCompanies.FirstOrDefault(c => c.Id == context.ShipMentCompanyId)?.Name.ToUpper() ?? "N/A")
+        <GridColumn TItem="InwardModel" HeaderText="Ship Company" PropertyName="ShipMentCompanyName" SortString="ShipMentCompanyName" SortKeySelector="item => item.ShipMentCompanyName" FilterTextboxWidth="100">
+            @context.ShipMentCompanyName.ToUpper()
         </GridColumn>
 
-        <GridColumn TItem="InwardModel" HeaderText="Status">
+        <GridColumn TItem="InwardModel" HeaderText="Category">
+            @(Categories.FirstOrDefault(c => c.Id == context.CategoryId)?.Name.ToUpper() ?? "All")
+        </GridColumn>
+
+        <GridColumn TItem="InwardModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive" Sortable=false>
             @if (context.IsActive)
             {
                 <Badge Color="BadgeColor.Success">Active</Badge>
@@ -34,16 +40,25 @@
             }
         </GridColumn>
 
-        <GridColumn TItem="InwardModel" HeaderText="Actions">
-            <div class="d-flex flex-wrap gap-1">
-                <Button Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
-                    <Icon Name="IconName.Plus" /> Add Items
-                </Button>
+        <GridColumn TItem="InwardModel" HeaderText="Actions" Filterable=false>
+            <div class="d-flex gap-1">
+                @if (CanCreate)
+                {
+                    <Button Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
+                        <Icon Name="IconName.Plus" /> Add Items
+                    </Button>
+                }
+                else
+                {
+                    <Button Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
+                        <Icon Name="IconName.Eye" /> View Items
+                    </Button>
+                }
                 @if (CanEdit)
                 {
-                    <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => OnEdit.InvokeAsync(context)">
-                        <Icon Name="IconName.Eye" /> View
-                </Button>
+                    <Button Class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => OnEdit.InvokeAsync(context)">
+                        <Icon Name="IconName.PencilSquare" /> Edit
+                    </Button>
                 }
                 @*
                 @if (CanEdit)
@@ -62,9 +77,11 @@
     private Grid<InwardModel>? InwardGrid;
     [Parameter] public List<InwardModel> Inwards { get; set; } = new();
     [Parameter] public List<CompanyModel> ShipCompanies { get; set; } = new();
+    [Parameter] public List<CategoryModel> Categories { get; set; } = new();
     [Parameter] public EventCallback<InwardModel> OnEdit { get; set; }
     [Parameter] public EventCallback<int> OnDelete { get; set; }
     [Parameter] public EventCallback<InwardModel?> OnAddItems { get; set; }
-    [Parameter] public bool CanEdit { get; set;}
+    [Parameter] public bool CanEdit { get; set; }
     [Parameter] public bool CanDelete { get; set; }
+    [Parameter] public bool CanCreate { get; set; }
 }

@@ -40,19 +40,21 @@ else
                   AllowPaging="true"
                   PageSize="10"
                   Responsive="true"
+                  AllowFiltering="true"
+                  AllowSorting="true"
                   @ref=ColourGrid>
 
-                <GridColumn TItem="ColourModel" HeaderText="No">
+                <GridColumn TItem="ColourModel" HeaderText="No" Filterable=false>
                     @(colourList.IndexOf(context) + 1)
                 </GridColumn>
-                <GridColumn TItem="ColourModel" HeaderText="Name" PropertyName="Name">
+                <GridColumn TItem="ColourModel" HeaderText="Name" PropertyName="Name" SortKeySelector="item => item.Name" SortString="Name" FilterTextboxWidth="100">
                     @context.Name
                 </GridColumn>
-                <GridColumn TItem="ColourModel" HeaderText="Code" PropertyName="Code">
+                <GridColumn TItem="ColourModel" HeaderText="Code" PropertyName="Code" SortKeySelector="item => item.Code" SortString="Code" FilterTextboxWidth="100">
                     @context.Code
                 </GridColumn>
 
-                <GridColumn TItem="ColourModel" HeaderText="Status" PropertyName="IsActive">
+                <GridColumn TItem="ColourModel" HeaderText="Status" PropertyName="IsActive" SortKeySelector="item => item.IsActive" SortString="IsActive" Sortable=false>
                     @if (context.IsActive)
                     {
                         <Badge Color="BadgeColor.Success">Active</Badge>
@@ -63,18 +65,18 @@ else
                     }
                 </GridColumn>
 
-                <GridColumn TItem="ColourModel" HeaderText="Actions">
+                <GridColumn TItem="ColourModel" HeaderText="Actions" Filterable=false>
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {
-                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                            <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                                 <Icon Name="IconName.PencilSquare" /> Edit
                             </Button>
                         }
 
                         @if (CanDelete(Route))
                         {
-                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteColour(context.Id)">
+                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteColour(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
                             </Button>
                         }
@@ -91,12 +93,12 @@ else
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <label class="form-label">Color Name <span class="text-danger">*</span></label>
                         <InputText class="form-control" @bind-Value="colourModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
                         <ValidationMessage For="@(() => colourModel.Name)" />
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Code <span class="text-danger">*</span> </label>
+                        <label class="form-label">Color Code <span class="text-danger">*</span> </label>
                         <InputText class="form-control" @bind-Value="colourModel.Code" @oninput="(e) => HandleCodeChangeAsync(e.Value?.ToString())" />
                         <ValidationMessage For="@(() => colourModel.Code)" />
                     </div>
@@ -239,7 +241,7 @@ else
             var isColourCodeUnique = await ColourService.IsColourCodeUnique(colourModel.Code, colourModel.Id);
             if (!isColourCodeUnique)
             {
-                validationMessage.Add(() => colourModel.Code, "This Code Already Exists");
+                validationMessage.Add(() => colourModel.Code, "Color Code Already Exists");
 
             }
             editContext.NotifyValidationStateChanged();
@@ -253,7 +255,7 @@ else
             var isColourNameUnique = await ColourService.IsColourNameUnique(colourModel.Name, colourModel.Id);
             if (!isColourNameUnique)
             {
-                validationMessage.Add(() => colourModel.Name, "This Name Already Exists");
+                validationMessage.Add(() => colourModel.Name, "Color Name Already Exists");
 
             }
             editContext.NotifyValidationStateChanged();

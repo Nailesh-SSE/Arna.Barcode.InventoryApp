@@ -60,33 +60,35 @@ else
                       AllowPaging="true"
                       PageSize="10"
                       Responsive="true"
+                      AllowFiltering="true"
+                      AllowSorting="true"
                       @ref="FormGrid">
 
-                    <GridColumn TItem="FormMasterModel" HeaderText="No">
+                    <GridColumn TItem="FormMasterModel" HeaderText="No" Filterable=false>
                         @(formList.IndexOf(context) + 1)
                     </GridColumn>
 
-                    <GridColumn TItem="FormMasterModel" HeaderText="Form Name" PropertyName="FormName">
+                    <GridColumn TItem="FormMasterModel" HeaderText="Form Name" PropertyName="FormName" SortString="FormName" SortKeySelector="item => item.FormName" FilterTextboxWidth="100">
                         @context.FormName
                     </GridColumn>
 
-                    <GridColumn TItem="FormMasterModel" HeaderText="Route" PropertyName="Route">
+                    <GridColumn TItem="FormMasterModel" HeaderText="Route" PropertyName="Route" SortString="Route" SortKeySelector="item => item.Route" FilterTextboxWidth="100">
                         @context.Route
                     </GridColumn>
 
-                    <GridColumn TItem="FormMasterModel" HeaderText="ParentForm" PropertyName="ParentId">
+                    <GridColumn TItem="FormMasterModel" HeaderText="ParentForm" PropertyName="ParentName" SortString="ParentName" SortKeySelector="item => item.ParentName" FilterTextboxWidth="100">
                         @context.ParentName
                     </GridColumn>
 
-                    <GridColumn TItem="FormMasterModel" HeaderText="DisplayIndex" PropertyName="DisplayIndex">
+                    <GridColumn TItem="FormMasterModel" HeaderText="DisplayIndex" PropertyName="DisplayIndex" SortString="DisplayIndex" SortKeySelector="item => item.DisplayIndex" FilterTextboxWidth="60">
                         @context.DisplayIndex
                     </GridColumn>
 
-                    <GridColumn TItem="FormMasterModel" HeaderText="Actions">
+                    <GridColumn TItem="FormMasterModel" HeaderText="Actions" Filterable=false>
                         <div class="d-flex gap-1 justify-content-start">
                             @if (CanEdit(Route))
                             {
-                                <Button Color="ButtonColor.Warning"
+                                <Button class="text-nowrap" Color="ButtonColor.Warning"
                                         Size="ButtonSize.Small"
                                         @onclick="() => ShowEditModal(context)">
                                     <Icon Name="IconName.PencilSquare" /> Edit
@@ -94,7 +96,7 @@ else
                             }
                             @if (CanDelete(Route))
                             {
-                                <Button Color="ButtonColor.Danger"
+                                <Button class="text-nowrap" Color="ButtonColor.Danger"
                                         Size="ButtonSize.Small"
                                         @onclick="() => DeleteForm(context.Id)">
                                     <Icon Name="IconName.Trash" /> Delete
@@ -153,7 +155,7 @@ else
                         DisplayIndex <span class="text-danger">*</span>
                     </label>
                     <InputNumber class="form-control"
-                                 @bind-Value="formModel.DisplayIndex" min="1"
+                                 @bind-Value="formModel.DisplayIndex"
                                  @oninput="HandleDisplayIndexChangeAsync" />
                     <ValidationMessage For="@(() => formModel.DisplayIndex)" />
                 </div>
@@ -329,7 +331,7 @@ else
         validationMessage.Clear(() => formModel.DisplayIndex);
         if (formModel.DisplayIndex == 0)
         {
-            validationMessage.Add(() => formModel.DisplayIndex, "Please select DisplayIndex");
+            validationMessage.Add(() => formModel.DisplayIndex, "Display index must greter than 0");
         }
         editContext.NotifyValidationStateChanged();
     }

@@ -2,7 +2,7 @@
     <BodyTemplate>
         <EditForm EditContext="@editContext" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator />
-            <fieldset disabled="@IsEditMode">
+            <fieldset disabled="@DisableFields">
                 <div class="modal-content-custom">
                     <div class="modal-body-section">
                         <div class="row g-2">
@@ -20,6 +20,7 @@
                             </div>
 
                             <div class="col-md-6">
+                                <fieldset disabled="@IsEditMode">
                                 <label class="form-label">Ship Company <span class="text-danger">*</span></label>
                                 <DropDown TItem="CompanyModel"
                                           Items="@ShipCompanies"
@@ -29,9 +30,11 @@
                                           Placeholder="-- Select Company --"
                                           OnValueChanged="OnShipMentCompanySelected" />
                                 <ValidationMessage For="@(() => Inward.ShipMentCompanyId)" />
+                                </fieldset>
                             </div>
 
                             <div class="col-md-6">
+                                <fieldset disabled="@IsEditMode">
                                 <label class="form-label">Category</label>
                                 <DropDown TItem="CategoryModel"
                                           Items="@Categories"
@@ -40,6 +43,7 @@
                                           TextSelector="x => x.Name"
                                           Placeholder="-- All Categories --"
                                           OnValueChanged="OnCategorySelected" />
+                                </fieldset>
                             </div>
                         </div>
 
@@ -86,6 +90,7 @@
     [Parameter] public EventCallback OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public bool DisableFields { get; set; }
 
     protected override void OnParametersSet()
     {

@@ -1,7 +1,7 @@
 ﻿@using InventoryManagement.Services.DTO
 @inject IJSRuntime JS
-
-<Modal @ref="modal" Title="@Title" Size="ModalSize.ExtraLarge" UseStaticBackdrop>
+@implements IAsyncDisposable
+<Modal @ref="modal" Title="@Title" Size="ModalSize.ExtraLarge" UseStaticBackdrop OnHidden="@Hide">
     <BodyTemplate>
         <div class="p-2">
 
@@ -21,38 +21,42 @@
                 </div>
             }
         </div>
+        <fieldset disabled="@DisableFields">
             <div class="col-12 mb-2">
                 <div class="position-relative">
 
-                    @if (isScanning)
-                    {
-                        <button type="button"
-                                class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2"
-                                title="Close Camera"
-                                style="z-index: 10;"
-                                @onclick="CloseCamera">
-                            <Icon Name="IconName.XCircle" />
-                        </button>
+                @if (isScanning)
+                {
+                    <button type="button"
+                            class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2"
+                            title="Close Camera"
+                            style="z-index: 10;"
+                            @onclick="CloseCamera">
+                        <Icon Name="IconName.XCircle" />
+                    </button>
                     <div class="scanner-wrapper">
                         <div id="reader"></div>
                     </div>
-                    }
-                </div>
-            <!-- BARCODE SECTION -->
-            <div class="d-flex align-items-center gap-2 mb-3 flex-nowrap">
-                <InputText class="form-control flex-grow-1"
-                           placeholder="Enter Barcode"
-                           @bind-Value="ItemsModel.BarCodeNo" />
-
-                <button type="button"
-                        class="btn btn-secondary d-flex align-items-center gap-1"
-                        @onclick="StartCameraScan"
-                        disabled="@isScanning">
-                    <Icon Name="IconName.Camera" /> Scan
-                </button>
-
-                <Button Class="btn btn-dark" @onclick="HandleBarcode">Validate</Button>
+                }
             </div>
+            @if (CanCreate)
+            {
+                <!-- BARCODE SECTION -->
+                <div class="d-flex align-items-center gap-2 mb-3 flex-nowrap">
+                    <InputText class="form-control flex-grow-1"
+                               placeholder="Enter Barcode"
+                               @bind-Value="ItemsModel.BarCodeNo" />
+
+                    <button type="button"
+                            class="btn btn-secondary d-flex align-items-center gap-1"
+                            @onclick="StartCameraScan"
+                            disabled="@isScanning">
+                        <Icon Name="IconName.Camera" /> Scan
+                    </button>
+
+                    <Button Class="btn btn-dark" @onclick="HandleBarcode">Validate</Button>
+                </div>          
+            }       
 
             <!-- ITEMS TABLE -->
             @if (ItemsList.Any())
@@ -75,8 +79,18 @@
 
                         <tbody>
                             @foreach (var item in ItemsList)
-                            {
-                                <tr>
+                            {                              
+                                    bool isLocked = item.Id > 0 && item.IsTakeInStock;
+                                    bool noPermission = !CanCreate;
+                                    bool isDisabled = isLocked || noPermission;
+                                
+
+                                <tr class="@(isDisabled ? "table-success text-muted disabled-row" : "")"
+                                    title="@(isLocked
+                                                ? "This item is already taken in stock. You cannot edit it."
+                                                : noPermission
+                                                    ? "You do not have permission to perform this action."
+                                                    : "")">
                                     <!-- PRODUCT -->
                                     @* <td>
                                         <InputSelect class="form-select" @bind-Value="@item.ProductId">
@@ -91,9 +105,6 @@
                                             <small class="text-danger">Required</small>
                                         }
                                     </td> *@
-                                    <!-- PRODUCT -->
-                                    <td>
-                                                  <!-- PRODUCT -->
                                     <td>
                                         <SearchableDropdown TItem="ProductModel"
                                                             Items="@ProductList"
@@ -102,10 +113,7 @@
                                                             Placeholder="Search product..."
                                                             OnItemSelected="@(p => OnProductDropdownSelected(item, p))"
                                                             ShowValidationMessage="@(showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))"
-                                                             />
-
-                                    
-                                    </td>
+                                                            IsDisabled="@isDisabled" />
                                         @if (showValidation && item.ProductId == 0)
                                         {
                                             <small class="text-danger">Required</small>
@@ -114,7 +122,7 @@
 
                                     <!-- SHIP TO -->
                                     <td>
-                                        <InputSelect class="form-select" @bind-Value="@item.ShipToCompanyId">
+                                        <InputSelect class="form-select" @bind-Value="@item.ShipToCompanyId" disabled="@isDisabled">
                                             <option value="0">Select</option>
                                             @foreach (var ship in CompanyList)
                                             {
@@ -129,7 +137,7 @@
 
                                     <!-- UNIT -->
                                     <td>
-                                        <InputSelect class="form-select" @bind-Value="@item.UnitId">
+                                        <InputSelect class="form-select" @bind-Value="@item.UnitId" disabled="@isDisabled">
                                             <option value="0">Select</option>
                                             @foreach (var unit in Units)
                                             {
@@ -144,7 +152,7 @@
 
                                     <!-- QTY (NARROW) -->
                                     <td class="col-1">
-                                        <InputNumber class="form-control p-1" min="1" @bind-Value="@item.ReturnQuantity" />
+                                        <InputNumber class="form-control p-1" min="1" @bind-Value="@item.ReturnQuantity" disabled="@isDisabled" />
                                         @if (showValidation && item.ReturnQuantity <= 0 && IsLastUnsavedItem(item))
                                         {
                                             <small class="text-danger">Min 1</small>
@@ -161,19 +169,19 @@
                                             }
                                         </InputSelect>
                                     </td> *@
-                                    <td style="width:150px;">
+                                    <td style="width:100px;">
                                         <SearchableDropdown TItem="OutwardModel"
                                                             Items="OutwardList"
                                                             ItemTextSelector="@(o => o.OutwardNo)"
                                                             SelectedText="@item.OutwardSearchText"
                                                             Placeholder="Search Outward..."
                                                             OnItemSelected="@(o => OnOutwardDropdownSelected(item, o))"
-                                                              />
+                                                            IsDisabled="@isDisabled" />
                                     </td>
 
                                     <!-- RETURN TYPE -->
                                     <td>
-                                        <InputSelect class="form-select" @bind-Value="@item.ReturnType">
+                                        <InputSelect class="form-select" @bind-Value="@item.ReturnType" disabled="@isDisabled">
                                             <option value="0">Select</option>
                                             @foreach (var type in Enum.GetValues(typeof(ReturnType)))
                                             {
@@ -190,7 +198,8 @@
                                     <td>
                                         <InputSelect TValue="bool"
                                                      class="form-select"
-                                                     @bind-Value="item.IsTakeInStock">
+                                                     @bind-Value="item.IsTakeInStock"
+                                                     disabled="@isDisabled">
 
                                             <option value="true">Yes</option>
                                             <option value="false">No</option>
@@ -200,24 +209,29 @@
 
                                     <!-- REASON -->
                                     <td class="col-1">
-                                        <InputText class="form-control" @bind-Value="@item.ReasonToReturn" />
+                                        <InputText class="form-control" @bind-Value="@item.ReasonToReturn" disabled="@isDisabled" />
                                     </td>
 
                                     <!-- ACTION (ONE LINE, TIGHT) -->
                                     <td class="text-center">
                                         <div class="d-flex align-items-center justify-content-center gap-1">
-                                            <Button Class="btn btn-success btn-sm p-1" title="Save"
-                                                    @onclick="(() => HandleSubmit(item))">
-                                                <Icon Name="IconName.Floppy" />
-                                            </Button>
+                                            @if (CanCreate)
+                                            {
+                                                <Button Class="btn btn-success btn-sm p-1" title="Save"
+                                                        @onclick="(() => HandleSubmit(item))" disabled="@isDisabled">
+                                                    <Icon Name="IconName.Floppy" />
+                                                </Button>
+                                            }
 
                                             @if (item.Id > 0)
                                             {
-
-                                                <Button Class="btn btn-danger btn-sm p-1" title="Delete"
-                                                        @onclick="(() => HandleDelete(item.Id))">
-                                                    <Icon Name="IconName.Trash" />
-                                                </Button>
+                                                @if (CanDelete)
+                                                {
+                                                    <Button Class="btn btn-danger btn-sm p-1" title="Delete"
+                                                            @onclick="(() => HandleDelete(item.Id))">
+                                                        <Icon Name="IconName.Trash" />
+                                                    </Button>
+                                                }
                                             }
                                             else
                                             {
@@ -233,7 +247,7 @@
                             }
                         </tbody>
                     </table>
-                    <div class="text-end mt-3">                    
+                    <div class="text-end mt-3">
                         <button type="button"
                                 disabled="@hideAddNewButton"
                                 class="btn btn-success "
@@ -250,7 +264,6 @@
                     No items added yet. Click "Add Item" to get started.
                 </div>
                 <div class="text-end mt-3">
-                    <button type="button" class="btn btn-secondary me-2" @onclick="HandleClose">Cancel</button>
                     <button type="button"
                             disabled="@hideAddNewButton"
                             class="btn btn-success "
@@ -259,10 +272,11 @@
                     </button>
                 </div>
             }
-            <div class ="text-start mt-3">
+            <div class="text-start mt-3">
                 <button type="button" class="btn btn-secondary me-2" @onclick="HandleClose">Close</button>
-            </div>           
+            </div>
         </div>
+        </fieldset>
     </BodyTemplate>
 </Modal>
 
@@ -292,7 +306,9 @@
 
     private System.Threading.Timer? errorTimer;
     public List<UnitModel> Units => CommonUtils.UnitList;
-
+    [Parameter] public bool CanCreate { get; set; }
+    [Parameter] public bool CanDelete { get; set; }
+    [Parameter] public bool CanEdit { get; set; }
 
     [Parameter] public EventCallback<SaleReturnItemsModel> OnSave { get; set; }
     [Parameter] public EventCallback<OperationResponse> OnSaveResponse { get; set; }
@@ -301,7 +317,9 @@
     [Parameter] public EventCallback AddItemRow { get; set; }
     [Parameter] public EventCallback OnBarcodeVal { get; set; }
     [Parameter] public EventCallback<SaleReturnItemsModel> RemoveItemRow { get; set; }
-
+    
+    [Parameter] public bool DisableFields { get; set; }
+    
     // protected override void OnParametersSet()
     // {
     //     InitializeEditContext();
@@ -351,6 +369,9 @@
 
     private async Task HandleDelete(int itemId)
     {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Delete this item?");
+
+        if (!confirmed) return;
         if (itemId == 0)
         {
             return;
@@ -360,15 +381,34 @@
     }
     public async Task HandleResponse(OperationResponse ResponseDto)
     {
-        if(ResponseDto.IsSuccess)
+        if (ResponseDto.IsSuccess)
         {
             successMessage = ResponseDto.Message;
+            _ = AutoHideAlertAsync();
         }
         else
         {
             errorMessage = ResponseDto.Message;
+            _ = AutoHideAlertAsync();
         }
+    }
+    private void ShowSuccessMessage(string message)
+    {
 
+        successMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+    private void ShowErrorMessage(string message)
+    {
+        errorMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+    private async Task AutoHideAlertAsync()
+    {
+        await Task.Delay(4500);
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        await InvokeAsync(StateHasChanged);
     }
     private async Task HandleAddItem()
     {
@@ -398,15 +438,15 @@
 
         if (string.IsNullOrWhiteSpace(barcode))
         {
-            errorMessage = "Barcode is required.";
-            return ;
+            ShowErrorMessage("Barcode is required.");
+            return;
         }
 
         barcode = barcode.Trim();
         if (barcode.Length != 16)
         {
-            errorMessage = "Barcode must be exactly 16 characters .";
-            return ;
+            ShowErrorMessage("Barcode must be exactly 16 characters .");
+            return;
         }
     }
     private bool ValidateSaleReturnItem(SaleReturnItemsModel item)
@@ -415,28 +455,27 @@
 
         if (item.ProductId == 0)
         {
-            errorMessage = "Product is required.";
+            ShowErrorMessage("Product is required.");
             return false;
         }
 
         if (item.ReturnQuantity <= 0)
         {
-            errorMessage = "Return quantity must be greater than 0.";
+            ShowErrorMessage("Return quantity must be greater than 0.");
             return false;
         }
 
         if (item.UnitId == 0)
         {
-            errorMessage = "Unit is required.";
+            ShowErrorMessage("Unit is required.");
             return false;
         }
 
-        if (item.ReturnType==0)
+        if (item.ReturnType == 0)
         {
-            errorMessage = "Return Type Required";
+            ShowErrorMessage("Return Type Required");
             return false;
         }
-
         errorMessage = "";
         return true;
     }
@@ -477,7 +516,7 @@
     private async Task HandleBarcode()
     {
         await ValidateBarcode(ItemsModel.BarCodeNo);
-        if (errorMessage != string.Empty) return;       
+        if (errorMessage != string.Empty) return;
         await OnBarcodeVal.InvokeAsync();
     }
 
@@ -489,7 +528,22 @@
     public async Task Hide()
     {
         ResetUiState();
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
+
+        if (dotNetHelper != null)
+        {
+            dotNetHelper.Dispose();
+            dotNetHelper = null;
+        }
+
+        isScanning = false;
         await modal.HideAsync();
+        SelectedSaleReturn = null;
+        ItemsList.Clear();
     }
     public async Task RemoveUnSaveItem(SaleReturnItemsModel item)
     {
@@ -537,9 +591,10 @@
         ItemsModel.BarCodeNo = scannedBarcode;
 
         isScanning = false;
-        
+
         await HandleBarcode();
-        
+        StateHasChanged();
+
     }
 
     public async Task CloseCamera()
@@ -573,10 +628,25 @@
         errorTimer?.Dispose();
         errorTimer = new System.Threading.Timer(_ =>
         {
-       //     showErrorMessage = false;
+            //     showErrorMessage = false;
             errorMessage = string.Empty;
             InvokeAsync(StateHasChanged);
         }, null, 4000, System.Threading.Timeout.Infinite);
+    }
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.stop");
+        }
+        catch
+        {
+        }
+
+        dotNetHelper?.Dispose();
+        dotNetHelper = null;
+
+        isScanning = false;
     }
 }
 <style>

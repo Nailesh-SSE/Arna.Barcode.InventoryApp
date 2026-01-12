@@ -4,6 +4,7 @@ using InventoryManagement.Core.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InventoryManagement.Core.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    partial class InventoryDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260102103436_addLotNoInOutward")]
+    partial class addLotNoInOutward
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -317,9 +320,6 @@ namespace InventoryManagement.Core.Migrations
 
                     b.Property<bool>("IsInStock")
                         .HasColumnType("bit");
-
-                    b.Property<int>("ParentId")
-                        .HasColumnType("int");
 
                     b.Property<DateTime>("TransactionDate")
                         .HasColumnType("datetime2");
@@ -748,26 +748,6 @@ namespace InventoryManagement.Core.Migrations
                         .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("Roles");
-                });
-
-            modelBuilder.Entity("InventoryManagement.Core.Entities.SP_Entities.BarcodeTrackDTO", b =>
-                {
-                    b.Property<string>("BarCodeNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TransactionNo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("TransactionTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("TransactionType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.ToTable("barcodeTrackDTO");
                 });
 
             modelBuilder.Entity("InventoryManagement.Core.Entities.SP_Entities.InventoryReportDTO", b =>

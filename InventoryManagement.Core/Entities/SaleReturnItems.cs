@@ -27,7 +27,7 @@ public class SaleReturnItems : Common
     public bool IsTakeInStock { get; set; } = false;
     [StringLength(200)]
     public string? ReasonToReturn { get; set; } = null;
-    public DateTime? ReturnDate { get; set; } = DateTime.UtcNow;
+    public DateTime? ReturnDate { get; set; } = DateTime.Now;
 
     public virtual Product Product { get; set; } = null!;
     public virtual Category Category { get; set; } = null!;

@@ -40,22 +40,24 @@ else
                   Data="platformList"
                   AllowPaging="true"
                   PageSize="10"
+                  AllowFiltering = "true"
+                  AllowSorting = "true"
                   Responsive="true">
 
 
-                <GridColumn TItem="PlatformModel" HeaderText="No">
+                <GridColumn TItem="PlatformModel" HeaderText="No" Filterable=false>
                     @(platformList.IndexOf(context) + 1)
                 </GridColumn>
 
-                <GridColumn TItem="PlatformModel" HeaderText="Name" PropertyName="Name">
+                <GridColumn TItem="PlatformModel" HeaderText="Name" PropertyName="Name" SortKeySelector="item => item.Name" SortString="Name" FilterTextboxWidth="100">
                     @context.Name
                 </GridColumn>
 
-                <GridColumn TItem="PlatformModel" HeaderText="Remark" PropertyName="Remark">
+                <GridColumn TItem="PlatformModel" HeaderText="Remark" PropertyName="Remark" Filterable=false>
                     @context.Remark
                 </GridColumn>
 
-                <GridColumn TItem="PlatformModel" HeaderText="Status" PropertyName="IsActive">
+                <GridColumn TItem="PlatformModel" HeaderText="Status" PropertyName="IsActive" SortKeySelector="item => item.IsActive" SortString="IsActive" Sortable=false>
                     @if (context.IsActive)
                     {
                         <Badge Color="BadgeColor.Success">Active</Badge>
@@ -66,17 +68,17 @@ else
                     }
                 </GridColumn>
 
-                <GridColumn TItem="PlatformModel" HeaderText="Actions">
+                <GridColumn TItem="PlatformModel" HeaderText="Actions" Filterable=false>
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {
-                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                            <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
                                 <Icon Name="IconName.PencilSquare" /> Edit
                             </Button>
                         }
                         @if (CanDelete(Route))
                         {
-                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeletePlatform(context.Id)">
+                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeletePlatform(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
                             </Button>
                         }
@@ -92,7 +94,7 @@ else
                 <DataAnnotationsValidator />
 
                 <div class="mb-3">
-                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                    <label class="form-label">Platform Name <span class="text-danger">*</span></label>
                     <InputText class="form-control" autocomplete="off" @bind-Value="platformModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
                     <ValidationMessage For="@(() => platformModel.Name)" />
                 </div>
@@ -250,7 +252,7 @@ else
         messageStore.Clear();
         if (string.IsNullOrWhiteSpace(platformModel.Name))
         {
-            messageStore.Add(() => platformModel.Name, "Name is required.");
+            messageStore.Add(() => platformModel.Name, "Platform name is required.");
             editContext.NotifyValidationStateChanged();
         }
 

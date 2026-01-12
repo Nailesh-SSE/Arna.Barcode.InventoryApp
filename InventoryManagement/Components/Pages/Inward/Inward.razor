@@ -40,16 +40,16 @@ else
         }
         else
         {
-            <InwardTable Inwards="inwards" ShipCompanies="shipCompanies" OnEdit="ShowEditModal" OnDelete="DeleteInward" OnAddItems="OpenAddItemModal" CanEdit="@CanEdit(Route)" CanDelete="@CanDelete(Route)" />
+            <InwardTable Inwards="inwards" ShipCompanies="shipCompanies" Categories="categories" OnEdit="ShowEditModal" OnDelete="DeleteInward" OnAddItems="OpenAddItemModal" CanCreate="@CanCreate(Route)" CanEdit="@CanEdit(Route)" CanDelete="@CanDelete(Route)" />
         }
     </div>
 }
 <InwardFormModal @ref="inwardFormModal" Title="@modalTitle" Inward="inward" ShipCompanies="shipCompanies" Categories="categories"
-                 Products="products" OnSave="SaveInward" OnCancel="HideModal" IsEditMode="isEditMode" />
+                 Products="products" OnSave="SaveInward" OnCancel="HideModal" IsEditMode="isEditMode" DisableFields="disablefields" />
 
 <InwardItemsModal @ref="itemsModal" Title="@itemTitle" SelectedInward="selectedInward" InwardItems="inwardItems" FilteredProducts="filteredProductsbyCategory" Brands="filteredBrandsByCategory"
                   OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnDownloadPdf="DownloadSingleItemPrn" OnAddItem="AddNewItemRow"
-                  OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" />
+                  OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" DisableFields="disableitemfields" />
 
 @code {
     private List<InwardModel> inwards = new();
@@ -66,13 +66,15 @@ else
     private string modalTitle = "Add Inward";
     private string itemTitle = "Manage Inward Items";
     private bool isEditMode = false;
+    private bool disablefields = true;
+    private bool disableitemfields = true;
     private InwardFormModal inwardFormModal = new();
     private InwardItemsModal itemsModal = new();
     private InwardModel? selectedInward;
     private List<UnitModel> Units => CommonUtils.UnitList;
     private string Route = "/inward";
     private bool isAdmin = false;
-   
+
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
@@ -93,7 +95,7 @@ else
     private async Task LoadData()
     {
         isLoading = true;
-        isAdmin = IsAdmin() || IsFactoryAdmin();
+        isAdmin = IsAdmin() || IsFactoryAdmin() || CanView(Route);
         inwards = (await InwardService.GetAllAsync(isAdmin)).ToList();
         shipCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
         MakeCompanies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo)).ToList();
@@ -107,6 +109,7 @@ else
     {
         modalTitle = "Add Inward";
         isEditMode = false;
+        disablefields = false;
         inward = new InwardModel
         {
             InwardDate = DateTime.Now,
@@ -121,8 +124,18 @@ else
 
     private async Task ShowEditModal(InwardModel edit)
     {
-        modalTitle = $"Edit Inward {edit.InwardNo}";
-        isEditMode = true;
+        if(CanEdit(Route) == true)
+        {
+            modalTitle = $"Edit Inward {edit.InwardNo}";
+            isEditMode = true;
+            disablefields = false;
+        }
+        else
+        {
+            modalTitle = $"View Inward {edit.InwardNo}";
+            isEditMode = true;
+            disablefields = true;
+        }
         inward = edit;
         inward.InwardTime = inward.InwardDate.TimeOfDay;
         inward.UpdatedBy = Convert.ToInt32(CurrentUserId);
@@ -195,7 +208,16 @@ else
     {
         selectedInward = inwards.FirstOrDefault(i => i.Id == inward.Id);
         if (selectedInward == null) return;
-        itemTitle = $"Manage Inward Items | Inward No: {selectedInward?.InwardNo}";
+        if(CanCreate(Route))
+        {
+            itemTitle = $"Manage Inward Items | Inward No: {selectedInward?.InwardNo}";
+            disableitemfields = false;
+        }
+        else
+        {
+            itemTitle = $"View Inward Items | Inward No: {selectedInward?.InwardNo}";
+            disableitemfields = true;
+        }
 
         inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(inward.Id);
         filteredProductsbyCategory = products;
