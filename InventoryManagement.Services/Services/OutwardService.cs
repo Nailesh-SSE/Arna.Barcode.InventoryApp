@@ -20,9 +20,10 @@ public class OutwardService : IOutwardService
     public async Task<List<OutwardModel>> GetAllOutwardsAsync()
     {
         var outwardRepository = _unitOfWork.GetRepository<Outward>();
-
         var outwards = await outwardRepository
                              .GetQueryable()
+                             .Include(x=>x.BillToCompany)
+                             .Include(x=>x.Platform)
                              .Where(o => !o.IsDeleted)
                              .OrderByDescending(o => o.OutwardDate)
                              .ThenByDescending(o => o.Id)
@@ -382,7 +383,9 @@ public class OutwardService : IOutwardService
             OutwardDate = entity.OutwardDate,
             BillToCompanyId = entity.BillToCompanyId,
             PlatformId = entity.PlatformId,
+            platformName = entity.Platform.Name ?? string.Empty,
             Remarks = entity.Remarks,
+            BillToCompanyName = entity.BillToCompany.Name ?? string.Empty,
             IsActive = entity.IsActive,
             IsFinished = entity.IsFinished
         };

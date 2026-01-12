@@ -27,6 +27,7 @@ public class Outward : Common
     public string? Remarks { get; set; }
     public bool IsFinished { get; set; }=false;
     public virtual Company BillToCompany { get; set; } = null!;
+    public virtual Platform Platform { get; set; } = null!;
     public virtual ICollection<OutwardDetail> OutwardDetails { get; set; } = new List<OutwardDetail>();
 
 }

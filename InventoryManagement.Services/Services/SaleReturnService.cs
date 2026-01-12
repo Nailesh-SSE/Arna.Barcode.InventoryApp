@@ -22,6 +22,7 @@ public class SaleReturnService : ISaleReturnService
     {
         var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
         var saleReturns = await saleReturnRepo.GetQueryable()
+                         .Include(sr => sr.BillToCompany)
                          .Where(o => !o.IsDeleted)
                          .OrderByDescending(o => o.SaleReturnDate)
                          .ThenByDescending(o => o.Id)
@@ -389,7 +390,7 @@ public class SaleReturnService : ISaleReturnService
         {
             Id = entity.Id,
             SaleReturnDate = entity.SaleReturnDate,
-
+            BillToCompanyName = entity.BillToCompany != null ? entity.BillToCompany.Name : string.Empty,
             BillToCompanyId = entity.BillToCompanyId,
             SaleReturnNo = entity.SaleReturnNo,
             CreatedBy = entity.CreatedBy,
