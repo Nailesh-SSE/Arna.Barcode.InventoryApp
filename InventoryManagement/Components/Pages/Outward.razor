@@ -127,6 +127,7 @@ else
                     </div>
 
                     <div class="col-md-6 mb-3">
+                        <fieldset disabled="@isEditMode">
                         <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
                         <DropDown TItem="CompanyModel"
                                   Items="@billCompanies"
@@ -136,9 +137,11 @@ else
                                   Placeholder="-- Select Company --"
                                   OnValueChanged="OnBillToCompanySelected" />
                         <ValidationMessage For="@(() => outward.BillToCompanyId)" />
+                        </fieldset>
                     </div>
                 </div>
                 <div class="col-md-12 mb-3">
+                    <fieldset disabled="@isEditMode">
                     <label class="form-label">Platform <span class="text-danger">*</span></label>
                     <DropDown TItem="PlatformModel"
                               Items="@platforms"
@@ -148,6 +151,7 @@ else
                               Placeholder="-- Select Platform --"
                               OnValueChanged="OnPlatformSelected" />
                     <ValidationMessage For="@(() => outward.PlatformId)" />
+                    </fieldset>
                 </div>
 
                 <div class="mb-3">
@@ -420,7 +424,14 @@ else
         {
             modalTitle = $"Edit Outward";
             isEditMode = true;
+            if (editOutward.IsFinished)
+            {
+                disablefields = true;
+            }
+            else
+            {
             disablefields = false;
+            }
         }
         else
         {
