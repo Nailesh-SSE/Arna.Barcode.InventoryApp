@@ -60,7 +60,6 @@ public class InventoryDbContext : DbContext
 
         modelBuilder.Entity<Company>()
        .HasIndex(c => c.Code)
-       .IsUnique()
        .HasFilter("[IsDeleted] = 0");
 
 
