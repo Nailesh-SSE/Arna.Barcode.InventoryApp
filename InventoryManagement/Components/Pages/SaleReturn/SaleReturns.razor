@@ -127,8 +127,7 @@ else
             BillToCompanyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
             ShipToCompanyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
             ProductList = (await ProductService.GetAllProductsAsync()).ToList();
-            var allOutwardList = (await OutwardService.GetAllOutwardsAsync()).ToList();
-            OutwardList = allOutwardList.Where(o => o.IsFinished).ToList();
+            OutwardList = (await OutwardService.GetAllOutwardsAsync()).Where(o => o.IsFinished).ToList();
             FilteredProducts = ProductList;
         }
         catch

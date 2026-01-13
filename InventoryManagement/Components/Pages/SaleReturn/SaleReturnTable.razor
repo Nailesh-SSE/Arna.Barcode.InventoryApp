@@ -14,11 +14,11 @@
             @(SaleReturns.IndexOf(context) + 1)
         </GridColumn>
 
-        <GridColumn TItem="SaleReturnModel" HeaderText="SaleReturn No" PropertyName="SaleReturnNo" SortString="SaleReturnNo" SortKeySelector="item => item.SaleReturnNo" FilterTextboxWidth="100">
+        <GridColumn TItem="SaleReturnModel" HeaderText="Sale Return No" PropertyName="SaleReturnNo" SortString="SaleReturnNo" SortKeySelector="item => item.SaleReturnNo" FilterTextboxWidth="100">
             @context.SaleReturnNo
         </GridColumn>
 
-        <GridColumn TItem="SaleReturnModel" HeaderText="Inward Date/Time" PropertyName="SaleReturnDateOnly" SortString="SaleReturnDateOnly" SortKeySelector="item => item.SaleReturnDateOnly" FilterTextboxWidth="130">
+        <GridColumn TItem="SaleReturnModel" HeaderText="Sale Return  Date/Time" PropertyName="SaleReturnDateOnly" SortString="SaleReturnDateOnly" SortKeySelector="item => item.SaleReturnDateOnly" FilterTextboxWidth="130">
             @context.SaleReturnDate.ToString("dd/MM/yyyy hh:mm tt")
         </GridColumn>
 

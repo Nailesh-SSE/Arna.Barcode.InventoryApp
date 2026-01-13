@@ -1,4 +1,5 @@
 using InventoryManagement.Core.Entities;
+using InventoryManagement.Core.Enums;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.DTO;
 using InventoryManagement.Services.Interfaces;
@@ -135,11 +136,21 @@ public class SaleReturnService : ISaleReturnService
             var saleReturns = await saleReturnRepo.GetByIdAsync(model.SaleReturnId);
 
             if (saleReturns == null) return false;
-
+            if (model.ShipToCompanyId == 0)
+            {
+                var shipTo = await _unitOfWork.GetRepository<Company>()
+                                              .GetQueryable()
+                                              .FirstOrDefaultAsync(c =>
+                                                  c.CompanyType == CompanyType.ShipTo &&
+                                                  c.Name.ToLower() == "other" &&
+                                                  !c.IsDeleted
+                                              );
+                model.ShipToCompanyId = shipTo != null ? shipTo.Id : 0;
+            }
             var item = await CreateSaleReturnItemEntity(model);
             if (item.IsTakeInStock)
-            {
-                var saleToInwardDto = await ConvertToDto(item);
+            {             
+                    var saleToInwardDto = await ConvertToDto(item);
                 await _inwardService.AddReturnItemToSaleInwardAsync(saleToInwardDto);
             }
 
@@ -160,7 +171,7 @@ public class SaleReturnService : ISaleReturnService
             SaleReturnId = model.SaleReturnId,
             ProductId = model.ProductId,
             OutwardId = model.OutwardId,
-            CategoryId = categoryId,
+            CategoryId = categoryId,    
             ShipToCompanyId = model.ShipToCompanyId,
             BarCodeNo = model.BarCodeNo,
             SerialNo = serialNo,

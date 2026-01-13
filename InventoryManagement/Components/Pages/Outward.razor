@@ -130,7 +130,7 @@ else
                         <fieldset disabled="@isEditMode">
                         <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
                         <DropDown TItem="CompanyModel"
-                                  Items="@billCompanies"
+                                  Items="@billCompanies.Where(c=>c.IsActive || c.Id == outward.BillToCompanyId)"
                                   SelectedId="@outward.BillToCompanyId"
                                   ValueSelector="x => x.Id"
                                   TextSelector="x => x.Name"
@@ -144,7 +144,7 @@ else
                     <fieldset disabled="@isEditMode">
                     <label class="form-label">Platform <span class="text-danger">*</span></label>
                     <DropDown TItem="PlatformModel"
-                              Items="@platforms"
+                              Items="@platforms.Where(p=>p.IsActive || p.Id == outward.PlatformId)"
                               SelectedId="@outward.PlatformId"
                               ValueSelector="x => x.Id"
                               TextSelector="x => x.Name"
@@ -159,20 +159,20 @@ else
                     <InputTextArea class="form-control" rows="3" @bind-Value="outward.Remarks" />
                 </div>
 
+            </fieldset>
                 @if (outward.Id > 0)
                 {
                     <div class="mb-3">
                         <div class="form-check">
-                            <InputCheckbox class="form-check-input" @bind-Value="outward.IsActive" id="isActive" />
+                        <InputCheckbox class="form-check-input" @bind-Value="outward.IsActive" id="isActive" disabled="@disablefields" />
                             <label class="form-check-label" for="isActive">Active</label>
                         </div>
                     </div>
                 }
                 <div class="text-end mt-3">
                     <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit"> @(outward.Id > 0 ? "Update" : "Next")</Button>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit" disabled="@disablefields"> @(outward.Id > 0 ? "Update" : "Next")</Button>
                 </div>
-            </fieldset>
         </EditForm>
     </BodyTemplate>
 </Modal>
@@ -318,7 +318,7 @@ else
         }
     </BodyTemplate>
 </Modal>
-}
+    
 @code {
     private Modal modal = default!;
     private Modal itemModal = default!;

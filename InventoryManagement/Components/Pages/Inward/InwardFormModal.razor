@@ -2,9 +2,9 @@
     <BodyTemplate>
         <EditForm EditContext="@editContext" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator />
-            <fieldset disabled="@DisableFields">
                 <div class="modal-content-custom">
                     <div class="modal-body-section">
+            <fieldset disabled="@DisableFields">
                         <div class="row g-2">
                             <div class="col-md-6">
                                 <label class="form-label">Inward Date <span class="text-danger">*</span></label>
@@ -64,14 +64,14 @@
 
                             </div>
                         </div>
+                        </fieldset>
                     </div>
 
                     <div class="modal-footer-section mt-3 text-end">
                         <button type="button" class="btn btn-secondary me-2" @onclick="HandleCancel">Cancel</button>
-                    <button type="submit" class="btn btn-primary"> @(Inward.Id>0 ? "Update" : "Next")</button>
+                    <button type="submit" class="btn btn-primary" disabled="@DisableFields"> @(Inward.Id > 0 ? "Update" : "Next")</button>
                     </div>
                 </div>
-            </fieldset>
         </EditForm>
     </BodyTemplate>
 </Modal>
@@ -101,6 +101,9 @@
     {
         editContext = new EditContext(Inward);
         validationMessage = new ValidationMessageStore(editContext);
+        ShipCompanies = ShipCompanies.Where(c => c.IsActive || (IsEditMode && c.Id == Inward.ShipMentCompanyId)).ToList();
+        Categories = Categories.Where(c => c.IsActive || (IsEditMode && c.Id == Inward.CategoryId)).ToList();
+        Products = Products.Where(p => p.IsActive).ToList();
     }
 
     public async Task Show()
