@@ -130,7 +130,7 @@ else
                         <fieldset disabled="@isEditMode">
                         <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
                         <DropDown TItem="CompanyModel"
-                                  Items="@billCompanies"
+                                  Items="@billCompanies.Where(c=>c.IsActive || c.Id == outward.BillToCompanyId)"
                                   SelectedId="@outward.BillToCompanyId"
                                   ValueSelector="x => x.Id"
                                   TextSelector="x => x.Name"
@@ -144,7 +144,7 @@ else
                     <fieldset disabled="@isEditMode">
                     <label class="form-label">Platform <span class="text-danger">*</span></label>
                     <DropDown TItem="PlatformModel"
-                              Items="@platforms"
+                              Items="@platforms.Where(p=>p.IsActive || p.Id == outward.PlatformId)"
                               SelectedId="@outward.PlatformId"
                               ValueSelector="x => x.Id"
                               TextSelector="x => x.Name"

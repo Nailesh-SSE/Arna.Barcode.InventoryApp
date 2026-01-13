@@ -67,7 +67,7 @@
                                             </td>
                                             <td>
                                                 <SearchableDropdown TItem="ProductModel"
-                                                                    Items="@item.ProductListForBrand"
+                                                                        Items="@item.ProductListForBrand.Where(p=>p.IsActive || p.Id==item.ProductId)"
                                                                     ItemTextSelector="@(p => p.SKU)"
                                                                     SelectedText="@item.ProductSearchText"
                                                                     Placeholder="Search product..."

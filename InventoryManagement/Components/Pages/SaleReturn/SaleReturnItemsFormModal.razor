@@ -107,7 +107,7 @@
                                     </td> *@
                                     <td>
                                         <SearchableDropdown TItem="ProductModel"
-                                                            Items="@ProductList"
+                                                            Items="@ProductList.Where(p=>p.IsActive || p.Id==item.ProductId)"
                                                             ItemTextSelector="@(p => p.SKU)"
                                                             SelectedText="@item.ProductSearchText"
                                                             Placeholder="Search product..."
@@ -124,7 +124,7 @@
                                     <td>
                                         <InputSelect class="form-select" @bind-Value="@item.ShipToCompanyId" disabled="@isDisabled">
                                             <option value="0">Select</option>
-                                            @foreach (var ship in CompanyList)
+                                            @foreach (var ship in CompanyList.Where(c=>c.IsActive || c.Id==item.ShipToCompanyId))
                                             {
                                                 <option value="@ship?.Id">@ship?.Name</option>
                                             }
@@ -171,7 +171,7 @@
                                     </td> *@
                                     <td style="width:100px;">
                                         <SearchableDropdown TItem="OutwardModel"
-                                                            Items="OutwardList"
+                                                            Items="OutwardList.Where(o=>o.IsActive || o.Id==item.OutwardId)"
                                                             ItemTextSelector="@(o => o.OutwardNo)"
                                                             SelectedText="@item.OutwardSearchText"
                                                             Placeholder="Search Outward..."

@@ -101,6 +101,9 @@
     {
         editContext = new EditContext(Inward);
         validationMessage = new ValidationMessageStore(editContext);
+        ShipCompanies = ShipCompanies.Where(c => c.IsActive || (IsEditMode && c.Id == Inward.ShipMentCompanyId)).ToList();
+        Categories = Categories.Where(c => c.IsActive || (IsEditMode && c.Id == Inward.CategoryId)).ToList();
+        Products = Products.Where(p => p.IsActive).ToList();
     }
 
     public async Task Show()
