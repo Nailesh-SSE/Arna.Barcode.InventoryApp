@@ -162,7 +162,7 @@ public class CompanyService : ICompanyService
     {
         var companyRepository = _unitOfWork.GetRepository<Company>();
         var companies = await companyRepository.GetAllAsync();
-        var company = companies.Where(a => a.IsActive && !a.IsDeleted).OrderByDescending(a => a.Id).FirstOrDefault();
+        var company = companies.Where(a => !a.IsDeleted).OrderByDescending(a => a.Id).FirstOrDefault();
         model.SerialNumber = company != null ? company.SerialNumber + 1 : 0;
         model.Code = "Comp" + model.SerialNumber;
     }
