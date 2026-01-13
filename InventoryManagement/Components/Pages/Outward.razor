@@ -159,20 +159,20 @@ else
                     <InputTextArea class="form-control" rows="3" @bind-Value="outward.Remarks" />
                 </div>
 
+            </fieldset>
                 @if (outward.Id > 0)
                 {
                     <div class="mb-3">
                         <div class="form-check">
-                            <InputCheckbox class="form-check-input" @bind-Value="outward.IsActive" id="isActive" />
+                        <InputCheckbox class="form-check-input" @bind-Value="outward.IsActive" id="isActive" disabled="@disablefields" />
                             <label class="form-check-label" for="isActive">Active</label>
                         </div>
                     </div>
                 }
                 <div class="text-end mt-3">
                     <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit"> @(outward.Id > 0 ? "Update" : "Next")</Button>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit" disabled="@disablefields"> @(outward.Id > 0 ? "Update" : "Next")</Button>
                 </div>
-            </fieldset>
         </EditForm>
     </BodyTemplate>
 </Modal>

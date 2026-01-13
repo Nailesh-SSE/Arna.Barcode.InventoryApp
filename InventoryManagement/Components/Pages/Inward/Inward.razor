@@ -128,7 +128,14 @@ else
         {
             modalTitle = $"Edit Inward {edit.InwardNo}";
             isEditMode = true;
-            disablefields = false;
+            if(edit.IsSalesReturn)
+            {
+                disablefields = true;
+            }
+            else
+            {
+                disablefields = false;
+            }
         }
         else
         {
