@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
+﻿using InventoryManagement.Services.Interfaces;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using System.Security.Claims;
-
 namespace InventoryManagement.Services.Auth;
 
 public class CustomAuthStateProvider : AuthenticationStateProvider
@@ -12,13 +12,14 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     private AuthenticationState _authenticationState;
     private readonly TimeSpan _sessionTimeout = TimeSpan.FromHours(2);
     private AuthData? _cachedAuthData;
-
+    private readonly IPermissionService PermissionService;
     public CustomAuthStateProvider(
         ProtectedLocalStorage storage,
-        ILogger<CustomAuthStateProvider> logger)
+        ILogger<CustomAuthStateProvider> logger, IPermissionService permissionService)
     {
         _storage = storage;
         _logger = logger;
+        PermissionService = permissionService;
         _authenticationState = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
     }
 
@@ -37,7 +38,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
                 else
                 {
                     _logger.LogInformation("Cached session expired for user {UserId}", _cachedAuthData.UserId);
-                    _cachedAuthData = null;
+                    await ClearPermissionCacheAndAuthData();
                     await MarkUserAsLoggedOut();
                     return _authenticationState;
                 }
@@ -54,6 +55,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
                 if (DateTime.UtcNow - user.LoginTime > _sessionTimeout)
                 {
                     _logger.LogInformation("Session expired for user {UserId}", user.UserId);
+                    await ClearPermissionCacheAndAuthData();
                     await MarkUserAsLoggedOut();
                     return _authenticationState;
                 }
@@ -195,6 +197,18 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
         {
             return string.Empty;
         }
+    }
+    private async Task ClearPermissionCacheAndAuthData()
+    {
+        if (_cachedAuthData == null)
+            return;
+
+        if (int.TryParse(_cachedAuthData.UserId, out var userId))
+        {
+            PermissionService.ClearUserPermissionCache(userId);
+        }
+
+        _cachedAuthData = null;
     }
 }
 
