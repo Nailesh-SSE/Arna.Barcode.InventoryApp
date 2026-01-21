@@ -57,6 +57,7 @@ public static class ServiceExtensions
         services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
         services.AddScoped<CustomAuthStateProvider>();
         services.AddScoped<PermissionState>();
+        services.AddScoped<ClientPermissionService>();
         services.AddMemoryCache();
 
         return services;

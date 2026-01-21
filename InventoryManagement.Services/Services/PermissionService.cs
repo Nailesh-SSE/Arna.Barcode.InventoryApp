@@ -105,20 +105,24 @@ public class PermissionService : IPermissionService
         var rolePermRepo = _unitOfWork.GetRepository<RoleFormPermission>();
         var formRepo = _unitOfWork.GetRepository<FormMaster>();
 
-        var userRole = (await userRoleRepo.FindAsync(x =>
-            x.UserId == userId && !x.IsDeleted)).FirstOrDefault();
-
-        if (userRole is null)
-            return [];
-
-        var role = await roleRepo.GetByIdAsync(userRole.RoleId);
-
-        if (role is null)
-            return [];
-
-        if (IsAdminRole(role.Name))
+        try
         {
-            return [new UserFormPermissionModel
+
+
+            var userRole = (await userRoleRepo.FindAsync(x =>
+               x.UserId == userId && !x.IsDeleted)).FirstOrDefault();
+
+            if (userRole is null)
+                return [];
+
+            var role = await roleRepo.GetByIdAsync(userRole.RoleId);
+
+            if (role is null)
+                return [];
+
+            if (IsAdminRole(role.Name))
+            {
+                return [new UserFormPermissionModel
             {
                 Route = "*",
                 CanView = true,
@@ -126,32 +130,37 @@ public class PermissionService : IPermissionService
                 CanEdit = true,
                 CanDelete = true
             }];
+            }
+
+            var forms = await formRepo.FindAsync(x => !x.IsDeleted && x.IsActive);
+            var rolePerms = await rolePermRepo.FindAsync(x =>
+                x.RoleId == role.Id && !x.IsDeleted);
+
+            var permissions = forms
+                .Select(form =>
+                {
+                    var rolePerm = rolePerms.FirstOrDefault(x => x.FormId == form.Id);
+                    return rolePerm is not null
+                        ? new UserFormPermissionModel
+                        {
+                            Route = form.Route,
+                            FormId = form.Id,
+                            CanView = rolePerm.CanView,
+                            CanCreate = rolePerm.CanCreate,
+                            CanEdit = rolePerm.CanEdit,
+                            CanDelete = rolePerm.CanDelete
+                        }
+                        : null;
+                })
+                .Where(p => p is not null)
+                .ToList()!;
+
+            return permissions;
         }
-
-        var forms = await formRepo.FindAsync(x => !x.IsDeleted && x.IsActive);
-        var rolePerms = await rolePermRepo.FindAsync(x =>
-            x.RoleId == role.Id && !x.IsDeleted);
-
-        var permissions = forms
-            .Select(form =>
-            {
-                var rolePerm = rolePerms.FirstOrDefault(x => x.FormId == form.Id);
-                return rolePerm is not null
-                    ? new UserFormPermissionModel
-                    {
-                        Route = form.Route,
-                        FormId = form.Id,
-                        CanView = rolePerm.CanView,
-                        CanCreate = rolePerm.CanCreate,
-                        CanEdit = rolePerm.CanEdit,
-                        CanDelete = rolePerm.CanDelete
-                    }
-                    : null;
-            })
-            .Where(p => p is not null)
-            .ToList()!;
-
-        return permissions;
+        catch(Exception e)
+        {
+            throw;
+        }
     }
 
     public void ClearUserPermissionCache(int userId)
@@ -185,5 +194,20 @@ public class PermissionService : IPermissionService
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(120),
             SlidingExpiration = TimeSpan.FromMinutes(120)
         });
+    }
+
+    public async Task<List<UserFormPermissionModel>> GetClientPermissionsAsync(int userId)
+    {
+        return await LoadPermissionsFromDbAsync(userId);
+    }
+    public async Task<List<FormMasterModel>> GetClientPermittedFormsAsync(int userId)
+    {
+        var permissions = await GetClientPermissionsAsync(userId);
+
+        List<FormMaster> forms = permissions.Any(p => p.Route == "*")
+            ? await GetAllActiveFormsAsync()
+            : await GetPermittedFormsAsync(permissions);
+
+        return forms.ToModelList();
     }
 }

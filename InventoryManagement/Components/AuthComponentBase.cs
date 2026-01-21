@@ -12,6 +12,7 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
     [Inject] protected IPermissionService PermissionService { get; set; } = default!;
     [Inject] protected PermissionState PermissionState { get; set; } = default!;
     [Inject] protected NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] protected ClientPermissionService ClientPermissionService { get; set; } = default!;
 
     protected ClaimsPrincipal User { get; private set; } = new(new ClaimsIdentity());
     protected int UserId => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
@@ -26,11 +27,22 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
 
         if (IsAuthenticated && !PermissionState.IsLoaded)
         {
-            var permissions = await PermissionService.GetUserPermissionsAsync(UserId);
-            PermissionState.SetPermissions(permissions);
+            var cachedPermissions = await ClientPermissionService.LoadAsync();
 
-            // 🔹 preload forms into cache
-            await PermissionService.GetPermittedFormsAsync(UserId);
+            if (cachedPermissions is not null && cachedPermissions.Any())
+            {
+                PermissionState.SetPermissions(cachedPermissions);
+            }
+            else
+            {
+                // Fallback to server (DB)
+                var permissions = await PermissionService.GetClientPermissionsAsync(UserId);
+
+                PermissionState.SetPermissions(permissions);
+
+                //  Save to client for next time
+                await ClientPermissionService.SaveAsync(permissions);
+            }
         }
 
 

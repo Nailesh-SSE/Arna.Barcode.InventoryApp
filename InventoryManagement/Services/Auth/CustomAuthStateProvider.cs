@@ -13,14 +13,18 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     private readonly TimeSpan _sessionTimeout = TimeSpan.FromHours(2);
     private AuthData? _cachedAuthData;
     private readonly IPermissionService PermissionService;
+    private readonly ClientPermissionService _clientPermissionService;
     public CustomAuthStateProvider(
         ProtectedLocalStorage storage,
-        ILogger<CustomAuthStateProvider> logger, IPermissionService permissionService)
+        ILogger<CustomAuthStateProvider> logger, 
+        IPermissionService permissionService, 
+        ClientPermissionService clientPermissionService)
     {
         _storage = storage;
         _logger = logger;
         PermissionService = permissionService;
         _authenticationState = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+        _clientPermissionService = clientPermissionService;
     }
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
@@ -110,6 +114,8 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
         try
         {
             await _storage.DeleteAsync(SessionKey);
+            await _clientPermissionService.ClearAsync();
+
             _cachedAuthData = null; // Clear cache
             _logger.LogInformation("User logged out successfully");
 

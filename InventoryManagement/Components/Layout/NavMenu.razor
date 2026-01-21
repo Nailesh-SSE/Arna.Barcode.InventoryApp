@@ -84,7 +84,7 @@
 
         isLoading = true;
 
-        var forms = await PermissionService.GetPermittedFormsAsync(UserId);
+        var forms = await PermissionService.GetClientPermittedFormsAsync(UserId);
 
         if (forms.Any())
         {
