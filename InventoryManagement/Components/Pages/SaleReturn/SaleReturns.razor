@@ -104,6 +104,7 @@ else
     private string Route = "/sale-returns";
     private bool disablefields;
     private bool disableitemfields;
+    private bool isAdmin = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -123,11 +124,13 @@ else
         try
         {
             isLoading = true;
-            saleReturnList = (await SaleReturnService.GetAllSaleReturnsAsync()).ToList();
+            isAdmin = IsAdmin() || IsFactoryAdmin();
+
+            saleReturnList = (await SaleReturnService.GetAllSaleReturnsAsync(isAdmin)).ToList();
             BillToCompanyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
             ShipToCompanyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
             ProductList = (await ProductService.GetAllProductsAsync()).ToList();
-            OutwardList = (await OutwardService.GetAllOutwardsAsync()).Where(o => o.IsFinished).ToList();
+            OutwardList = (await OutwardService.GetAllOutwardsAsync(true)).Where(o => o.IsFinished).ToList();
             FilteredProducts = ProductList;
         }
         catch
@@ -299,7 +302,8 @@ else
 
     private async Task DeleteSaleReturnItem(int itemId)
     {
-        var result = await SaleReturnService.DeleteSaleReturnItem(itemId);
+        var currentUserId = Convert.ToInt32(CurrentUserId);
+        var result = await SaleReturnService.DeleteSaleReturnItem(itemId, currentUserId);
         SaleReturnItems = await SaleReturnService.GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
         await SyncSearchText();
 

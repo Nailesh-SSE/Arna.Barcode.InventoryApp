@@ -312,7 +312,8 @@ else
 
     private async Task DeleteSingleItem(int itemId)
     {
-        if (await InwardService.DeleteInwardItemAsync(itemId))
+        var currentUser = Convert.ToInt32(CurrentUserId);
+        if (await InwardService.DeleteInwardItemAsync(itemId, currentUser))
         {
             inwardItems = inwardItems.Where(i => i.Id != itemId).ToList();
             StateHasChanged();

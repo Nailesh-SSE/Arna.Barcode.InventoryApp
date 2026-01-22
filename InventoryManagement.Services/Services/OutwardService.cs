@@ -17,7 +17,7 @@ public class OutwardService : IOutwardService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<List<OutwardModel>> GetAllOutwardsAsync()
+    public async Task<List<OutwardModel>> GetAllOutwardsAsync(bool isAdmin)
     {
         var outwardRepository = _unitOfWork.GetRepository<Outward>();
         var outwards = await outwardRepository
@@ -29,7 +29,11 @@ public class OutwardService : IOutwardService
                              .ThenByDescending(o => o.Id)
                              .ToListAsync();
         // var outwards = await outwardRepository.FindAsync(o => !o.IsDeleted);
-
+        if (!isAdmin)
+        {
+            var today = DateTime.Today;
+            outwards = outwards.Where(o => o.OutwardDate.Date == today).ToList();
+        }   
         return outwards.Select(MapToModel).ToList();
     }
 

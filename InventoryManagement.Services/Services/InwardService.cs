@@ -88,7 +88,7 @@ public class InwardService : IInwardService
             if (entity == null) return false;
 
             UpdateInwardEntity(entity, model);
-            await ReplaceInwardItemsAsync(entity.Id, model.InwardItems, entity.InwardDate);
+            await ReplaceInwardItemsAsync(entity.Id, model.InwardItems, entity.InwardDate, entity.UpdatedBy);
 
             inwardRepo.Update(entity);
             await _unitOfWork.SaveChangesAsync();
@@ -192,7 +192,7 @@ public class InwardService : IInwardService
 
             if (model.ItemQuantity > 0)
             {
-                await DeleteBarcodesForItemAsync(entity.Id);
+                await DeleteBarcodesForItemAsync(entity.Id, entity.UpdatedBy);
                 await CreateBarcodesForSingleItemAsync(entity, inward.InwardDate);
             }
             entity.InwardUnitId = model.InwardUnitId;
@@ -212,14 +212,19 @@ public class InwardService : IInwardService
         }
     }
 
-    public async Task<bool> DeleteInwardItemAsync(int id)
+    public async Task<bool> DeleteInwardItemAsync(int id, int userId)
     {
         try
         {
-            await DeleteBarcodesForItemAsync(id);
+            await DeleteBarcodesForItemAsync(id, userId);
 
             var itemRepo = _unitOfWork.GetRepository<InwardItem>();
-            await itemRepo.DeleteAsync(id);
+            var item = await  itemRepo.GetByIdAsync(id);
+
+            item.IsActive = false;
+            item.IsDeleted = true;
+            item.UpdatedOn = DateTime.Now;
+            item.UpdatedBy = userId;       
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -230,53 +235,6 @@ public class InwardService : IInwardService
         }
     }
 
-    public async Task<int> AddReturnedItemToExistingInwardAsync(ReturnItemDto parameter)
-    {
-        var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
-        var inwardRepo = _unitOfWork.GetRepository<Inward>();
-
-        try
-        {
-            var inward = await inwardRepo.GetByIdAsync(parameter.InwardId);
-            if (inward == null)
-            {
-                await _unitOfWork.RollbackTransactionAsync();
-                throw new Exception($"Inward {parameter.InwardId} not found.");
-            }
-
-            var serialNo = await inwardItemRepo.CountAsync() + 1;
-            var inwardItem = new InwardItem
-            {
-                InwardId = inward.Id,
-                ProductId = parameter.ProductId,
-                InwardUnitId = parameter.UnitId,
-
-                InwardUnitName = parameter.UnitName,
-                ItemQuantity = parameter.ItemQuantity,
-                BoxQuantity = parameter.BoxQuantity,
-                SerialNo = serialNo.ToString(),
-                BatchNo = GenerateBatchNo(serialNo),
-                IsDeleted = false,
-
-                CreatedBy = parameter.CreatedBy,
-                CreatedOn = DateTime.UtcNow
-            };
-
-            await inwardItemRepo.AddAsync(inwardItem);
-            await _unitOfWork.SaveChangesAsync();
-
-            await CreateBarcodesForSingleItemAsync(inwardItem, inward.InwardDate);
-
-            await _unitOfWork.SaveChangesAsync();
-
-            return inwardItem.Id;
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync();
-            throw;
-        }
-    }
     public async Task<bool> AddReturnItemToSaleInwardAsync(SaleToInwardDto saleReturnItems)
     {
         try
@@ -312,7 +270,7 @@ public class InwardService : IInwardService
         try
         {
             var inwardRepo = _unitOfWork.GetRepository<Inward>();
-            var date = saleReturnItems.ReturnDate.Date; 
+            var date = saleReturnItems.ReturnDate.Date;
 
             var existingReturnInward = await inwardRepo.GetQueryable()
                 .Include(i => i.InwardItems)
@@ -329,11 +287,11 @@ public class InwardService : IInwardService
             i.ProductId == saleReturnItems.ProductId &&
             i.InwardUnitId == saleReturnItems.UnitId &&
             i.ItemQuantity == saleReturnItems.ReturnQuantity);
-                             
+
             if (items == null)
                 return false;
 
-            var result = await DeleteInwardItemAsync(items.Id);
+            var result = await DeleteInwardItemAsync(items.Id, saleReturnItems.UpdatedBy);
 
             return result;
         }
@@ -343,41 +301,6 @@ public class InwardService : IInwardService
             throw;
         }
     }
-    public async Task RemoveReturnedReturnedItemFromStockAsync(int inwardItemId)
-    {
-        var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
-        var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
-
-        try
-        {
-            var inwardItem = await inwardItemRepo.GetByIdAsync(inwardItemId);
-            if (inwardItem == null)
-            {
-                return;
-            }
-
-            var barcodes = await barcodeRepo.FindAsync(b =>
-                b.InwardItemId == inwardItemId && !b.IsDeleted);
-
-            foreach (var barcode in barcodes)
-            {
-                barcode.IsDeleted = true;
-                barcode.IsInStock = false;
-                barcodeRepo.Update(barcode);
-            }
-
-            inwardItem.IsDeleted = true;
-            inwardItemRepo.Update(inwardItem);
-
-            await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
-        }
-        catch
-        {
-            throw;
-        }
-    }
-
     public async Task<byte[]> GenerateItemBarcodePrnAsync(int inwardItemId)
     {
         var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
@@ -564,9 +487,9 @@ public class InwardService : IInwardService
         await CreateBarcodesForItemsAsync(items, transactionDate);
     }
 
-    private async Task ReplaceInwardItemsAsync(int inwardId, List<InwardItemModel> newItems, DateTime transactionDate)
+    private async Task ReplaceInwardItemsAsync(int inwardId, List<InwardItemModel> newItems, DateTime transactionDate, int userId)
     {
-        await DeleteExistingInwardItemsAsync(inwardId);
+        await DeleteExistingInwardItemsAsync(inwardId, userId);
         await CreateInwardItemsWithBarcodesAsync(inwardId, newItems, transactionDate);
     }
 
@@ -626,15 +549,20 @@ public class InwardService : IInwardService
         return entity;
     }
 
-    private async Task DeleteExistingInwardItemsAsync(int inwardId)
+    private async Task DeleteExistingInwardItemsAsync(int inwardId, int userId)
     {
         var itemRepo = _unitOfWork.GetRepository<InwardItem>();
         var existingItems = await itemRepo.FindAsync(i => i.InwardId == inwardId);
 
         foreach (var item in existingItems)
         {
-            await DeleteBarcodesForItemAsync(item.Id);
-            await itemRepo.DeleteAsync(item.Id);
+            await DeleteBarcodesForItemAsync(item.Id, userId);
+            item.IsActive = false;
+            item.IsDeleted = true;
+            item.UpdatedBy = userId;
+            item.UpdatedOn = DateTime.Now;
+            itemRepo.Update(item);
+
         }
     }
     private async Task<int> GetBrandIdByProductId(int productId)
@@ -777,8 +705,7 @@ public class InwardService : IInwardService
             // Get all existing barcodes for this inward to find the highest counter
             var existingBarcodes = await barcodeRepo.FindAsync(b =>
             b.InwardId == item.InwardId &&
-            b.TransactionDate.Date == transactionDate.Date &&
-            b.IsActive && !b.IsDeleted);
+            b.TransactionDate.Date == transactionDate.Date);
 
             int maxCounter = 1; // Default start
 
@@ -827,14 +754,20 @@ public class InwardService : IInwardService
         }
     }
 
-    private async Task DeleteBarcodesForItemAsync(int itemId)
+    private async Task DeleteBarcodesForItemAsync(int itemId, int userId)
     {
         var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
         var barcodes = await barcodeRepo.FindAsync(b => b.InwardItemId == itemId);
 
         foreach (var barcode in barcodes)
         {
-            await barcodeRepo.DeleteAsync(barcode.Id);
+            barcode.IsActive = false;
+            barcode.IsInStock = false;
+            barcode.IsDeleted = true;
+            barcode.UpdatedOn = DateTime.Now;
+            barcode.UpdatedBy = userId;
+            barcodeRepo.Update(barcode);
+
         }
     }
 

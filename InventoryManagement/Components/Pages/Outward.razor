@@ -128,29 +128,29 @@ else
 
                     <div class="col-md-6 mb-3">
                         <fieldset disabled="@isEditMode">
-                        <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
-                        <DropDown TItem="CompanyModel"
-                                  Items="@billCompanies.Where(c=>c.IsActive || c.Id == outward.BillToCompanyId)"
-                                  SelectedId="@outward.BillToCompanyId"
-                                  ValueSelector="x => x.Id"
-                                  TextSelector="x => x.Name"
-                                  Placeholder="-- Select Company --"
-                                  OnValueChanged="OnBillToCompanySelected" />
-                        <ValidationMessage For="@(() => outward.BillToCompanyId)" />
+                            <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
+                            <DropDown TItem="CompanyModel"
+                                      Items="@billCompanies.Where(c=>c.IsActive || c.Id == outward.BillToCompanyId)"
+                                      SelectedId="@outward.BillToCompanyId"
+                                      ValueSelector="x => x.Id"
+                                      TextSelector="x => x.Name"
+                                      Placeholder="-- Select Company --"
+                                      OnValueChanged="OnBillToCompanySelected" />
+                            <ValidationMessage For="@(() => outward.BillToCompanyId)" />
                         </fieldset>
                     </div>
                 </div>
                 <div class="col-md-12 mb-3">
                     <fieldset disabled="@isEditMode">
-                    <label class="form-label">Platform <span class="text-danger">*</span></label>
-                    <DropDown TItem="PlatformModel"
-                              Items="@platforms.Where(p=>p.IsActive || p.Id == outward.PlatformId)"
-                              SelectedId="@outward.PlatformId"
-                              ValueSelector="x => x.Id"
-                              TextSelector="x => x.Name"
-                              Placeholder="-- Select Platform --"
-                              OnValueChanged="OnPlatformSelected" />
-                    <ValidationMessage For="@(() => outward.PlatformId)" />
+                        <label class="form-label">Platform <span class="text-danger">*</span></label>
+                        <DropDown TItem="PlatformModel"
+                                  Items="@platforms.Where(p=>p.IsActive || p.Id == outward.PlatformId)"
+                                  SelectedId="@outward.PlatformId"
+                                  ValueSelector="x => x.Id"
+                                  TextSelector="x => x.Name"
+                                  Placeholder="-- Select Platform --"
+                                  OnValueChanged="OnPlatformSelected" />
+                        <ValidationMessage For="@(() => outward.PlatformId)" />
                     </fieldset>
                 </div>
 
@@ -160,19 +160,19 @@ else
                 </div>
 
             </fieldset>
-                @if (outward.Id > 0)
-                {
-                    <div class="mb-3">
-                        <div class="form-check">
+            @if (outward.Id > 0)
+            {
+                <div class="mb-3">
+                    <div class="form-check">
                         <InputCheckbox class="form-check-input" @bind-Value="outward.IsActive" id="isActive" disabled="@disablefields" />
-                            <label class="form-check-label" for="isActive">Active</label>
-                        </div>
+                        <label class="form-check-label" for="isActive">Active</label>
                     </div>
-                }
-                <div class="text-end mt-3">
-                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit" disabled="@disablefields"> @(outward.Id > 0 ? "Update" : "Next")</Button>
                 </div>
+            }
+            <div class="text-end mt-3">
+                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit" disabled="@disablefields"> @(outward.Id > 0 ? "Update" : "Next")</Button>
+            </div>
         </EditForm>
     </BodyTemplate>
 </Modal>
@@ -251,7 +251,7 @@ else
                                     <th style="width: 15%">Barcode</th>
                                     <th style="width: 45%">Product Name</th>
                                     <th style="width: 10%">Unit</th>
-                                    @if (!selectedOutward.IsFinished)
+                                    @if (!selectedOutward.IsFinished && CanDelete(Route))
                                     {
                                         <th style="width: 10%">Action</th>
                                     }
@@ -269,15 +269,15 @@ else
                                             <td>@item.BarcodeNo</td>
                                             <td>@item.ProductName</td>
                                             <td>@item.Unit</td>
-                                            @if (!selectedOutward.IsFinished)
+                                            @if (!selectedOutward.IsFinished && CanDelete(Route))
                                             {
                                                 <td>
                                                     <fieldset disabled="@disableitemfields">
-                                                    <Button Color="ButtonColor.Danger"
-                                                            Size="ButtonSize.Small"
-                                                            @onclick="() => RemoveItem(item)">
-                                                        <Icon Name="IconName.Trash" />
-                                                    </Button>
+                                                        <Button Color="ButtonColor.Danger"
+                                                                Size="ButtonSize.Small"
+                                                                @onclick="() => RemoveItem(item)">
+                                                            <Icon Name="IconName.Trash" />
+                                                        </Button>
                                                     </fieldset>
                                                 </td>
                                             }
@@ -318,7 +318,7 @@ else
         }
     </BodyTemplate>
 </Modal>
-    
+
 @code {
     private Modal modal = default!;
     private Modal itemModal = default!;
@@ -350,6 +350,8 @@ else
     private string errorMessage = string.Empty;
     private System.Threading.Timer? errorTimer;
     private string Route = "/outward";
+    private bool isAdmin = false;
+
     // Reference for JS Interop
     private DotNetObjectReference<Outward>? dotNetHelper;
 
@@ -383,7 +385,9 @@ else
     {
         try
         {
-            outwards = await OutwardService.GetAllOutwardsAsync();
+            isAdmin = IsAdmin() || IsFactoryAdmin();
+
+            outwards = await OutwardService.GetAllOutwardsAsync(isAdmin);
             billCompanies = await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo);
             platforms = await PlatformService.GetAllPlatformAsync();
             InitializeEditContext();
@@ -423,7 +427,7 @@ else
             }
             else
             {
-            disablefields = false;
+                disablefields = false;
             }
         }
         else
