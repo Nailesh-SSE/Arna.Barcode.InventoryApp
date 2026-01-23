@@ -134,17 +134,27 @@ else
                                                 <th>Transaction</th>
                                                 <th>TransactionNo</th>
                                                 <th>BarcodeNo</th>
-                                                <th>TransactionTime</th>
+                                                <th>CreationTime</th>
+                                                <th> User</th>
+                                                <th>Status</th>
+                                                <th>Last Updated</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @foreach (var item in reportResult.Items)
                                             {
                                                 <tr>
-                                                    <td>@item.TransactionType</td>
+                                                    <td>
+                                                        <span class="badge @GetTransactionBadgeClass(item.TransactionType)">
+                                                            @item.TransactionType
+                                                        </span>
+                                                    </td>
                                                     <td>@item.TransactionNo</td>
                                                     <td>@item.BarCodeNo</td>
                                                     <td>@item.TransactionTime</td>
+                                                    <td>@item.UserName</td>
+                                                    <td><span class="badge bg-danger">@item.Status</span></td>
+                                                    <td>@item.UpdatedOn</td>
                                                 </tr>
                                             }
                                         </tbody>
@@ -415,6 +425,16 @@ else
             await barcodeInput.Element.Value.FocusAsync();
         }
     }
+    private string GetTransactionBadgeClass(string transactionType)
+    {
+        return transactionType switch
+        {
+            "INWARD" => "bg-success",
+            "OUTWARD" => "bg-secondary",
+            "RETURN" => " bg-warning text-dark",
+            _ => "bg-secondary"
+        };
+    }
     public async ValueTask DisposeAsync()
     {
         try
@@ -429,6 +449,7 @@ else
         isScanning = false;
     }
 }
+
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
 <script>
