@@ -4,7 +4,7 @@ namespace InventoryManagement.Services.Interfaces;
 
 public interface IOutwardService
 {
-    Task<List<OutwardModel>> GetAllOutwardsAsync();
+    Task<List<OutwardModel>> GetAllOutwardsAsync(bool isAdmin);
     Task<OutwardModel?> GetOutwardByIdAsync(int id);
     Task<int> CreateOutwardAsync(OutwardModel model);
     Task<bool> UpdateOutwardAsync(OutwardModel model);

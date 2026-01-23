@@ -19,7 +19,7 @@ public class SaleReturnService : ISaleReturnService
         _inwardService = inwardService;
     }
     #region SaleReturns
-    public async Task<List<SaleReturnModel>> GetAllSaleReturnsAsync()
+    public async Task<List<SaleReturnModel>> GetAllSaleReturnsAsync(bool isAdmin)
     {
         var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
         var saleReturns = await saleReturnRepo.GetQueryable()
@@ -28,7 +28,11 @@ public class SaleReturnService : ISaleReturnService
                          .OrderByDescending(o => o.SaleReturnDate)
                          .ThenByDescending(o => o.Id)
                          .ToListAsync();
-
+        if (!isAdmin) 
+        {
+            var today = DateTime.Today;
+            saleReturns = saleReturns.Where(s => s.SaleReturnDate.Date == today).ToList();
+        }
         return saleReturns.Select(MapToModel).ToList();
     }
     public async Task<SaleReturnModel?> GetSaleReturnByIdAsync(int id)
@@ -44,7 +48,7 @@ public class SaleReturnService : ISaleReturnService
     public async Task<int> CreateSaleReturnAsync(SaleReturnModel model)
     {
         try
-        {  
+        {
             model.SaleReturnNo = await GenerateSaleReturnNumberAsync(model.SaleReturnDate);
             var newSaleReturn = await CreateSaleReturnEntityAsync(model);
          
@@ -229,17 +233,21 @@ public class SaleReturnService : ISaleReturnService
         await _unitOfWork.SaveChangesAsync();
         return true;
     }
-    public async Task<bool> DeleteSaleReturnItem(int id)
+    public async Task<bool> DeleteSaleReturnItem(int id, int userId)
     {
         try
         {
             var itemRepo = _unitOfWork.GetRepository<SaleReturnItems>();
-            var item = await itemRepo.GetQueryable()
-                                 .AsNoTracking()
-                                 .FirstOrDefaultAsync(x => x.Id == id);
+            var item = await itemRepo.GetByIdAsync(id);
 
             if (item == null) return false;
-            await itemRepo.DeleteAsync(id);                   
+            item.IsActive = false;
+            item.IsDeleted = true; 
+            item.UpdatedOn= DateTime.Now;
+            item.UpdatedBy= userId;
+            
+            itemRepo.Update(item);
+                        
             await _unitOfWork.SaveChangesAsync();
 
             var saleToInwardDto = await ConvertToDto(item);
