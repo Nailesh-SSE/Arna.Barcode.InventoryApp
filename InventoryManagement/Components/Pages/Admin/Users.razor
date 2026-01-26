@@ -290,21 +290,7 @@ else
     {
         isLoading = true;
         var userRoleId = CurrentUserRoleId;
-        users = (await UserService.GetAllUsersAsync(userRoleId))
-         .Select(u => new UserModel
-         {
-             Id = u.Id,
-             FirstName = u.FirstName,
-             LastName = u.LastName,
-             UserName = u.UserName,
-             Email = u.EmailId,
-             ContactNo = u.ContactNo,
-             CreatedBy = u.CreatedBy,
-             UpdatedBy = u.UpdatedBy,
-             IsActive = u.IsActive,
-             RoleId = u.RoleId,
-             Password = u.Password
-         }).ToList();
+        users = (await UserService.GetAllUsersAsync(userRoleId)).ToList();
         roles = (await RoleService.GetAllRolesAsync(userRoleId)).ToList();
         isLoading = false;
     }
@@ -377,8 +363,8 @@ else
     {
         if (!await JS.InvokeAsync<bool>("confirm", "Delete this user?"))
             return;
-
-        await UserService.DeleteUserAsync(id);
+        var userId = Convert.ToInt32(CurrentUserId);
+        await UserService.DeleteUserAsync(id,userId);
         await LoadData();
         await userGrid.RefreshDataAsync();
     }

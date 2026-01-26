@@ -57,10 +57,10 @@ namespace InventoryManagement.Services.Reports.Services
                 var result = new List<BarcodeTrackDTO>();
                 var barcodeParam = new SqlParameter("@BarcodeNo", SqlDbType.NVarChar) { Value = barcode ?? (object)DBNull.Value };
 
-                result = await _db.barcodeTrackDTO.FromSqlRaw("EXEC sp_BarcodeTracking @BarcodeNo", barcodeParam)
-                    .AsNoTracking()
-                    .ToListAsync();
-                return result;
+               // result = await _db.BarcodeTrackDTO.FromSqlRaw("EXEC sp_BarcodeTracking @BarcodeNo", barcodeParam)
+               //     .AsNoTracking()
+               //     .ToListAsync();
+                return new();
             }
             catch
             {

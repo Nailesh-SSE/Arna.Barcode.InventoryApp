@@ -7,7 +7,6 @@ public partial class Users : Common
 {
     [Key]
     public int Id { get; set; }
-    public int RoleId { get; set; }
 
     [Required(ErrorMessage = "First name is required")]
     [StringLength(50)]
