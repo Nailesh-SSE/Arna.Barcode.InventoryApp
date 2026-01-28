@@ -1,6 +1,7 @@
 ﻿@page "/inward"
 @using BlazorDownloadFile
 @using InventoryManagement.Components.Auth
+@using InventoryManagement.Services.Download
 @inherits AuthComponentBase
 @inject IInwardService InwardService
 @inject ICompanyService CompanyService
@@ -8,6 +9,7 @@
 @inject ICategoryService CategoryService
 @inject IBlazorDownloadFileService BlazorDownloadFileService
 @inject IJSRuntime JS
+@inject IPrnDownloadService PrnDownloadService
 
 <PageTitle>Inward Management</PageTitle>
 @if (!CanView(Route))
@@ -17,10 +19,16 @@
 else
 {
     <div class="container-fluid">
-        <div class="row mb-3">
+        <div class="row mb-3 align-items-center">
             <div class="col">
-                <h3>Inward Management</h3>
+                <h3 class="mb-0">Inward Management</h3>
             </div>
+            <div class="col-auto">
+                <button class="btn btn-dark" @onclick="ShowReprintModal">
+                    <Icon Name="IconName.Printer" /> Reprint
+                </button>
+            </div>
+
             <div class="col-auto">
                 @if (CanCreate(Route))
                 {
@@ -51,6 +59,8 @@ else
                   OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnDownloadPdf="DownloadSingleItemPrn" OnAddItem="AddNewItemRow"
                   OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" DisableFields="disableitemfields" />
 
+<ReprintBarcodeModal @ref="reprintBarcodeModal" Title="@reprintTitle" OnPrint="DownloadSingleBarcode" />
+
 @code {
     private List<InwardModel> inwards = new();
     private List<CompanyModel> shipCompanies = new();
@@ -65,11 +75,16 @@ else
     private bool isLoading = true;
     private string modalTitle = "Add Inward";
     private string itemTitle = "Manage Inward Items";
+    private string reprintTitle = "Reprint Barcode";
+    private string barcodeValue = string.Empty;
+
     private bool isEditMode = false;
     private bool disablefields = true;
     private bool disableitemfields = true;
     private InwardFormModal inwardFormModal = new();
     private InwardItemsModal itemsModal = new();
+    private ReprintBarcodeModal reprintBarcodeModal = new();
+
     private InwardModel? selectedInward;
     private List<UnitModel> Units => CommonUtils.UnitList;
     private string Route = "/inward";
@@ -124,11 +139,11 @@ else
 
     private async Task ShowEditModal(InwardModel edit)
     {
-        if(CanEdit(Route) == true)
+        if (CanEdit(Route) == true)
         {
             modalTitle = $"Edit Inward {edit.InwardNo}";
             isEditMode = true;
-            if(edit.IsSalesReturn)
+            if (edit.IsSalesReturn)
             {
                 disablefields = true;
             }
@@ -215,7 +230,7 @@ else
     {
         selectedInward = inwards.FirstOrDefault(i => i.Id == inward.Id);
         if (selectedInward == null) return;
-        if(CanCreate(Route))
+        if (CanCreate(Route))
         {
             itemTitle = $"Manage Inward Items | Inward No: {selectedInward?.InwardNo}";
             disableitemfields = false;
@@ -319,27 +334,26 @@ else
             StateHasChanged();
         }
     }
-
-    private async Task DownloadSingleItemPrn(InwardItemModel item)
+    private async Task ShowReprintModal()
     {
-        try
-        {
-            var prnBytes = await InwardService.GenerateItemBarcodePrnAsync(item.Id);
+        await reprintBarcodeModal.ShowAsync();
+    }
 
-            if (prnBytes != null && prnBytes.Length > 0)
-            {
-                string fileName = $"Item_{item.Id}_Barcodes.prn";
-                await BlazorDownloadFileService.DownloadFile(fileName, prnBytes, "application/octet-stream");
-            }
-            else
-            {
-                await JS.InvokeVoidAsync("alert", "No barcodes found for this item.");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error downloading PRN file: {ex.Message}");
-            await JS.InvokeVoidAsync("alert", "Error downloading PRN file.");
-        }
+    private Task DownloadSingleItemPrn(InwardItemModel item)
+    {
+        return PrnDownloadService.DownloadAsync(
+            () => InwardService.GenerateItemBarcodePrnAsync(item.Id),
+            $"Item_{item.Id}_Barcodes.prn",
+            "No barcodes found for this item."
+        );
+    }
+
+    private Task DownloadSingleBarcode(string barcode)
+    {
+        return PrnDownloadService.DownloadAsync(
+            () => InwardService.GenerateSingleBarcodePrnAsync(barcode),
+            $"Item_{barcode}_Barcodes.prn",
+            "No barcodes found for this barcode."
+        );
     }
 }

@@ -1,14 +1,19 @@
 ﻿@page "/reports/barcodetrack"
+@using BlazorDownloadFile
 @using InventoryManagement.Components.Auth
+@using InventoryManagement.Services.Download
 @using InventoryManagement.Services.Models.ReportModels
 @using InventoryManagement.Services.Reports.Interfaces
 @inherits AuthComponentBase
 @implements IAsyncDisposable
+@inject IBlazorDownloadFileService BlazorDownloadFileService
 @inject IInwardReportService InwardReportService
 @inject IBarcodeTrackingReportService BarcodeTrackingReportService
 @inject ICompanyService CompanyService
 @inject ICategoryService CategoryService
+@inject IInwardService InwardService
 @inject IJSRuntime JS
+@inject IPrnDownloadService PrnDownloadService
 
 <PageTitle>Track Barcode</PageTitle>
 @if (!CanView(Route))
@@ -74,7 +79,7 @@ else
                                     <label class="form-label">Barcode No</label>
                                     <InputText class="form-control"
                                                @bind-Value="filter.barcode"
-                                               @oninput="HandleInput" />                                 
+                                               @oninput="HandleInput" />
                                     @if (barcodeError != null)
                                     {
                                         <div class="text-danger small mt-1">
@@ -83,7 +88,7 @@ else
                                     }
                                 </div>
                                 <div class="col-12 d-grid gap-2">
-                                     <button type="button"
+                                    <button type="button"
                                             class="btn btn-secondary"
                                             @onclick="StartCameraScan"
                                             disabled="@isScanning">
@@ -91,6 +96,9 @@ else
                                     </button>
                                     <button type="submit" class="btn btn-primary">
                                         <Icon Name="IconName.Search" /> Generate Report
+                                    </button>
+                                    <button type="button" class="btn btn-dark" @onclick="ReprintBarcode">
+                                        <Icon Name="IconName.Printer" /> Reprint Barcode
                                     </button>
                                     <button type="button" class="btn btn-outline-secondary" @onclick="ClearFilters">
                                         <Icon Name="IconName.XCircle" /> Clear
@@ -260,6 +268,35 @@ else
             isLoading = false;
             StateHasChanged();
         }
+    }
+    private async Task ReprintBarcode()
+    {
+        var barcode = filter.barcode ?? string.Empty;
+        if (!ValidateBarcode())
+        {
+            ShowAlert("warning", barcodeError!);
+            StateHasChanged();
+            return;
+        }
+        var validationBarcode = await InwardService.ValidateBarcodeForReprintAsync(barcode);
+
+        if (!validationBarcode.IsValid)
+        {
+            barcodeError = validationBarcode.ErrorMessage;
+            reportResult = new BarCodeReportResult();
+            return;
+        }
+        await DownloadSingleBarcode(barcode);
+
+    }
+
+    private Task DownloadSingleBarcode(string barcode)
+    {
+        return PrnDownloadService.DownloadAsync(
+            () => InwardService.GenerateSingleBarcodePrnAsync(barcode),
+            $"Item_{barcode}_Barcodes.prn",
+            "No barcodes found for this barcode."
+        );
     }
 
     private void LoadDefaultFilters()
@@ -441,7 +478,7 @@ else
         {
             await JS.InvokeVoidAsync("manageScanner.stop");
         }
-        catch{}
+        catch { }
 
         dotNetHelper?.Dispose();
         dotNetHelper = null;

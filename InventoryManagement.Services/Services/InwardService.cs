@@ -355,6 +355,89 @@ public class InwardService : IInwardService
 
         return Encoding.UTF8.GetBytes(sb.ToString());
     }
+    public async Task<byte[]> GenerateSingleBarcodePrnAsync(string barcodeNo)
+    {
+        try 
+        {
+            var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+            var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
+
+            var barcode = await barcodeRepo.GetQueryable()
+                .FirstOrDefaultAsync(b =>
+                    b.BarcodeNo == barcodeNo &&
+                    !b.IsDeleted &&
+                    b.IsActive);
+
+            if (barcode == null)
+                return null;
+
+            var item = await inwardItemRepo.GetQueryable()
+                .Include(i => i.Product)
+                .FirstOrDefaultAsync(i => i.Id == barcode.InwardItemId);
+
+            if (item == null)
+                return null;
+
+            var sb = new StringBuilder();
+            AppendPrnHeader(sb);
+
+            sb.AppendLine("CLS");
+            AddBarcodeLabel(
+                sb,
+                barcode,
+                item.Product?.SKU ?? "N/A",
+                BatchNo(barcode, item, item.BatchNo),
+                TotalQty(barcode, item, item.ItemQuantity),
+                BarcodePositionType.Left);
+
+            sb.AppendLine("PRINT 1,1");
+
+            return Encoding.UTF8.GetBytes(sb.ToString());
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Error in GenerateSingleBarcodePrnAsync service" + e.Message);
+            return null;
+        }
+       
+    }
+    public async Task<BarcodeValidationResult> ValidateBarcodeForReprintAsync(string barcodeNo)
+    {
+        try 
+        {
+            var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
+          
+        var barcodeItem = await barcodeItemRepository
+            .GetQueryable()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(bi => bi.BarcodeNo == barcodeNo && !bi.IsDeleted);
+
+            if (barcodeItem == null)
+            {
+                return new BarcodeValidationResult
+                {
+                    IsValid = false,
+                    ErrorMessage = "Invalid barcode. Barcode does not exist in inventory."
+                };
+            }
+
+            if (!barcodeItem.IsInStock)
+            {
+                return new BarcodeValidationResult
+                {
+                    IsValid = false,
+                    ErrorMessage = "This barcode has already been sold."
+                };
+            }
+
+            return new BarcodeValidationResult { IsValid = true };
+        }
+        catch(Exception e) 
+        {
+            throw;
+        }
+    }
+
     private static bool IsParentBarcode(InwardBarcodeItem barcode, InwardItem inward)
     {
         return (barcode.ParentId == null || barcode.ParentId == 0)

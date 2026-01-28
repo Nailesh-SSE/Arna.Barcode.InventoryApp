@@ -2,6 +2,7 @@ using BlazorDownloadFile;
 using InventoryManagement.Core.Data;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Auth;
+using InventoryManagement.Services.Download;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Reports.Interfaces;
 using InventoryManagement.Services.Reports.Services;
@@ -45,6 +46,7 @@ public static class ServiceExtensions
         services.AddScoped<IFormPermissionService, FormPermissionService>();
         services.AddScoped<IFormMasterService, FormMasterService>();
         services.AddScoped<IRoleService, RoleService>();
+        services.AddScoped<IPrnDownloadService, PrnDownloadService>();
 
         // Register generators
         services.AddTransient<IInwardReportService, InwardReportGenerator>();
