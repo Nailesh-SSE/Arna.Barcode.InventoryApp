@@ -28,18 +28,19 @@ public class InventoryDbContext : DbContext
     public DbSet<Colour> Colour { get; set; }
     public DbSet<Platform> Platform { get; set; }
     public DbSet<SaleReturnItems> SaleReturnItems { get; set; }
+    public DbSet<ErrorLog> ErrorLog { get; set; }  
 
     [NotMapped]
     public DbSet<InventoryReportDTO> InventoryReportDTO { get; set; }
 
     [NotMapped]
-    public DbSet<BarcodeTrackDTO> barcodeTrackDTO { get; set; }
+    public DbSet<BarcodeTrackDTO> BarcodeTrackDTO { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<InventoryReportDTO>().HasNoKey();
-        modelBuilder.Entity<BarcodeTrackDTO>().HasNoKey();
-
+        modelBuilder.Entity<BarcodeTrackDTO>()
+                       .HasNoKey().ToView(null);
         // Configure relationships
         modelBuilder.Entity<Colour>()
             .HasIndex(c => new { c.Name, c.Code })

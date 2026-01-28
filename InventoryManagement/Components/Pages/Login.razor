@@ -126,13 +126,13 @@
 
             if (isValid)
             {
-                var user = await UserService.GetUserByUsernameAsync(loginModel.Username);
+                var user = await UserService.GetUserByUsernameAsync(loginModel.Username);               
                 if (user == null)
                 {
                     errorMessage = "User account not found";
                     return;
                 }
-
+                
                 // Mark user as authenticated using the AuthenticationStateProvider
                 var authProvider = AuthStateProvider as CustomAuthStateProvider;
                 if (authProvider != null)
@@ -141,7 +141,7 @@
                     {
                         UserId = user.Id.ToString(),
                         UserName = user.UserName ?? loginModel.Username,
-                        UserFullName = user.Name ?? loginModel.Username,
+                        UserFullName = user.UserName + " " + user.LastName ?? loginModel.Username,
                         UserRoleId = user.RoleId.ToString(),
                         IsAuthenticated = true,
                         LoginTime = DateTime.UtcNow

@@ -1,0 +1,347 @@
+﻿@inject IInwardService InwardService
+@inject IJSRuntime JS
+
+<Modal @ref="modal"
+       Title="Reprint Barcode"
+       Size="ModalSize.Small"
+       UseStaticBackdrop>
+
+    <BodyTemplate>
+        <EditForm EditContext="@editContext">
+            <DataAnnotationsValidator />
+            <div>
+                <div class="position-relative">
+
+                    @if (isScanning)
+                   {
+                       <button type="button"
+                               class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2"
+                               title="Close Camera"
+                               style="z-index: 10;"
+                               @onclick="CloseCamera">
+                           <Icon Name="IconName.XCircle" />
+                       </button>
+                   }
+
+                   <div id="reader" class="border rounded" style="width: 100%;"></div>
+                </div>
+            </div>
+            <!-- Barcode + Validate -->
+            <div class="mb-2">
+                <label class="form-label">Barcode</label>
+
+                <div class="input-group">
+                    <InputText class="form-control"
+                               @bind-Value="@barcode"
+                               @oninput="OnBarcodeChanged" />
+                    <button type="button"
+                            class="btn btn-secondary d-flex align-items-center gap-1"
+                            @onclick="StartCameraScan"
+                            disabled="@isScanning">
+                        <Icon Name="IconName.Camera" /> Scan
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="text-danger mt-1">@errorMessage</div>
+                }
+
+                @if (isValidated && isValidBarcode)
+                {
+                    <div class="text-success mt-1">
+                        Barcode validated successfully
+                    </div>
+                }
+            </div>
+
+            <!-- Close + Print -->
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        @onclick="HandleClose">
+                    Close
+                </button>
+
+                <button type="button"
+                        class="btn btn-primary"
+                        @onclick="PrintBarcodeAsync">
+                    Print
+                </button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+
+@code {
+    private Modal modal = new();
+    private EditContext? editContext;
+    private string barcode = string.Empty;
+    private bool isValidated;
+    private bool isValidBarcode;
+    private string errorMessage = string.Empty;
+    private bool isScanning = false;
+    private DotNetObjectReference<ReprintBarcodeModal>? dotNetHelper;
+    private InputText barcodeInput = default!;
+    private System.Threading.Timer? errorTimer;
+
+    [Parameter] public string Title { get; set; } = "Reprint Barcode";
+    [Parameter] public EventCallback<string> OnPrint { get; set; }
+
+    protected override void OnInitialized()
+    {
+        editContext = new EditContext(this);
+    }
+
+    private void OnBarcodeChanged(ChangeEventArgs e)
+    {
+        barcode = e.Value?.ToString() ?? string.Empty;
+
+        isValidated = false;
+        isValidBarcode = false;
+
+        if (string.IsNullOrWhiteSpace(barcode))
+        {
+            errorMessage = "Barcode is required.";
+        }
+        else
+        {
+            errorMessage = string.Empty;
+        }
+    }
+
+    private async Task ValidateBarcodeAsync()
+    {
+        errorMessage = string.Empty;
+        isValidated = true;
+
+        if (string.IsNullOrWhiteSpace(barcode))
+        {
+            isValidBarcode = false;
+            errorMessage = "Barcode is required.";
+            return;
+        }
+        if (barcode.Length != 16)
+        {
+            isValidBarcode = false;
+            errorMessage = "Barcode must be exactly 16 characters long.";
+            return;
+        }
+
+        var result = await InwardService.ValidateBarcodeForReprintAsync(barcode);
+
+        if (result.IsValid)
+        {
+            isValidBarcode = true;
+        }
+        else
+        {
+            isValidBarcode = false;
+            errorMessage = result.ErrorMessage;
+        }
+    }
+
+    private async Task PrintBarcodeAsync()
+    {
+        await ValidateBarcodeAsync();
+
+        if (!isValidBarcode) return;
+
+        await OnPrint.InvokeAsync(barcode);
+        await modal.HideAsync();
+    }
+
+    public async Task ShowAsync()
+    {
+        Reset();
+        await modal.ShowAsync();
+    }
+    public async Task HandleClose()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
+
+        if (dotNetHelper != null)
+        {
+            dotNetHelper.Dispose();
+            dotNetHelper = null;
+        }
+
+        isScanning = false;
+        await CloseCamera();
+        await modal.HideAsync();
+    }
+
+    private void Reset()
+    {
+        barcode = string.Empty;
+        isValidated = false;
+        isValidBarcode = false;
+        errorMessage = string.Empty;
+    }
+
+    private async Task StartCameraScan()
+    {
+        if (isScanning) return;
+
+        try
+        {
+            isScanning = true;
+            await Task.Yield();
+            dotNetHelper?.Dispose();
+            dotNetHelper = DotNetObjectReference.Create(this);
+
+            await JS.InvokeVoidAsync("manageScanner.start", dotNetHelper);
+        }
+        catch (Exception)
+        {
+            isScanning = false;
+            ShowError("Could not start camera");
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnBarcodeScanned(string scannedBarcode)
+    {
+        errorMessage = string.Empty;
+        if (dotNetHelper == null) return;
+
+        if (string.IsNullOrWhiteSpace(scannedBarcode))
+            return;
+
+        barcode = scannedBarcode;
+
+        OnBarcodeChanged(new ChangeEventArgs { Value = scannedBarcode });
+        isScanning = false;
+
+        await ValidateBarcodeAsync();
+        StateHasChanged();
+
+    }
+
+    public async Task CloseCamera()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
+
+        if (dotNetHelper != null)
+        {
+            dotNetHelper.Dispose();
+            dotNetHelper = null;
+        }
+
+        isScanning = false;
+
+        if (barcodeInput != null &&
+         barcodeInput.Element.HasValue)
+        {
+            await barcodeInput.Element.Value.FocusAsync();
+        }
+    }
+    private void ShowError(string message)
+    {
+        errorMessage = message;
+        StateHasChanged();
+
+        errorTimer?.Dispose();
+        errorTimer = new System.Threading.Timer(_ =>
+        {
+            errorMessage = string.Empty;
+            InvokeAsync(StateHasChanged);
+        }, null, 4000, System.Threading.Timeout.Infinite);
+    }
+    public async ValueTask DisposeAsync()
+    {
+        errorTimer?.Dispose();
+
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
+
+        if (dotNetHelper != null)
+        {
+            dotNetHelper.Dispose();
+            dotNetHelper = null;
+        }
+    }
+}
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<script>
+    let html5QrcodeScanner;
+
+    window.manageScanner = {
+        start: (dotNetHelper) => {
+            if (html5QrcodeScanner) { return; }
+
+            html5QrcodeScanner = new Html5Qrcode("reader");
+
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            html5QrcodeScanner.start({ facingMode: "environment" }, config,
+                (decodedText, decodedResult) => {
+                    // SUCCESS:
+                    // 1. Stop the camera immediately so it doesn't scan twice
+                    // 2. Clear the variable and DOM
+                    // 3. Send result to C#
+                    window.manageScanner.stop().then(() => {
+                        dotNetHelper.invokeMethodAsync('OnBarcodeScanned', decodedText)
+                            .catch(err => console.log("Blazor component disposed", err));
+                    });
+                },
+                (errorMessage) => {
+                    // ignore errors
+                })
+            .catch(err => {
+                console.error("Error starting scanner", err);
+                alert("Could not start camera. Permissions?");
+            });
+        },
+
+        stop: () => {
+            return new Promise((resolve, reject) => {
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.stop().then(() => {
+                        html5QrcodeScanner.clear();
+                        html5QrcodeScanner = null;
+                        document.getElementById("reader").innerHTML = "";
+                        resolve();
+                    }).catch(err => {
+                        console.log("Error stopping scanner", err);
+                        html5QrcodeScanner = null;
+                        resolve();
+                    });
+                } else {
+                    resolve();
+                }
+            });
+        },
+        forceStop: () => {
+            if (!html5QrcodeScanner) return;
+
+            try
+            {
+                html5QrcodeScanner.stop();
+                html5QrcodeScanner.clear();
+            }
+            catch (e)
+            {
+                console.warn("Scanner stop error", e);
+            }
+
+            html5QrcodeScanner = null;
+
+            const reader = document.getElementById("reader");
+            if (reader) reader.innerHTML = "";
+        }
+    };
+</script>
