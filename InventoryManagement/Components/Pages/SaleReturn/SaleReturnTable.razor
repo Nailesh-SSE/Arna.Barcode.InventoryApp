@@ -22,7 +22,7 @@
             @context.SaleReturnDate.ToString("dd/MM/yyyy hh:mm tt")
         </GridColumn>
 
-        <GridColumn TItem="SaleReturnModel" HeaderText="Ship Company" PropertyName="BillToCompanyName" SortString="BillToCompanyName" SortKeySelector="item => item.BillToCompanyName" FilterTextboxWidth="100">
+        <GridColumn TItem="SaleReturnModel" HeaderText="Bill Company" PropertyName="BillToCompanyName" SortString="BillToCompanyName" SortKeySelector="item => item.BillToCompanyName" FilterTextboxWidth="100">
             @context.BillToCompanyName.ToUpper()
         </GridColumn>
 

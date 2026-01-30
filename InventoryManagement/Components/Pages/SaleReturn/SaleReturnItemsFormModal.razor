@@ -21,76 +21,81 @@
                 </div>
             }
         </div>
-            <div class="col-12 mb-2">
+        <div class="col-12 mb-2">
             <fieldset disabled="@DisableFields">
                 <div class="position-relative">
 
-                @if (isScanning)
+                    @if (isScanning)
+                    {
+                        <button type="button"
+                                class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2"
+                                title="Close Camera"
+                                style="z-index: 10;"
+                                @onclick="CloseCamera">
+                            <Icon Name="IconName.XCircle" />
+                        </button>
+                        <div class="scanner-wrapper">
+                            <div id="reader"></div>
+                        </div>
+                    }
+                </div>
+                @if (CanCreate)
                 {
-                    <button type="button"
-                            class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2"
-                            title="Close Camera"
-                            style="z-index: 10;"
-                            @onclick="CloseCamera">
-                        <Icon Name="IconName.XCircle" />
-                    </button>
-                    <div class="scanner-wrapper">
-                        <div id="reader"></div>
+                    <!-- BARCODE SECTION -->
+                    <div class="d-flex align-items-center gap-2 mb-3 flex-nowrap">
+                        <InputText class="form-control flex-grow-1"
+                                   placeholder="Enter Barcode"
+                                   @bind-Value="ItemsModel.BarCodeNo" />
+
+                        <button type="button"
+                                class="btn btn-secondary d-flex align-items-center gap-1"
+                                @onclick="StartCameraScan"
+                                disabled="@isScanning">
+                            <Icon Name="IconName.Camera" /> Scan
+                        </button>
+
+                        <Button Class="btn btn-dark" @onclick="HandleBarcode">Validate</Button>
                     </div>
                 }
-            </div>
-            @if (CanCreate)
-            {
-                <!-- BARCODE SECTION -->
-                <div class="d-flex align-items-center gap-2 mb-3 flex-nowrap">
-                    <InputText class="form-control flex-grow-1"
-                               placeholder="Enter Barcode"
-                               @bind-Value="ItemsModel.BarCodeNo" />
-
-                    <button type="button"
-                            class="btn btn-secondary d-flex align-items-center gap-1"
-                            @onclick="StartCameraScan"
-                            disabled="@isScanning">
-                        <Icon Name="IconName.Camera" /> Scan
-                    </button>
-
-                    <Button Class="btn btn-dark" @onclick="HandleBarcode">Validate</Button>
-                </div>          
-            }       
             </fieldset>
             <!-- ITEMS TABLE -->
             @if (ItemsList.Any())
             {
-                <div class="table-responsive" style="height: 650px; overflow-y: auto;">
-                    <table class="table table-bordered table-sm align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="col-3 col-md-3">Product <span class="text-danger">*</span></th>
-                                <th class="col-2">Ship To </th>
-                                <th class="col-1">Unit <span class="text-danger">*</span></th>
-                                <th class="col-1">Qty <span class="text-danger">*</span></th>
-                                <th class="col-2">Lot No</th>
-                                <th class="col-1">Type <span class="text-danger">*</span></th>
-                                <th class="col-1">To Stock</th>
-                                <th class="col-2">Reason</th>
-                                <th class="col-2 text-center">Action</th>
-                            </tr>
-                        </thead>
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Items List (@ItemsList.Count) | Total Item Qty (@TotalItemQty) | Total Box Qty (@TotalBoxQty)</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="height: 650px; overflow-y: auto;">
+                            <table class="table table-bordered table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="col-3 col-md-3">Product <span class="text-danger">*</span></th>
+                                        <th class="col-2">Ship To </th>
+                                        <th class="col-1">Unit <span class="text-danger">*</span></th>
+                                        <th class="col-1">Qty <span class="text-danger">*</span></th>
+                                        <th class="col-2">Lot No</th>
+                                        <th class="col-1">Type <span class="text-danger">*</span></th>
+                                        <th class="col-1">To Stock</th>
+                                        <th class="col-2">Reason</th>
+                                        <th class="col-2 text-center">Action</th>
+                                    </tr>
+                                </thead>
 
-                        <tbody>
-                            @foreach (var item in ItemsList)
-                            {                              
-                                    bool isLocked = item.Id > 0 && item.IsTakeInStock;
-                                    bool noPermission = !CanCreate;
-                                    bool isDisabled = isLocked || noPermission;
-                                
+                                <tbody>
+                                    @foreach (var item in ItemsList)
+                                    {
+                                        bool isLocked = item.Id > 0 && item.IsTakeInStock;
+                                        bool noPermission = !CanCreate;
+                                        bool isDisabled = isLocked || noPermission;
 
-                                <tr class="@(isDisabled ? "table-success text-muted disabled-row" : "")"
-                                    title="@(isLocked
-                                                ? "This item is already taken in stock. You cannot edit it."
-                                                : noPermission
-                                                    ? "You do not have permission to perform this action."
-                                                    : "")">
+
+                                        <tr class="@(isDisabled ? "table-success text-muted disabled-row" : "")"
+                                            title="@(isLocked
+                                                                                            ? "This item is already taken in stock. You cannot edit it."
+                                                                                            : noPermission
+                                                                                                ? "You do not have permission to perform this action."
+                                                                                                : "")">
                                     <!-- PRODUCT -->
                                     @* <td>
                                         <InputSelect class="form-select" @bind-Value="@item.ProductId">
@@ -105,62 +110,62 @@
                                             <small class="text-danger">Required</small>
                                         }
                                     </td> *@
-                                    <td>
-                                        <SearchableDropdown TItem="ProductModel"
-                                                            Items="@ProductList.Where(p=>p.IsActive || p.Id==item.ProductId)"
-                                                            ItemTextSelector="@(p => p.SKU)"
-                                                            SelectedText="@item.ProductSearchText"
-                                                            Placeholder="Search product..."
-                                                            OnItemSelected="@(p => OnProductDropdownSelected(item, p))"
-                                                            ShowValidationMessage="@(showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))"
-                                                            IsDisabled="@isDisabled" />
+                                            <td>
+                                                <SearchableDropdown TItem="ProductModel"
+                                                                    Items="@ProductList.Where(p=>p.IsActive || p.Id==item.ProductId)"
+                                                                    ItemTextSelector="@(p => p.SKU)"
+                                                                    SelectedText="@item.ProductSearchText"
+                                                                    Placeholder="Search product..."
+                                                                    OnItemSelected="@(p => OnProductDropdownSelected(item, p))"
+                                                                    ShowValidationMessage="@(showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))"
+                                                                    IsDisabled="@isDisabled" />
                                         @if (showValidation && item.ProductId == 0)
-                                        {
-                                            <small class="text-danger">Required</small>
-                                        }
-                                    </td>
+                                                {
+                                                    <small class="text-danger">Required</small>
+                                                }
+                                            </td>
 
-                                    <!-- SHIP TO -->
-                                    <td>
-                                        <InputSelect class="form-select" @bind-Value="@item.ShipToCompanyId" disabled="@isDisabled">
-                                            <option value="0">Select</option>
-                                            @foreach (var ship in CompanyList.Where(c=>c.IsActive || c.Id==item.ShipToCompanyId))
-                                            {
-                                                <option value="@ship?.Id">@ship?.Name</option>
-                                            }
-                                        </InputSelect>
-                                        @* @if (showValidation && item.ShipToCompanyId == 0 && IsLastUnsavedItem(item))
+                                            <!-- SHIP TO -->
+                                            <td>
+                                                <InputSelect class="form-select" @bind-Value="@item.ShipToCompanyId" disabled="@isDisabled">
+                                                    <option value="0">Select</option>
+                                                    @foreach (var ship in CompanyList.Where(c => c.IsActive || c.Id == item.ShipToCompanyId))
+                                                    {
+                                                        <option value="@ship?.Id">@ship?.Name</option>
+                                                    }
+                                                </InputSelect>
+                                                @* @if (showValidation && item.ShipToCompanyId == 0 && IsLastUnsavedItem(item))
                                             {
                                                 <small class="text-danger">Required</small>
                                             } *@
-                                    </td>
+                                            </td>
 
-                                    <!-- UNIT -->
-                                    <td>
-                                        <InputSelect class="form-select" @bind-Value="@item.UnitId" disabled="@isDisabled">
-                                            <option value="0">Select</option>
-                                            @foreach (var unit in Units)
-                                            {
-                                                <option value="@unit.Id">@unit.Name</option>
-                                            }
-                                        </InputSelect>
-                                        @if (showValidation && item.UnitId == 0 && IsLastUnsavedItem(item))
-                                        {
-                                            <small class="text-danger">Required</small>
-                                        }
-                                    </td>
+                                            <!-- UNIT -->
+                                            <td>
+                                                <InputSelect class="form-select" @bind-Value="@item.UnitId" disabled="@isDisabled">
+                                                    <option value="0">Select</option>
+                                                    @foreach (var unit in Units)
+                                                    {
+                                                        <option value="@unit.Id">@unit.Name</option>
+                                                    }
+                                                </InputSelect>
+                                                @if (showValidation && item.UnitId == 0 && IsLastUnsavedItem(item))
+                                                {
+                                                    <small class="text-danger">Required</small>
+                                                }
+                                            </td>
 
-                                    <!-- QTY (NARROW) -->
-                                    <td class="col-1">
-                                        <InputNumber class="form-control p-1" min="1" @bind-Value="@item.ReturnQuantity" disabled="@isDisabled" />
-                                        @if (showValidation && item.ReturnQuantity <= 0 && IsLastUnsavedItem(item))
-                                        {
-                                            <small class="text-danger">Min 1</small>
-                                        }
-                                    </td>
+                                            <!-- QTY (NARROW) -->
+                                            <td class="col-1">
+                                                <InputNumber class="form-control p-1" min="1" @bind-Value="@item.ReturnQuantity" disabled="@isDisabled" />
+                                                @if (showValidation && item.ReturnQuantity <= 0 && IsLastUnsavedItem(item))
+                                                {
+                                                    <small class="text-danger">Min 1</small>
+                                                }
+                                            </td>
 
-                                    <!-- OUTWARD (WIDER) -->
-                                    @* <td style="width:150px;">
+                                            <!-- OUTWARD (WIDER) -->
+                                            @* <td style="width:150px;">
                                         <InputSelect class="form-select" @bind-Value="@item.OutwardId">
                                             <option value="0">Select</option>
                                             @foreach (var outward in OutwardList)
@@ -169,94 +174,96 @@
                                             }
                                         </InputSelect>
                                     </td> *@
-                                    <td style="width:100px;">
-                                        <SearchableDropdown TItem="OutwardModel"
-                                                            Items="OutwardList.Where(o=>o.IsActive || o.Id==item.OutwardId)"
-                                                            ItemTextSelector="@(o => o.OutwardNo)"
-                                                            SelectedText="@item.OutwardSearchText"
-                                                            Placeholder="Search Outward..."
-                                                            OnItemSelected="@(o => OnOutwardDropdownSelected(item, o))"
-                                                            IsDisabled="@isDisabled" />
-                                    </td>
+                                            <td style="width:100px;">
+                                                <SearchableDropdown TItem="OutwardModel"
+                                                                    Items="OutwardList.Where(o=>o.IsActive || o.Id==item.OutwardId)"
+                                                                    ItemTextSelector="@(o => o.OutwardNo)"
+                                                                    SelectedText="@item.OutwardSearchText"
+                                                                    Placeholder="Search Outward..."
+                                                                    OnItemSelected="@(o => OnOutwardDropdownSelected(item, o))"
+                                                                    IsDisabled="@isDisabled" />
+                                            </td>
 
-                                    <!-- RETURN TYPE -->
-                                    <td>
-                                        <InputSelect class="form-select" @bind-Value="@item.ReturnType" disabled="@isDisabled">
-                                            <option value="0">Select</option>
-                                            @foreach (var type in Enum.GetValues(typeof(ReturnType)))
-                                            {
-                                                <option value="@((int)type)">@type</option>
-                                            }
-                                        </InputSelect>
-                                        @if (showValidation && item.ReturnType == 0 && IsLastUnsavedItem(item))
-                                        {
-                                            <small class="text-danger">Required</small>
-                                        }
-                                    </td>
-
-                                    <!-- TAKE TO STOCK -->
-                                    <td>
-                                        <InputSelect TValue="bool"
-                                                     class="form-select"
-                                                     @bind-Value="item.IsTakeInStock"
-                                                     disabled="@isDisabled">
-
-                                            <option value="true">Yes</option>
-                                            <option value="false">No</option>
-
-                                        </InputSelect>
-                                    </td>
-
-                                    <!-- REASON -->
-                                    <td class="col-1">
-                                        <InputText class="form-control" @bind-Value="@item.ReasonToReturn" disabled="@isDisabled" />
-                                    </td>
-
-                                    <!-- ACTION (ONE LINE, TIGHT) -->
-                                    <td class="text-center">
-                                        <div class="d-flex align-items-center justify-content-center gap-1">
-                                            @if (CanCreate)
-                                            {
-                                                <Button Class="btn btn-success btn-sm p-1" title="Save"
-                                                        @onclick="(() => HandleSubmit(item))" disabled="@isDisabled">
-                                                    <Icon Name="IconName.Floppy" />
-                                                </Button>
-                                            }
-
-                                            @if (item.Id > 0)
-                                            {
-                                                @if (CanDelete)
+                                            <!-- RETURN TYPE -->
+                                            <td>
+                                                <InputSelect class="form-select" @bind-Value="@item.ReturnType" disabled="@isDisabled">
+                                                    <option value="0">Select</option>
+                                                    @foreach (var type in Enum.GetValues(typeof(ReturnType)))
+                                                    {
+                                                        <option value="@((int)type)">@type</option>
+                                                    }
+                                                </InputSelect>
+                                                @if (showValidation && item.ReturnType == 0 && IsLastUnsavedItem(item))
                                                 {
-                                                    <Button Class="btn btn-danger btn-sm p-1" title="Delete"
-                                                            @onclick="(() => HandleDelete(item.Id))">
-                                                        <Icon Name="IconName.Trash" />
-                                                    </Button>
+                                                    <small class="text-danger">Required</small>
                                                 }
-                                            }
-                                            else
-                                            {
-                                                <Button Class="btn btn-secondary btn-sm p-1" title="Cancel"
-                                                        @onclick="(() => RemoveUnSaveItem(item))">
-                                                    <Icon Name="IconName.XCircle" />
-                                                </Button>
-                                            }
+                                            </td>
 
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                    <fieldset disabled="@DisableFields">
-                    <div class="text-end mt-3">
-                        <button type="button"
-                                disabled="@hideAddNewButton"
-                                class="btn btn-success "
-                                @onclick="HandleAddItem">
-                            <i class="bi bi-plus-circle me-1"></i>Add New Item
-                        </button>
+                                            <!-- TAKE TO STOCK -->
+                                            <td>
+                                                <InputSelect TValue="bool"
+                                                             class="form-select"
+                                                             @bind-Value="item.IsTakeInStock"
+                                                             disabled="@isDisabled">
+
+                                                    <option value="true">Yes</option>
+                                                    <option value="false">No</option>
+
+                                                </InputSelect>
+                                            </td>
+
+                                            <!-- REASON -->
+                                            <td class="col-1">
+                                                <InputText class="form-control" @bind-Value="@item.ReasonToReturn" disabled="@isDisabled" />
+                                            </td>
+
+                                            <!-- ACTION (ONE LINE, TIGHT) -->
+                                            <td class="text-center">
+                                                <div class="d-flex align-items-center justify-content-center gap-1">
+                                                    @if (CanCreate)
+                                                    {
+                                                        <Button Class="btn btn-success btn-sm p-1" title="Save"
+                                                                @onclick="(() => HandleSubmit(item))" disabled="@isDisabled">
+                                                            <Icon Name="IconName.Floppy" />
+                                                        </Button>
+                                                    }
+
+                                                    @if (item.Id > 0)
+                                                    {
+                                                        @if (CanDelete)
+                                                        {
+                                                            <Button Class="btn btn-danger btn-sm p-1" title="Delete"
+                                                                    @onclick="(() => HandleDelete(item.Id))">
+                                                                <Icon Name="IconName.Trash" />
+                                                            </Button>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <Button Class="btn btn-secondary btn-sm p-1" title="Cancel"
+                                                                @onclick="(() => RemoveUnSaveItem(item))">
+                                                            <Icon Name="IconName.XCircle" />
+                                                        </Button>
+                                                    }
+
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                            <fieldset disabled="@DisableFields">
+                                <div class="text-end mt-3">
+                                    <button type="button"
+                                            disabled="@hideAddNewButton"
+                                            class="btn btn-success "
+                                            @onclick="HandleAddItem">
+                                        <i class="bi bi-plus-circle me-1"></i>Add New Item
+                                    </button>
+                                </div>
+                            </fieldset>
+                        </div>
                     </div>
-                    </fieldset>
                 </div>
             }
             else
@@ -266,14 +273,14 @@
                     No items added yet. Click "Add Item" to get started.
                 </div>
                 <fieldset disabled="@DisableFields">
-                <div class="text-end mt-3">
-                    <button type="button"
-                            disabled="@hideAddNewButton"
-                            class="btn btn-success "
-                            @onclick="HandleAddItem">
-                        <i class="bi bi-plus-circle me-1"></i>Add New Item
-                    </button>
-                </div>
+                    <div class="text-end mt-3">
+                        <button type="button"
+                                disabled="@hideAddNewButton"
+                                class="btn btn-success "
+                                @onclick="HandleAddItem">
+                            <i class="bi bi-plus-circle me-1"></i>Add New Item
+                        </button>
+                    </div>
                 </fieldset>
 
             }
@@ -295,7 +302,11 @@
     private bool isScanning = false;
     private DotNetObjectReference<SaleReturnItemsFormModal>? dotNetHelper;
     private InputText barcodeInput = default!;
-
+    private decimal TotalItemQty => _savedTotals.Values.Count > 0 ?
+        _savedTotals.Values.Sum(v => v.ItemQty) : 0;
+    private decimal TotalBoxQty => _savedTotals.Values.Count > 0 ?
+        _savedTotals.Values.Sum(v => v.BoxCount) : 0;
+    private Dictionary<int, (int BoxCount, decimal ItemQty)> _savedTotals = new();
     // private EditContext editContext;
     // private ValidationMessageStore? validationMessage;
 
@@ -321,9 +332,9 @@
     [Parameter] public EventCallback AddItemRow { get; set; }
     [Parameter] public EventCallback OnBarcodeVal { get; set; }
     [Parameter] public EventCallback<SaleReturnItemsModel> RemoveItemRow { get; set; }
-    
+
     [Parameter] public bool DisableFields { get; set; }
-    
+
     // protected override void OnParametersSet()
     // {
     //     InitializeEditContext();
@@ -335,6 +346,17 @@
     //     validationMessage = new ValidationMessageStore(editContext);
 
     // }
+    private void UpdateTotalQtys()
+    {
+        _savedTotals.Clear();
+
+        foreach (var item in ItemsList.Where(i => i.Id > 0))
+        {
+            var boxCount = item.UnitId == (int)UnitType.BOX ? 1 : 0;
+
+            _savedTotals[item.Id] = (boxCount, item.ReturnQuantity);
+        }
+    }
     private bool IsLastUnsavedItem(SaleReturnItemsModel item)
     {
         return item.Id == 0;
@@ -342,6 +364,7 @@
     public async Task Show()
     {
         ResetUiState();
+        UpdateTotalQtys();
         var mo = ItemsModel;
         if (ItemsList == null || ItemsList.Count == 0)
         {
@@ -365,9 +388,9 @@
         // successMessage = item.Id == 0
         //     ? "Sale return item added successfully."
         //     : "Sale return item updated successfully.";
-
         showValidation = false;
         hideAddNewButton = false;
+        UpdateTotalQtys();
         StateHasChanged();
     }
 
@@ -381,7 +404,8 @@
             return;
         }
         await OnDelete.InvokeAsync(itemId);
-
+        UpdateTotalQtys();
+        StateHasChanged();
     }
     public async Task HandleResponse(OperationResponse ResponseDto)
     {
