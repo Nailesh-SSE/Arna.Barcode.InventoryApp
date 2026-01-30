@@ -12,6 +12,7 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
     [Inject] protected IPermissionService PermissionService { get; set; } = default!;
     [Inject] protected PermissionState PermissionState { get; set; } = default!;
     [Inject] protected NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] protected ILogger<AuthComponentBase> Logger { get; set; } = default!;
 
     protected ClaimsPrincipal User { get; private set; } = new(new ClaimsIdentity());
     protected int UserId => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
@@ -19,22 +20,33 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
     protected int CurrentUserRoleId => int.TryParse(User.FindFirst("UserRoleId")?.Value, out var roleId) ? roleId : 0;
     protected bool IsAuthenticated => User.Identity?.IsAuthenticated ?? false;
 
+    private CancellationTokenSource _cts = new CancellationTokenSource();
+
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        User = authState.User;
-
-        if (IsAuthenticated && !PermissionState.IsLoaded)
+        try
         {
-            var permissions = await PermissionService.GetUserPermissionsAsync(UserId);
-            PermissionState.SetPermissions(permissions);
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            User = authState.User;
 
-            // 🔹 preload forms into cache
-            await PermissionService.GetPermittedFormsAsync(UserId);
+            if (IsAuthenticated && !PermissionState.IsLoaded)
+            {
+                var permissions = await PermissionService.GetUserPermissionsAsync(UserId, _cts.Token);
+                PermissionState.SetPermissions(permissions);
+
+                await PermissionService.GetPermittedFormsAsync(UserId, _cts.Token);
+            }
+
+            AuthProvider.AuthenticationStateChanged += OnAuthChanged;
         }
-
-
-        AuthProvider.AuthenticationStateChanged += OnAuthChanged;
+        catch (OperationCanceledException)
+        {
+            Logger.LogDebug("Component initialization was cancelled");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing auth component");
+        }
     }
 
     private void OnAuthChanged(Task<AuthenticationState> task)
@@ -44,17 +56,30 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
 
     private async Task HandleAuthChangedAsync(Task<AuthenticationState> task)
     {
-        var authState = await task;
-        User = authState.User;
-
-        if (!User.Identity?.IsAuthenticated ?? true)
+        try
         {
-            PermissionState.Clear();
+            _cts.Token.ThrowIfCancellationRequested();
+
+            var authState = await task;
+            User = authState.User;
+
+            if (!User.Identity?.IsAuthenticated ?? true)
+            {
+                PermissionState.Clear();
+            }
+
+            await InvokeAsync(StateHasChanged);
         }
-
-        await InvokeAsync(StateHasChanged);
+        catch (OperationCanceledException)
+        {
+            // Expected when component is disposed
+            Logger.LogDebug("Auth change handler was cancelled");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error handling auth state change");
+        }
     }
-
 
     public bool CanView(string route)
     {
@@ -90,6 +115,7 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
         return permission != null && permission.CanView && permission.CanCreate &&
                permission.CanEdit && permission.CanDelete;
     }
+
     public bool IsFactoryAdmin()
     {
         var permission = PermissionState.Permissions.FirstOrDefault(p => p.Route == "*");
@@ -98,5 +124,16 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
     }
 
     public void Dispose()
-        => AuthProvider.AuthenticationStateChanged -= OnAuthChanged;
+    {
+        try
+        {
+            _cts?.Cancel();
+            _cts?.Dispose();
+            AuthProvider.AuthenticationStateChanged -= OnAuthChanged;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error disposing AuthComponentBase");
+        }
+    }
 }

@@ -85,6 +85,7 @@
     private bool isLoading;
     private bool showPassword;
     private string? returnUrl;
+    private CancellationTokenSource _cts = new CancellationTokenSource();
 
 
     private string passwordInputType => showPassword ? "text" : "password";
@@ -94,17 +95,16 @@
     {
         try
         {
-            // Get return URL from query parameters
-            var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
-            returnUrl = System.Web.HttpUtility.ParseQueryString(uri.Query).Get("returnUrl");
-
-            // Check if user is already authenticated and redirect if needed
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             if (authState.User.Identity?.IsAuthenticated == true)
             {
                 await NavigateToReturnUrl();
                 return;
             }
+        }
+        catch (JSDisconnectedException ex)
+        {
+            Logger.LogWarning(ex, "JSDisconnectedException occurred during login initialization.");
         }
         catch (Exception ex)
         {
@@ -126,13 +126,14 @@
 
             if (isValid)
             {
-                var user = await UserService.GetUserByUsernameAsync(loginModel.Username);               
+                var user = await UserService.GetUserByUsernameAsync(loginModel.Username);
                 if (user == null)
                 {
                     errorMessage = "User account not found";
+                    Logger.LogWarning("User authenticated but account not found for username: {Username}", loginModel.Username);
                     return;
                 }
-                
+
                 // Mark user as authenticated using the AuthenticationStateProvider
                 var authProvider = AuthStateProvider as CustomAuthStateProvider;
                 if (authProvider != null)
@@ -153,6 +154,7 @@
                 else
                 {
                     errorMessage = "Authentication service not available";
+                    Logger.LogError("Could not cast AuthStateProvider to CustomAuthStateProvider");
                 }
             }
             else
@@ -160,6 +162,16 @@
                 errorMessage = "Invalid username or password";
                 Logger.LogWarning("Failed login attempt for username: {Username}", loginModel.Username);
             }
+        }
+        catch (ObjectDisposedException ex)
+        {
+            Logger.LogError(ex, "DbContext disposed during login for user {Username}", loginModel.Username);
+            errorMessage = "System error. Please try again.";
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.LogDebug("Login operation was cancelled for user {Username}", loginModel.Username);
+            errorMessage = "Login cancelled. Please try again.";
         }
         catch (Exception ex)
         {
@@ -184,6 +196,7 @@
             }
             else
             {
+                Logger.LogWarning("Invalid return URL detected: {ReturnUrl}", returnUrl);
                 NavigationManager.NavigateTo("/", false);
             }
         }
@@ -197,7 +210,6 @@
     {
         if (string.IsNullOrEmpty(url))
             return false;
-
         // Ensure the URL is relative and doesn't contain suspicious characters
         return url.StartsWith("/") &&
                !url.Contains("://") &&
@@ -209,6 +221,19 @@
     private void TogglePasswordVisibility()
     {
         showPassword = !showPassword;
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            _cts?.Cancel();
+            _cts?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error disposing Login component");
+        }
     }
 
     public class LoginModel

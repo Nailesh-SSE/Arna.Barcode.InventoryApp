@@ -1,6 +1,7 @@
 ﻿using InventoryManagement.Services.Interfaces;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.JSInterop;
 using System.Security.Claims;
 namespace InventoryManagement.Services.Auth;
 
@@ -10,7 +11,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     private readonly ILogger<CustomAuthStateProvider> _logger;
     private const string SessionKey = "UserAuth";
     private AuthenticationState _authenticationState;
-    private readonly TimeSpan _sessionTimeout = TimeSpan.FromHours(2);
+    private readonly TimeSpan _sessionTimeout = TimeSpan.FromHours(8);
     private AuthData? _cachedAuthData;
     private readonly IPermissionService PermissionService;
     public CustomAuthStateProvider(
@@ -30,7 +31,6 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             // Use cached data if available to avoid async delays
             if (_cachedAuthData?.IsAuthenticated == true)
             {
-                // Check if cache is still valid
                 if (DateTime.UtcNow - _cachedAuthData.LoginTime <= _sessionTimeout)
                 {
                     return CreateAuthenticationState(_cachedAuthData);
@@ -44,14 +44,14 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
                 }
             }
 
+            // Retrieve session data from ProtectedBrowserStorage
             var session = await _storage.GetAsync<AuthData>(SessionKey);
 
             if (session.Success && session.Value?.IsAuthenticated == true)
             {
                 var user = session.Value;
-                _cachedAuthData = user; // Cache the data
+                _cachedAuthData = user;
 
-                // Check session timeout
                 if (DateTime.UtcNow - user.LoginTime > _sessionTimeout)
                 {
                     _logger.LogInformation("Session expired for user {UserId}", user.UserId);
@@ -63,6 +63,10 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
                 _authenticationState = CreateAuthenticationState(user);
                 return _authenticationState;
             }
+        }
+        catch (JSDisconnectedException ex)
+        {
+            _logger.LogWarning(ex, "JSDisconnectedException occurred while retrieving authentication state.");
         }
         catch (Exception ex)
         {
