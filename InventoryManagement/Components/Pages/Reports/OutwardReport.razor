@@ -237,6 +237,7 @@ else
                                                     <th>#</th>
                                                     <th>Outward No</th>
                                                     <th>Date</th>
+                                                    <th>Brand</th>
                                                     <th>Product</th>
                                                     <th>SKU</th>
                                                     <th>Category</th>
@@ -254,6 +255,7 @@ else
                                                         <td>@((reportResult.PageNumber - 1) * reportResult.PageSize + reportResult.Items.IndexOf(item) + 1)</td>
                                                         <td><span class="badge bg-primary">@item.OutwardNumber</span></td>
                                                         <td>@item.OutwardDate.ToString("dd/MM/yyyy")</td>
+                                                        <td>@item.BrandName</td>
                                                         <td>@item.ProductName</td>
                                                         <td><code>@item.SKU</code></td>
                                                         <td>@item.CategoryName</td>
