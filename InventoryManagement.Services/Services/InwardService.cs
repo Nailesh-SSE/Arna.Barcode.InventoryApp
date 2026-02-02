@@ -980,7 +980,7 @@ public class InwardService : IInwardService
             CreatedBy = entity.CreatedBy,
             BoxQuantity = entity.BoxQuantity,
             ProductSearchText = entity.Product.SKU,
-            HasOutOfStockBarcodes = entity.InwardBarcodeItems.Any(b => !b.IsInStock)
+            HasOutOfStockBarcodes = entity.InwardBarcodeItems.Any(b => !b.IsInStock && !b.IsDeleted)
         };
     }
 
