@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthProvider
 @implements IDisposable
 
 <div class="page">
@@ -31,10 +32,25 @@
 
 @code {
     private bool isCollapsed = false;
+    private Task<AuthenticationState>? _lastAuthStateTask;
+    private CancellationTokenSource? _cts;
 
     protected override void OnInitialized()
     {
         Navigation.LocationChanged += OnLocationChanged;
+        AuthProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        var authState = await task;
+        if (authState.User.Identity?.IsAuthenticated != true)
+        {
+            // Redirect to login page with force reload
+            Navigation.NavigateTo("/login");
+        }
+        // Optionally, you can force a UI refresh here if needed
+        StateHasChanged();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -48,7 +64,7 @@
             }
         }
     }
-
+        
     private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         if (await IsMobileAsync())
@@ -74,5 +90,6 @@
     public void Dispose()
     {
         Navigation.LocationChanged -= OnLocationChanged;
+        AuthProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
     }
 }

@@ -329,9 +329,10 @@ public class OutwardService : IOutwardService
         var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
     
         var barcodeItem = (await barcodeItemRepository.FindWithIncludesAsync(
-            bi => bi.BarcodeNo == barcodeNo && !bi.IsDeleted,
-            bi => bi.InwardItem
-        )).FirstOrDefault();
+    bi => bi.BarcodeNo == barcodeNo && !bi.IsDeleted,
+    CancellationToken.None,
+    bi => bi.InwardItem
+)).FirstOrDefault();
 
         if (barcodeItem == null) return;
 

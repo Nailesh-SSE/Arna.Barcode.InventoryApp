@@ -17,7 +17,7 @@ protected override async Task OnInitializedAsync()
         var returnUrl = GetReturnUrl();
         
         // Navigate to login with return URL - use client-side navigation
-        NavigationManager.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(returnUrl)}", false);
+        NavigationManager.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(returnUrl)}");
     }
     else
     {
