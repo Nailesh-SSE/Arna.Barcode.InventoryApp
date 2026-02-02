@@ -2,12 +2,18 @@
 @using InventoryManagement.Components.Auth
 @inherits AuthComponentBase
 @inject IPermissionService PermissionService
+@inject AuthenticationStateProvider AuthProvider
+@inject ILogger<NavMenu> Logger
+@implements IDisposable
+
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">Inventory Management</a>
+        <a class="navbar-brand" href="/">Inventory Management</a>
     </div>
 </div>
+
+
 
 <div class="nav-scrollable d-flex flex-column">
     <div class="nav-menu flex-grow-1">
@@ -32,86 +38,175 @@
                         </div>
                     </div>
 
-                    <!-- CHILD MENU -->
-                    @if (childForms.TryGetValue(parent.Id, out var children))
+
+
+                <!-- CHILD MENU -->
+                @if (childForms.TryGetValue(parent.Id, out var children))
+                {
+                    @foreach (var form in children)
                     {
-                        @foreach (var form in children)
+                        if (CanView(form.Route))
                         {
-                            if (CanView(form.Route))
-                            {
-                                <div class="nav-item px-3 ms-3">
-                                    <NavLink class="nav-link" href="@form.Route">
-                                        @if (GetIcon(form.Icon) is IconName childIcon)
-                                        {
-                                            <Icon Name="@childIcon" class="me-2" />
-                                        }
-                                        &nbsp; @FormatName(form.FormName)
-                                    </NavLink>
-                                </div>
-                            }
+                            <div class="nav-item px-3 ms-3">
+                                <NavLink class="nav-link" href="@form.Route">
+                                    @if (GetIcon(form.Icon) is IconName childIcon)
+                                    {
+                                        <Icon Name="@childIcon" class="me-2" />
+                                    }
+                                    &nbsp; @FormatName(form.FormName)
+                                </NavLink>
+                            </div>
                         }
                     }
                 }
             }
         }
-    </div>
-
-    <footer class="app-footer">
-        <small>Designed & Developed by Arna Technosoft.</small>
-    </footer>
+    }
 </div>
+
+<footer class="app-footer">
+    <small>Designed & Developed by Arna Technosoft.</small>
+</footer>
+
+</div>
+
+
 
 @code
 {
     private bool isLoading = true;
+    private CancellationTokenSource _cts = new CancellationTokenSource();
 
-    private List<FormMasterModel> formList = new();
-    private List<FormMasterModel> parentformList = new();
-    private List<FormPermissionModel> permissionList = new();
-    private Dictionary<int, List<FormMasterModel>> childForms = new();
 
-    private List<RoleModel> roles = new();
+private List<FormMasterModel> formList = new();
+private List<FormMasterModel> parentformList = new();
+private List<FormPermissionModel> permissionList = new();
+private Dictionary<int, List<FormMasterModel>> childForms = new();
 
-    private int UserRoleId;
-    private int UserLevel;
+private List<RoleModel> roles = new();
+private int UserRoleId;
+private int UserLevel;
 
-    protected override async Task OnInitializedAsync()
+protected override async Task OnInitializedAsync()
+{
+    await base.OnInitializedAsync();
+    AuthProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+    await LoadMenuAsync(_cts.Token);
+}
+
+private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+{
+    try
     {
-        await base.OnInitializedAsync();
+        // Cancel previous loading operation
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _cts = new CancellationTokenSource();
 
-        if (!IsAuthenticated)
+        await LoadMenuAsync(_cts.Token);
+        await InvokeAsync(StateHasChanged);
+    }
+    catch (OperationCanceledException)
+    {
+        // Expected when component is disposed or cancelled
+        Logger.LogDebug("Menu loading operation was cancelled");
+    }
+    catch (Exception ex)
+    {
+        Logger.LogError(ex, "Error loading menu on authentication state change");
+    }
+}
+
+private async Task LoadMenuAsync(CancellationToken cancellationToken = default)
+{
+    if (cancellationToken.IsCancellationRequested)
+        return;
+
+    if (!IsAuthenticated)
+    {
+        formList.Clear();
+        parentformList.Clear();
+        childForms.Clear();
+        isLoading = false;
+        StateHasChanged();
+        return;
+    }
+
+    isLoading = true;
+    try
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Pass cancellation token to service call
+        var forms = await PermissionService.GetPermittedFormsAsync(UserId, cancellationToken);
+
+        if (cancellationToken.IsCancellationRequested)
             return;
-
-        isLoading = true;
-
-        var forms = await PermissionService.GetPermittedFormsAsync(UserId);
 
         if (forms.Any())
         {
             formList = forms;
             parentformList = forms.Where(f => f.Route == "#").ToList();
-
             childForms = forms
                 .Where(f => f.ParentId != null)
                 .GroupBy(f => f.ParentId!.Value)
                 .ToDictionary(g => g.Key, g => g.ToList());
         }
-
+        else
+        {
+            formList.Clear();
+            parentformList.Clear();
+            childForms.Clear();
+        }
+    }
+    catch (OperationCanceledException)
+    {
+        // Expected when component is disposed or cancelled
+        Logger.LogDebug("Menu loading operation was cancelled");
+    }
+    catch (Exception ex)
+    {
+        Logger.LogError(ex, "Error loading menu");
+        formList.Clear();
+        parentformList.Clear();
+        childForms.Clear();
+    }
+    finally
+    {
         isLoading = false;
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            await InvokeAsync(StateHasChanged);
+        }
     }
+}
 
-    private IconName? GetIcon(string icon)
+private IconName? GetIcon(string icon)
+{
+    if (string.IsNullOrWhiteSpace(icon))
+        return null;
+    return Enum.TryParse<IconName>(icon, out var result)
+        ? result
+        : null;
+}
+
+private static string FormatName(string name)
+{
+    return char.ToUpper(name[0]) + name[1..].ToLower();
+}
+
+public void Dispose()
+{
+    try
     {
-        if (string.IsNullOrWhiteSpace(icon))
-            return null;
-
-        return Enum.TryParse<IconName>(icon, out var result)
-            ? result
-            : null;
+        _cts?.Cancel();
+        _cts?.Dispose();
+        AuthProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
     }
-
-    private static string FormatName(string name)
+    catch (Exception ex)
     {
-        return char.ToUpper(name[0]) + name[1..].ToLower();
+        Logger.LogError(ex, "Error disposing NavMenu");
     }
+}
+
 }

@@ -127,6 +127,7 @@ public class OutwardReportItem
     public string ProductName { get; set; } = string.Empty;
     public string SKU { get; set; } = string.Empty;
     public string CategoryName { get; set; } = string.Empty;
+    public string BrandName { get; set; } = string.Empty;
     public decimal Quantity { get; set; }
     public string Unit { get; set; } = string.Empty;
     public decimal UnitCost { get; set; }

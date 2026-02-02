@@ -219,12 +219,12 @@ public class InwardService : IInwardService
             await DeleteBarcodesForItemAsync(id, userId);
 
             var itemRepo = _unitOfWork.GetRepository<InwardItem>();
-            var item = await  itemRepo.GetByIdAsync(id);
+            var item = await itemRepo.GetByIdAsync(id);
 
             item.IsActive = false;
             item.IsDeleted = true;
             item.UpdatedOn = DateTime.Now;
-            item.UpdatedBy = userId;       
+            item.UpdatedBy = userId;
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -239,68 +239,42 @@ public class InwardService : IInwardService
     {
         try
         {
-            var inwardRepo = _unitOfWork.GetRepository<Inward>();
-
-            var Date = saleReturnItems.ReturnDate.Date;
-            var existingReturnInward = await inwardRepo.GetQueryable()
-                .FirstOrDefaultAsync(i =>
-                    i.IsSalesReturn &&
-                    i.InwardDate.Date == Date &&
-                    i.ShipMentCompanyId == saleReturnItems.ShipToCompanyId &&
-                    i.CategoryId == saleReturnItems.CategoryId);
-
+            var existingReturnInward = await GetSaleReturnInwardAsync(saleReturnItems);
             var inwardId = existingReturnInward?.Id
                            ?? await CreateSalesReturnInwardAsync(saleReturnItems);
 
             if (inwardId == 0)
                 return false;
 
-            await CreateSalesReturnInwardItemAsync(inwardId, saleReturnItems);
-
-            return true;
+            var itemModel = await ConvertDtoToItemModel(inwardId, saleReturnItems);
+            return await SaveSalesReturnInwardItemAsync(itemModel);
         }
         catch (Exception ex)
         {
-            // TODO: log exception
+            Console.WriteLine($"Error Adding inward item: {ex.Message}");
             return false;
         }
     }
+
     public async Task<bool> DeleteSalesReturnInwardItemAsync(SaleToInwardDto saleReturnItems)
     {
         try
         {
-            var inwardRepo = _unitOfWork.GetRepository<Inward>();
-            var date = saleReturnItems.ReturnDate.Date;
-
-            var existingReturnInward = await inwardRepo.GetQueryable()
-                .Include(i => i.InwardItems)
-                .FirstOrDefaultAsync(i =>
-                    i.IsSalesReturn &&
-                    i.InwardDate.Date == date &&
-                    i.ShipMentCompanyId == saleReturnItems.ShipToCompanyId &&
-                    i.CategoryId == saleReturnItems.CategoryId);
+            var existingReturnInward = await GetSaleReturnInwardAsync(saleReturnItems);
 
             if (existingReturnInward == null)
                 return false;
 
-            var items = existingReturnInward.InwardItems.FirstOrDefault(i =>
-            i.ProductId == saleReturnItems.ProductId &&
-            i.InwardUnitId == saleReturnItems.UnitId &&
-            i.ItemQuantity == saleReturnItems.ReturnQuantity);
-
-            if (items == null)
-                return false;
-
-            var result = await DeleteInwardItemAsync(items.Id, saleReturnItems.UpdatedBy);
-
-            return result;
+            var model = await ConvertDtoToItemModel(existingReturnInward.Id, saleReturnItems);
+            return await DeleteSaleReturnInwardItemAsync(model);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error deleting inward item: {ex.Message}");
-            throw;
+            return false;
         }
     }
+
     public async Task<byte[]> GenerateItemBarcodePrnAsync(int inwardItemId)
     {
         var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
@@ -357,7 +331,7 @@ public class InwardService : IInwardService
     }
     public async Task<byte[]> GenerateSingleBarcodePrnAsync(string barcodeNo)
     {
-        try 
+        try
         {
             var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
             var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
@@ -399,18 +373,18 @@ public class InwardService : IInwardService
             Console.WriteLine("Error in GenerateSingleBarcodePrnAsync service" + e.Message);
             return null;
         }
-       
+
     }
     public async Task<BarcodeValidationResult> ValidateBarcodeForReprintAsync(string barcodeNo)
     {
-        try 
+        try
         {
             var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
-          
-        var barcodeItem = await barcodeItemRepository
-            .GetQueryable()
-            .AsNoTracking()
-            .FirstOrDefaultAsync(bi => bi.BarcodeNo == barcodeNo && !bi.IsDeleted);
+
+            var barcodeItem = await barcodeItemRepository
+                .GetQueryable()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(bi => bi.BarcodeNo == barcodeNo && !bi.IsDeleted);
 
             if (barcodeItem == null)
             {
@@ -432,7 +406,7 @@ public class InwardService : IInwardService
 
             return new BarcodeValidationResult { IsValid = true };
         }
-        catch(Exception e) 
+        catch (Exception e)
         {
             throw;
         }
@@ -694,39 +668,13 @@ public class InwardService : IInwardService
         }
 
     }
-    private async Task<bool> CreateSalesReturnInwardItemAsync(int inwardId, SaleToInwardDto items)
+
+    private async Task<bool> CreateSalesReturnInwardItemAsync(InwardItemModel model)
     {
         try
         {
-            var brandId = await GetBrandIdByProductId(items.ProductId);
-            var unitName = CommonUtils.UnitList
-                .FirstOrDefault(u => u.Id == items.UnitId)?.Name ?? string.Empty;
-            var model = new InwardItemModel()
-            {
-                ProductId = items.ProductId,
-                BrandId = brandId,
-                InwardId = inwardId,
-                InwardUnitId = items.UnitId,
-                InwardUnitName = unitName,
-                CreatedBy = items.CreatedBy,
-                CreatedOn = items.CreatedOn,
-                UpdatedBy = items.UpdatedBy,
-                UpdatedOn = items.UpdatedOn,
-
-            };
-
-            if (items.UnitId == (int)UnitType.BOX)
-            {
-                model.BoxQuantity = 1;
-                model.ItemQuantity = items.ReturnQuantity;
-            }
-            else
-            {
-                model.ItemQuantity = items.ReturnQuantity;
-                model.BoxQuantity = 0;
-            }
             var entity = await CreateInwardItemEntityAsync(model);
-            await CreateBarcodesForSingleItemAsync(entity, DateTime.UtcNow);
+            await CreateBarcodesForSingleItemAsync(entity, entity.CreatedOn);
             return true;
         }
         catch (Exception ex)
@@ -734,7 +682,100 @@ public class InwardService : IInwardService
             Console.WriteLine($"Error creating SaleReturn Inward Items: {ex.Message}");
             throw;
         }
+    }
 
+    private async Task<bool> UpdateSaleReturnInwardItemAsync(InwardItem existingItem, InwardItemModel model, bool isDeleting)
+    {
+        var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
+
+        var delta = isDeleting ? -model.ItemQuantity : model.ItemQuantity;
+        var newQuantity = existingItem.ItemQuantity + delta;
+
+        if (newQuantity < 0)
+            throw new Exception("Inward item quantity cannot be negative.");
+
+        // Delete row if quantity becomes zero
+        if (newQuantity == 0)
+        {
+            return await DeleteInwardItemAsync(
+                existingItem.Id,
+                model.UpdatedBy ?? 0);
+        }
+
+        // Update
+        existingItem.ItemQuantity = newQuantity;
+        existingItem.UpdatedBy = model.UpdatedBy ?? 0;
+        existingItem.UpdatedOn = DateTime.Now;
+
+        if (existingItem.InwardUnitId == (int)UnitType.PCS)
+            existingItem.BoxQuantity = 0;
+
+        //Rebuild barcodes
+        await DeleteBarcodesForItemAsync(existingItem.Id, existingItem.UpdatedBy);
+        await CreateBarcodesForSingleItemAsync(existingItem, DateTime.Now);
+
+        inwardItemRepo.Update(existingItem);
+        await _unitOfWork.SaveChangesAsync();
+
+        return true;
+    }
+
+    private async Task<bool> SaveSalesReturnInwardItemAsync(InwardItemModel model)
+    {
+        var existingItem = await GetExistingItemAsync(model);
+
+        if (existingItem == null || existingItem.InwardUnitId == (int)UnitType.BOX)
+        {
+            return await CreateSalesReturnInwardItemAsync(model);
+        }
+        return await UpdateSaleReturnInwardItemAsync(existingItem, model, false);
+    }
+
+    private async Task<bool> DeleteSaleReturnInwardItemAsync(InwardItemModel model)
+    {
+        var existingItem = await GetExistingItemAsync(model);
+
+        if (existingItem == null)
+            return false;
+
+        if (existingItem.ItemQuantity == model.ItemQuantity &&
+            existingItem.InwardUnitId == model.InwardUnitId)
+        {
+            return await DeleteInwardItemAsync(existingItem.Id, model.UpdatedBy ?? 0);
+        }
+        return await UpdateSaleReturnInwardItemAsync(existingItem, model, true);
+    }
+
+    private async Task<InwardItem?> GetExistingItemAsync(InwardItemModel model)
+    {
+        var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
+
+        var query = inwardItemRepo.GetQueryable().Where(i =>
+            !i.IsDeleted &&
+            i.InwardId == model.InwardId &&
+            i.ProductId == model.ProductId &&
+            i.InwardUnitId == model.InwardUnitId);
+
+        if (model.InwardUnitId == (int)UnitType.BOX)
+            query = query.Where(i => i.ItemQuantity == model.ItemQuantity);
+
+        return await query.FirstOrDefaultAsync();
+    }
+
+    private async Task<Inward?> GetSaleReturnInwardAsync(SaleToInwardDto saleReturnItems)
+    {
+        var inwardRepo = _unitOfWork.GetRepository<Inward>();
+        var date = saleReturnItems.ReturnDate.Date;
+
+        var existingReturnInward = await inwardRepo.GetQueryable()
+            .Include(i => i.InwardItems)
+            .FirstOrDefaultAsync(i =>
+                i.IsSalesReturn &&
+                i.InwardDate.Date == date &&
+                i.ShipMentCompanyId == saleReturnItems.ShipToCompanyId &&
+                i.CategoryId == saleReturnItems.CategoryId);
+
+        return existingReturnInward;
     }
     #endregion
 
@@ -939,9 +980,41 @@ public class InwardService : IInwardService
             CreatedBy = entity.CreatedBy,
             BoxQuantity = entity.BoxQuantity,
             ProductSearchText = entity.Product.SKU,
-            HasOutOfStockBarcodes = entity.InwardBarcodeItems.Any(b => !b.IsInStock)
+            HasOutOfStockBarcodes = entity.InwardBarcodeItems.Any(b => !b.IsInStock && !b.IsDeleted)
         };
     }
 
+    private async Task<InwardItemModel> ConvertDtoToItemModel(int inwardId, SaleToInwardDto dto)
+    {
+        var brandId = await GetBrandIdByProductId(dto.ProductId);
+
+        var unitName = CommonUtils.UnitList
+            .FirstOrDefault(u => u.Id == dto.UnitId)?.Name ?? string.Empty;
+
+        var model = new InwardItemModel
+        {
+            InwardId = inwardId,
+            ProductId = dto.ProductId,
+            BrandId = brandId,
+            InwardUnitId = dto.UnitId,
+            InwardUnitName = unitName,
+            CreatedBy = dto.CreatedBy,
+            CreatedOn = dto.CreatedOn,
+            UpdatedBy = dto.UpdatedBy,
+            UpdatedOn = dto.UpdatedOn
+        };
+        // Quantity logic (BOX vs PCS)
+        if (dto.UnitId == (int)UnitType.BOX)
+        {
+            model.BoxQuantity = 1;
+            model.ItemQuantity = dto.ReturnQuantity;
+        }
+        else
+        {
+            model.BoxQuantity = 0;
+            model.ItemQuantity = dto.ReturnQuantity;
+        }
+        return model;
+    }
     #endregion
 }

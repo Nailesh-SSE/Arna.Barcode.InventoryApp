@@ -15,37 +15,74 @@
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             if (authState.User.Identity?.IsAuthenticated == true)
             {
-                var userIdClaim =
-                 authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var userIdClaim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
 
                 if (int.TryParse(userIdClaim, out var userId))
                 {
-                    // 🔹 CLEAR IN-MEMORY CACHE
-                    PermissionService.ClearUserPermissionCache(userId);
+                    try
+                    {
+                        PermissionService.ClearUserPermissionCache(userId);
+                        Logger.LogInformation("Cleared permission cache for user {UserId}", userId);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Error clearing permission cache for user {UserId}", userId);
+                    }
                 }
 
-                // 🔹 CLEAR UI STATE
-                PermissionState.Clear();
+                try
+                {
+                    PermissionState.Clear();
+                    Logger.LogDebug("Cleared permission state");
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error clearing permission state");
+                }
 
                 var username = authState.User.Identity.Name;
                 Logger.LogInformation("User {Username} is logging out", username);
 
-
-            var authProvider = AuthStateProvider as CustomAuthStateProvider;
-            if (authProvider != null)
+                var authProvider = AuthStateProvider as CustomAuthStateProvider;
+                if (authProvider != null)
+                {
+                    await authProvider.MarkUserAsLoggedOut();
+                    Logger.LogInformation("User marked as logged out");
+                }
+                else
+                {
+                    Logger.LogWarning("Could not cast AuthStateProvider to CustomAuthStateProvider");
+                }
+            }
+            else
             {
-                await authProvider.MarkUserAsLoggedOut();
+                Logger.LogDebug("User is not authenticated, skipping logout steps");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.LogDebug("Logout operation was cancelled");
+        }
+        catch (ObjectDisposedException ex)
+        {
+            Logger.LogError(ex, "DbContext or services disposed during logout");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during logout");
+        }
+        finally
+        {
+            // Always redirect to login page
+            try
+            {
+                NavigationManager.NavigateTo("/login");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error navigating to login page during logout");
             }
         }
     }
-    catch (Exception ex)
-    {
-        Logger.LogError(ex, "Error during logout");
-    }
-    finally
-    {
-        // Always redirect to login page
-        NavigationManager.NavigateTo("/login", forceLoad: true);
-    }
-}
 }

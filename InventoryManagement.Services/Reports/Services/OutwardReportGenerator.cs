@@ -69,7 +69,7 @@ namespace InventoryManagement.Services.Reports.Services
             IRow headerRow = sheet.CreateRow(0);
             string[] headers = new string[]
             {
-                "Outward Number", "Date", "Product", "SKU", "Category",
+                "Outward Number", "Date", "Brand" ,"Product", "SKU", "Category",
                 "Quantity", "Unit", "Supplier", "Status"
             };
 
@@ -86,14 +86,15 @@ namespace InventoryManagement.Services.Reports.Services
 
                 row.CreateCell(0).SetCellValue(item.OutwardNumber);
                 row.CreateCell(1).SetCellValue(item.OutwardDate.ToString("dd/MM/yyyy"));
-                row.CreateCell(2).SetCellValue(item.ProductName);
-                row.CreateCell(3).SetCellValue(item.SKU);
-                row.CreateCell(4).SetCellValue(item.CategoryName);
-                row.CreateCell(5).SetCellValue((double)item.Quantity);
-                row.CreateCell(6).SetCellValue(item.Unit);
-                row.CreateCell(7).SetCellValue(item.BillToCompanyName);
+                row.CreateCell(2).SetCellValue(item.BrandName);
+                row.CreateCell(3).SetCellValue(item.ProductName);
+                row.CreateCell(4).SetCellValue(item.SKU);
+                row.CreateCell(5).SetCellValue(item.CategoryName);
+                row.CreateCell(6).SetCellValue((double)item.Quantity);
+                row.CreateCell(7).SetCellValue(item.Unit);
+                row.CreateCell(8).SetCellValue(item.BillToCompanyName);
                 //row.CreateCell(8).SetCellValue(item.BatchNumber);
-                row.CreateCell(8).SetCellValue(item.IsActive ? "Active" : "Inactive");
+                row.CreateCell(9).SetCellValue(item.IsActive ? "Active" : "Inactive");
             }
 
             // Autosize all columns
@@ -173,6 +174,7 @@ namespace InventoryManagement.Services.Reports.Services
                         ProductName = item.Product?.Name ?? "Unknown",
                         SKU = item.Product?.SKU ?? "",
                         CategoryName = item.Product?.Category?.Name ?? "",
+                        BrandName = item.Product?.MakeCompany ?? "",
                         Quantity = item.Quantity,
                         Unit = item.Unit ?? "",
                         BillToCompanyId = outward.BillToCompanyId,

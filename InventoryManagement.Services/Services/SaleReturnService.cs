@@ -284,6 +284,7 @@ public class SaleReturnService : ISaleReturnService
         return product.CategoryId;
     }
     #endregion
+
     #region BarcodeOperation
     public async Task<SaleReturnValidationResult> ValidateBarcodeForSaleReturnAsync(string barcodeNo, int companyId)
     {
@@ -297,9 +298,12 @@ public class SaleReturnService : ISaleReturnService
         }
 
         var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
-        var barcodeItems = await barcodeItemRepository.FindWithIncludesAsync(bi =>
-            bi.BarcodeNo == barcodeNo && !bi.IsDeleted,
-             bi => bi.Inward, bi => bi.InwardItem);
+        var barcodeItems = await barcodeItemRepository.FindWithIncludesAsync(
+      bi => bi.BarcodeNo == barcodeNo && !bi.IsDeleted,
+      CancellationToken.None,
+      bi => bi.Inward,
+      bi => bi.InwardItem
+  );
 
         var barcodeItem = barcodeItems.FirstOrDefault();
 
@@ -340,9 +344,10 @@ public class SaleReturnService : ISaleReturnService
 
         var outwardDetailRepository = _unitOfWork.GetRepository<OutwardDetail>();
         var outwardDetails = await outwardDetailRepository.FindWithIncludesAsync(
-            od => od.BarcodeNo == barcodeNo && !od.IsDeleted,
-            od => od.Outward
-        );
+       od => od.BarcodeNo == barcodeNo && !od.IsDeleted,
+       CancellationToken.None,
+       od => od.Outward
+   );
 
         var outwardDetail = outwardDetails.FirstOrDefault();
         if (outwardDetail == null)
@@ -388,7 +393,7 @@ public class SaleReturnService : ISaleReturnService
             ProductId = item.ProductId,
             CategoryId = item.CategoryId,
             ShipToCompanyId = item.ShipToCompanyId,
-            ReturnDate = item.ReturnDate ?? DateTime.UtcNow,
+            ReturnDate = item.ReturnDate ?? DateTime.Now,
             UnitId = item.UnitId,
             ReturnQuantity = item.ReturnQuantity,
             CreatedBy = item.CreatedBy,

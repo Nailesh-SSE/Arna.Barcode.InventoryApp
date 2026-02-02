@@ -241,7 +241,7 @@ else
             _redirectInitiated = true;
             var currentRelativeUrL = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
 
-            NavigationManager.NavigateTo($"/login?returnUrl={Uri.EscapeDataString("/" + currentRelativeUrL)}", forceLoad: true);
+            NavigationManager.NavigateTo($"/login?returnUrl={Uri.EscapeDataString("/" + currentRelativeUrL)}");
         }
     }
 }
