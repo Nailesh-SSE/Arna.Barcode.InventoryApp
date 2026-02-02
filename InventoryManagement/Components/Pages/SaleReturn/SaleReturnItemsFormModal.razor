@@ -1,4 +1,5 @@
 ﻿@using InventoryManagement.Services.DTO
+@using Microsoft.AspNetCore.Components.Web
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 <Modal @ref="modal" Title="@Title" Size="ModalSize.ExtraLarge" UseStaticBackdrop OnHidden="@Hide">
@@ -43,9 +44,11 @@
             {
                 <!-- BARCODE SECTION -->
                 <div class="d-flex align-items-center gap-2 mb-3 flex-nowrap">
-                    <InputText class="form-control flex-grow-1"
-                               placeholder="Enter Barcode"
-                               @bind-Value="ItemsModel.BarCodeNo" />
+                        <InputText class="form-control flex-grow-1"
+                                   placeholder="Enter Barcode"
+                                   @bind-Value="ItemsModel.BarCodeNo"
+                                   @onkeyup="HandleKeyUp"
+                                   @ref="barcodeInput" />
 
                     <button type="button"
                             class="btn btn-secondary d-flex align-items-center gap-1"
@@ -651,6 +654,37 @@
         dotNetHelper = null;
 
         isScanning = false;
+    }
+
+    private async Task OnBarcodeChangedAfter()
+    {
+        // run existing validation/handling after the value is committed (onchange)
+        await HandleBarcode();
+
+        // clear and restore focus if needed
+        ItemsModel.BarCodeNo = string.Empty;
+        await InvokeAsync(StateHasChanged);
+
+        if (barcodeInput?.Element.HasValue == true)
+            await barcodeInput.Element.Value.FocusAsync();
+    }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e?.Key != "Enter" && e?.Key != "Tab")
+            return;
+
+        await Task.Yield();
+        await HandleBarcode();
+
+        // For Enter → clear + refocus (continuous scanning)
+        if (e.Key == "Enter" || e.Key=="Tab")
+        {
+            ItemsModel.BarCodeNo = string.Empty;
+
+            if (barcodeInput?.Element.HasValue == true)
+                await barcodeInput.Element.Value.FocusAsync();
+        }
     }
 }
 <style>

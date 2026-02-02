@@ -388,7 +388,7 @@ public class SaleReturnService : ISaleReturnService
             ProductId = item.ProductId,
             CategoryId = item.CategoryId,
             ShipToCompanyId = item.ShipToCompanyId,
-            ReturnDate = item.ReturnDate ?? DateTime.UtcNow,
+            ReturnDate = item.ReturnDate ?? DateTime.Now,
             UnitId = item.UnitId,
             ReturnQuantity = item.ReturnQuantity,
             CreatedBy = item.CreatedBy,
