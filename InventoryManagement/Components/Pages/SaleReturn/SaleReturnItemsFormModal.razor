@@ -74,10 +74,11 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th class="col-3 col-md-3">Product <span class="text-danger">*</span></th>
+                                        <th class="col-2">Return Company  <span class="text-danger">*</span></th>
                                         <th class="col-2">Ship To </th>
                                         <th class="col-1">Unit <span class="text-danger">*</span></th>
-                                        <th class="col-1">Qty <span class="text-danger">*</span></th>
-                                        <th class="col-2">Lot No</th>
+                                        <th class="col-1">item Qty <span class="text-danger">*</span></th>
+                                        @* <th class="col-2">Lot No</th> *@
                                         <th class="col-1">Type <span class="text-danger">*</span></th>
                                         <th class="col-1">To Stock</th>
                                         <th class="col-2">Reason</th>
@@ -99,20 +100,7 @@
                                                                                             : noPermission
                                                                                                 ? "You do not have permission to perform this action."
                                                                                                 : "")">
-                                    <!-- PRODUCT -->
-                                    @* <td>
-                                        <InputSelect class="form-select" @bind-Value="@item.ProductId">
-                                            <option value="0">Select</option>
-                                            @foreach (var product in ProductList)
-                                            {
-                                                <option value="@product.Id">@product.SKU</option>
-                                            }
-                                        </InputSelect>
-                                        @if (showValidation && item.ProductId == 0)
-                                        {
-                                            <small class="text-danger">Required</small>
-                                        }
-                                    </td> *@
+                                    <!-- PRODUCT -->                          
                                             <td>
                                                 <SearchableDropdown TItem="ProductModel"
                                                                     Items="@ProductList.Where(p=>p.IsActive || p.Id==item.ProductId)"
@@ -127,7 +115,20 @@
                                                     <small class="text-danger">Required</small>
                                                 }
                                             </td>
-
+                                            <!-- Return Company -->
+                                            <td>
+                                                <InputSelect class="form-select" @bind-Value="@item.BillToCompanyId" disabled="@isDisabled">
+                                                    <option value="0">Select</option>
+                                                    @foreach (var bill in BillToCompanyList.Where(c => c.IsActive || c.Id == item.BillToCompanyId))
+                                                    {
+                                                        <option value="@bill?.Id">@bill?.Name</option>
+                                                    }
+                                                </InputSelect>
+                                                @if (showValidation && item.BillToCompanyId == 0 && IsLastUnsavedItem(item))
+                                            {
+                                                <small class="text-danger">Required</small>
+                                            }
+                                            </td>
                                             <!-- SHIP TO -->
                                             <td>
                                                 <InputSelect class="form-select" @bind-Value="@item.ShipToCompanyId" disabled="@isDisabled">
@@ -167,17 +168,8 @@
                                                 }
                                             </td>
 
-                                            <!-- OUTWARD (WIDER) -->
-                                            @* <td style="width:150px;">
-                                        <InputSelect class="form-select" @bind-Value="@item.OutwardId">
-                                            <option value="0">Select</option>
-                                            @foreach (var outward in OutwardList)
-                                            {
-                                                <option value="@outward?.Id">@outward?.OutwardNo</option>
-                                            }
-                                        </InputSelect>
-                                    </td> *@
-                                            <td style="width:100px;">
+                                            <!-- OUTWARD (WIDER) -->                                                                      
+                                            @* <td style="width:100px;">
                                                 <SearchableDropdown TItem="OutwardModel"
                                                                     Items="OutwardList.Where(o=>o.IsActive || o.Id==item.OutwardId)"
                                                                     ItemTextSelector="@(o => o.OutwardNo)"
@@ -185,7 +177,7 @@
                                                                     Placeholder="Search Outward..."
                                                                     OnItemSelected="@(o => OnOutwardDropdownSelected(item, o))"
                                                                     IsDisabled="@isDisabled" />
-                                            </td>
+                                            </td> *@
 
                                             <!-- RETURN TYPE -->
                                             <td>
@@ -320,6 +312,7 @@
 
     [Parameter] public List<ProductModel?> ProductList { get; set; } = new();
     [Parameter] public List<CompanyModel?> CompanyList { get; set; } = new();
+    [Parameter] public List<CompanyModel?> BillToCompanyList { get; set; } = new();
     [Parameter] public List<OutwardModel?> OutwardList { get; set; } = new();
 
     private System.Threading.Timer? errorTimer;
@@ -488,6 +481,12 @@
         {
             ShowErrorMessage("Product is required.");
             return false;
+        }
+
+        if(item.BillToCompanyId <=0)
+        {
+            ShowErrorMessage("Return Company is required.");
+            return false;           
         }
 
         if (item.ReturnQuantity <= 0)

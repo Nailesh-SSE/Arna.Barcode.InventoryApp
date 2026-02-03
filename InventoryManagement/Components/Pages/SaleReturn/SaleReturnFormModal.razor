@@ -1,13 +1,13 @@
 ﻿
 
-<Modal @ref=modal Title="@Title" Size="ModalSize.Large" UseStaticBackdrop>
+<Modal @ref=modal Title="@Title" Size="ModalSize.Regular" UseStaticBackdrop>
     <BodyTemplate>
         <EditForm EditContext="editContext" OnValidSubmit="HandleSubmit">
             <DataAnnotationsValidator />
             <fieldset disabled="@DisableFields">
                 <div class="container-fluid">
                     <div class="row m-2">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-12 mb-3">
                             <label class="form-label">SaleReturn Date <span class="text-danger">*</span></label>
                             <InputDate @bind-Value="SaleReturnModel.SaleReturnDate" @onblur="HandleDateValidation"
                                        class="form-control"
@@ -15,7 +15,7 @@
                             <ValidationMessage For="@(() => SaleReturnModel.SaleReturnDate)" />
                         </div>
 
-                        <div class="col-md-6 mb-3">
+                        @* <div class="col-md-6 mb-3">
                             <label class="form-label">Return Company <span class="text-danger">*</span></label>
                             <InputSelect @bind-Value="SaleReturnModel.BillToCompanyId" @onchange="HandleBillToValidation" class="form-select" disabled="@OnEditMode">
                                 <option value="0">-- Select Company --</option>
@@ -25,7 +25,7 @@
                                 }
                             </InputSelect>
                             <ValidationMessage For="@(() => SaleReturnModel.BillToCompanyId)" />
-                        </div>
+                        </div> *@
                     </div>
                 </div>
                 <div class="modal-footer-section mt-3 text-end">
@@ -71,7 +71,7 @@
 
     public async Task HandleSubmit()
     {
-        await ValidateBillTo();
+       // await ValidateBillTo();
         await ValidateDate();
         await OnSave.InvokeAsync();
 
@@ -88,26 +88,26 @@
         await modal.HideAsync();
     }
 
-    public async Task HandleBillToValidation()
-    {
-        await ValidateBillTo();
+    // public async Task HandleBillToValidation()
+    // {
+    //     await ValidateBillTo();
 
-    }
+    // }
 
     public async Task HandleDateValidation()
     {
         await ValidateDate();
     }
 
-    public async Task ValidateBillTo()
-    {
-        validationMessage.Clear(() => SaleReturnModel.BillToCompanyId);
-        if (SaleReturnModel.BillToCompanyId <= 0)
-        {
-            validationMessage.Add(() => SaleReturnModel.BillToCompanyId, "Please select a return company.");
-        }
+    // public async Task ValidateBillTo()
+    // {
+    //     validationMessage.Clear(() => SaleReturnModel.BillToCompanyId);
+    //     if (SaleReturnModel.BillToCompanyId <= 0)
+    //     {
+    //         validationMessage.Add(() => SaleReturnModel.BillToCompanyId, "Please select a return company.");
+    //     }
 
-    }
+    // }
 
     public async Task ValidateDate()
     {

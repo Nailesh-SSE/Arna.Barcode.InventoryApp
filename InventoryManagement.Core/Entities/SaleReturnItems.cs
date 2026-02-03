@@ -23,6 +23,8 @@ public class SaleReturnItems : Common
     [Required]
     public int ShipToCompanyId { get; set; } = 0;
     [Required]
+    public int BillToCompanyId { get; set; } = 0;
+    [Required]
     public int ReturnType { get; set; }
     public bool IsTakeInStock { get; set; } = false;
     [StringLength(200)]

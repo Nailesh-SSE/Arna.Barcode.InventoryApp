@@ -193,7 +193,7 @@ public class SaleReturnReportItem
     public decimal UnitCost { get; set; }
     public decimal TotalCost { get; set; }
     public string? BatchNumber { get; set; }
-    public int BillToCompanyId { get; set; }
+    public int? BillToCompanyId { get; set; }
     public string BillToCompanyName { get; set; } = string.Empty;
     public string? Remarks { get; set; }
     public bool IsActive { get; set; }
