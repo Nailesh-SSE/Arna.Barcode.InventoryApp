@@ -1,4 +1,6 @@
-﻿using InventoryManagement.Infrastructure.Repositories;
+﻿using InventoryManagement.Core.Entities;
+using InventoryManagement.Core.Enums;
+using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models.ReportModels;
 using Microsoft.EntityFrameworkCore;
@@ -24,26 +26,22 @@ namespace InventoryManagement.Services.Reports.Services
             {
                 var query = BuildBaseQuery(filter);
 
-                var items = await ExecuteQuery(query, filter);
-
-                // Apply paging
-                var pagedItems = items.Skip((filter.PageNumber - 1) * filter.PageSize).Take(filter.PageSize).ToList();
+                var (items, totalRecords) = await ExecuteQuery(query, filter);
 
                 // Generate summary
-                var summary = await GenerateSummaryAsync(filter);
+                // var summary = await GenerateSummaryAsync(filter);
 
                 stopwatch.Stop();
 
                 return new SaleReturnReportResult
                 {
-                    Items = pagedItems,
-                    Summary = summary,
-                    TotalRecords = items.Count,
+                    Items = items,
+                    TotalRecords = totalRecords,
                     PageNumber = filter.PageNumber,
                     PageSize = filter.PageSize,
                     GenerationTime = stopwatch.Elapsed,
-                    PageCount = (int)Math.Ceiling((double)items.Count / filter.PageSize),
-                    HasNextPage = filter.PageNumber * filter.PageSize < items.Count,
+                    PageCount = (int)Math.Ceiling((double)totalRecords / filter.PageSize),
+                    HasNextPage = filter.PageNumber * filter.PageSize < totalRecords,
                     HasPreviousPage = filter.PageNumber > 1
                 };
             }
@@ -114,10 +112,8 @@ namespace InventoryManagement.Services.Reports.Services
         {
             var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
             var query = saleReturnRepo.GetQueryable()
-                .Include(o => o.SaleReturnItems)
-                    .ThenInclude(od => od.Product)
-                        .ThenInclude(p => p.Category)
-                .Where(sr => !sr.IsDeleted);
+                                 .AsNoTracking()
+                                 .Where(sr => !sr.IsDeleted);
 
             // Apply filters
             if (filter.StartDate.HasValue)
@@ -127,66 +123,133 @@ namespace InventoryManagement.Services.Reports.Services
                 query = query.Where(i => i.SaleReturnDate.Date <= filter.EndDate.Value.Date);
 
             if (filter.BillToCompanyId.HasValue)
-                query = query.Where(sr => sr.BillToCompanyId == filter.BillToCompanyId);
+                query = query.Where(sr => sr.BillToCompanyId == filter.BillToCompanyId || sr.BillToCompanyId == null);
 
             if (!filter.IncludeInactive)
                 query = query.Where(sr => sr.IsActive);
-
-            // Apply sorting
-            query = ApplySorting(query, filter);
-
+      
             return query;
         }
 
-        private async Task<List<SaleReturnReportItem>> ExecuteQuery(IQueryable<SaleReturn> query, SaleReturnFilter filter)
+        private async Task<(List<SaleReturnReportItem> Items, int TotalRecords)> ExecuteQuery(
+        IQueryable<SaleReturn> baseQuery,
+        SaleReturnFilter filter)
         {
-            List<string>? returnNos = null;
-            var saleReturns = await query.ToListAsync();
-            var items = new List<SaleReturnReportItem>();
+            // Build SQL query (joins only, no navigation)
+            var productRepo = _unitOfWork.GetRepository<Product>();
+            var categoryRepo = _unitOfWork.GetRepository<Category>();
+            var companyRepo = _unitOfWork.GetRepository<Company>();
+           
+            var query =
+                from sr in baseQuery
+                from item in sr.SaleReturnItems.Where(i => !i.IsDeleted)
 
-            if (!string.IsNullOrWhiteSpace(filter.ReturnNumbers))
-            {
-                returnNos = filter.ReturnNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList();
-            }
+                join p in productRepo.GetQueryable()
+                    on item.ProductId equals p.Id
 
-            foreach (var saleReturn in saleReturns)
-            {
-                foreach(var item in saleReturn.SaleReturnItems)
+                join c in categoryRepo.GetQueryable()
+                    on p.CategoryId equals c.Id into cat
+                from c in cat.DefaultIfEmpty()
+
+                    // ⭐ BillToCompany join using effective id (item > parent)
+                join comp in companyRepo.GetQueryable()
+                    on (item.BillToCompanyId != 0
+                        ? item.BillToCompanyId
+                        : sr.BillToCompanyId) equals comp.Id into compJoin
+                from comp in compJoin.DefaultIfEmpty()
+
+                select new
                 {
-                    if (returnNos != null && returnNos.Any() && !returnNos.Contains(saleReturn.SaleReturnNo)) continue;
-                    if (filter.CategoryId.HasValue && item.Product?.CategoryId != filter.CategoryId) continue;
+                    sr,
+                    item,
+                    p,
+                    c,
+                    comp
+                };
+      
+            // Filters
+            
+            if (filter.CategoryId.HasValue)
+                query = query.Where(x => x.p.CategoryId == filter.CategoryId);
 
-                    items.Add(new SaleReturnReportItem
-                    {
-                        SaleReturnId = saleReturn.Id,
-                        ReturnNo = saleReturn.SaleReturnNo,
-                        ReturnDate = saleReturn.SaleReturnDate,
-                        Unit = "PCS",
-                        ProductName = item.Product?.Name ?? "Unknown",
-                        SKU = item.Product?.SKU ?? "",
-                        CategoryName = item.Product?.Category?.Name ?? "",
-                        Quantity = item.ReturnQuantity,
-                        BillToCompanyId = saleReturn.BillToCompanyId,
-                        BillToCompanyName = saleReturn.BillToCompany?.Name ?? "N/A",
-                        IsActive = saleReturn.IsActive,
-                        CreatedBy = saleReturn.CreatedBy,
-                        CreatedOn = saleReturn.CreatedOn
-                    });
-                }
-            }
-
-            return items;
-        }
-
-        private IQueryable<SaleReturn> ApplySorting(IQueryable<SaleReturn> query, SaleReturnFilter filter)
-        {
-            return filter.SortBy?.ToLower() switch
+            if (filter.BillToCompanyId.HasValue)
             {
-                "returndate" => filter.SortDescending ? query.OrderByDescending(sr => sr.SaleReturnDate) : query.OrderBy(sr => sr.SaleReturnDate),
-                "returnno" => filter.SortDescending ? query.OrderByDescending(sr => sr.SaleReturnNo) : query.OrderBy(sr => sr.SaleReturnNo),
-                "shipmentcompany" => filter.SortDescending ? query.OrderByDescending(sr => sr.BillToCompany.Name) : query.OrderBy(sr => sr.BillToCompany.Name),
-                _ => query.OrderByDescending(sr => sr.SaleReturnDate)
+                int filterId = filter.BillToCompanyId.Value;
+
+                query = query.Where(x =>
+                    (x.item.BillToCompanyId != 0
+                        ? x.item.BillToCompanyId
+                        : x.sr.BillToCompanyId) == filterId);
+            }
+         
+            var totalRecords = await query.CountAsync();
+            // ---------------- Sorting----------------
+          
+            bool desc = filter.SortDescending;
+            query = filter.SortBy?.ToLower() switch
+            {
+                // DATE
+                "returndate" =>
+                    desc
+                        ? query.OrderByDescending(x => x.sr.SaleReturnDate)
+                        : query.OrderBy(x => x.sr.SaleReturnDate),
+
+                // RETURN NO
+                "returnno" =>
+                    desc
+                        ? query.OrderByDescending(x => x.sr.SaleReturnNo)
+                        : query.OrderBy(x => x.sr.SaleReturnNo),
+
+                // SUPPLIER
+                "shipmentcompany" =>
+                    desc
+                        ? query.OrderByDescending(x => x.comp.Name)
+                               .ThenByDescending(x => x.sr.SaleReturnDate)
+                        : query.OrderBy(x => x.comp.Name)
+                               .ThenBy(x => x.sr.SaleReturnDate),
+
+                // DEFAULT
+                _ =>
+                    desc
+                        ? query.OrderByDescending(x => x.sr.SaleReturnDate)
+                        : query.OrderBy(x => x.sr.SaleReturnDate)
             };
+
+            // Paging (ALWAYS order first)
+            query = query
+                .Skip((filter.PageNumber - 1) * filter.PageSize)
+                .Take(filter.PageSize);
+
+            // Fetch from DB
+           
+            var raw = await query.ToListAsync();
+          
+            // Map to DTO (AFTER DB for safety/performance)
+
+            var items = raw.Select(x => new SaleReturnReportItem
+            {
+                SaleReturnId = x.sr.Id,
+                ReturnNo = x.sr.SaleReturnNo,
+                ReturnDate = x.sr.SaleReturnDate,
+                Unit = ((UnitType)x.item.UnitId).ToString(),
+
+                ProductId = x.p.Id,
+                ProductName = x.p.Name,
+                SKU = x.p.SKU,
+                CategoryName = x.c?.Name ?? "",
+
+                Quantity = x.item.ReturnQuantity,
+
+                BillToCompanyId = x.comp?.Id ?? 0,
+                BillToCompanyName = x.comp?.Name ?? "",
+
+                IsActive = x.sr.IsActive,
+                CreatedBy = x.sr.CreatedBy,
+                CreatedOn = x.sr.CreatedOn
+            })
+            .ToList();
+
+            return (items, totalRecords);
         }
 
         private async Task<SaleReturnReportSummary> GenerateSummaryAsync(SaleReturnFilter filter)
