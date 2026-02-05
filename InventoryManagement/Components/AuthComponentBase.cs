@@ -18,6 +18,7 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
     protected int UserId => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
     protected string CurrentUserId => UserId.ToString();
     protected int CurrentUserRoleId => int.TryParse(User.FindFirst("UserRoleId")?.Value, out var roleId) ? roleId : 0;
+    protected int CurrentUserRoleLevel => int.TryParse(User.FindFirst("UserRoleLevel")?.Value, out var roleLevel) ? roleLevel : int.MaxValue;
     protected bool IsAuthenticated => User.Identity?.IsAuthenticated ?? false;
 
     private CancellationTokenSource _cts = new CancellationTokenSource();
@@ -118,9 +119,7 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
 
     public bool IsFactoryAdmin()
     {
-        var permission = PermissionState.Permissions.FirstOrDefault(p => p.Route == "*");
-        return permission != null && permission.CanView && permission.CanCreate &&
-               permission.CanEdit && permission.CanDelete;
+        return CurrentUserRoleLevel > 0 && CurrentUserRoleLevel <= 5;
     }
 
     public void Dispose()

@@ -145,7 +145,8 @@
                         UserFullName = user.UserName + " " + user.LastName ?? loginModel.Username,
                         UserRoleId = user.RoleId.ToString(),
                         IsAuthenticated = true,
-                        LoginTime = DateTime.UtcNow
+                        LoginTime = DateTime.UtcNow,
+                        UserRoleLevel = user.RoleLevel.ToString()
                     });
 
                     Logger.LogInformation("User {Username} logged in successfully", loginModel.Username);

@@ -24,5 +24,6 @@ public class UserModel : CommonModel
 
     public string RoleName { get; set; }
     public int RoleId { get; set; }
+    public int RoleLevel { get; set; }
 
 }

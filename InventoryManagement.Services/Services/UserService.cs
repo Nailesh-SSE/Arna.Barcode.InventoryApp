@@ -2,6 +2,7 @@
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
+using System.Data;
 
 namespace InventoryManagement.Services;
 
@@ -30,11 +31,13 @@ public class UserService : IUserService
     {
         var userRepository = _unitOfWork.GetRepository<Users>();
         var userInRoleRepo = _unitOfWork.GetRepository<UsersInRole>();
+        var roleRepo = _unitOfWork.GetRepository<Roles>();
         var entity = (await userRepository.FindAsync(u => u.UserName.ToLower() == username.ToLower() && u.IsActive && !u.IsDeleted)).FirstOrDefault();
         if (entity == null) return null;
      
         var userRole = (await userInRoleRepo.FindAsync(ur => ur.UserId == entity.Id)).FirstOrDefault();
         if (userRole == null) return null;
+        var role = (await roleRepo.FindAsync(r => r.Id == userRole.RoleId && !r.IsDeleted)).FirstOrDefault();
 
         var model = new UserModel()
         {
@@ -45,7 +48,8 @@ public class UserService : IUserService
             Email = entity.EmailId,
             ContactNo = entity.ContactNo,
             IsActive = entity.IsActive,
-            RoleId = userRole.RoleId
+            RoleId = userRole.RoleId,
+            RoleLevel = role.RoleLevel 
         };
         return model;
     }
