@@ -125,6 +125,7 @@ public class SaleReturnService : ISaleReturnService
             ReturnQuantity = i.ReturnQuantity,
             SerialNo = i.SerialNo,
             ShipToCompanyId = i.ShipToCompanyId,
+            BillToCompanyId=i.BillToCompanyId,
             IsTakeInStock = i.IsTakeInStock,
             CreatedBy = i.CreatedBy,
             CreatedOn = i.CreatedOn,
@@ -177,6 +178,7 @@ public class SaleReturnService : ISaleReturnService
             OutwardId = model.OutwardId,
             CategoryId = categoryId,    
             ShipToCompanyId = model.ShipToCompanyId,
+            BillToCompanyId = model.BillToCompanyId,
             BarCodeNo = model.BarCodeNo,
             SerialNo = serialNo,
             ReturnType = model.ReturnType,
@@ -217,6 +219,7 @@ public class SaleReturnService : ISaleReturnService
         entity.OutwardId = model.OutwardId;
         entity.CategoryId = categoryId;
         entity.ShipToCompanyId = model.ShipToCompanyId;
+        entity.BillToCompanyId = model.BillToCompanyId;
         entity.BarCodeNo = model.BarCodeNo;
         entity.SerialNo = model.SerialNo;
         entity.ReturnDate = model.ReturnDate;
@@ -286,7 +289,7 @@ public class SaleReturnService : ISaleReturnService
     #endregion
 
     #region BarcodeOperation
-    public async Task<SaleReturnValidationResult> ValidateBarcodeForSaleReturnAsync(string barcodeNo, int companyId)
+    public async Task<SaleReturnValidationResult> ValidateBarcodeForSaleReturnAsync(string barcodeNo, int? companyId)
     {
         if (string.IsNullOrWhiteSpace(barcodeNo))
         {
@@ -328,7 +331,7 @@ public class SaleReturnService : ISaleReturnService
         var saleReturnItemRepo = _unitOfWork.GetRepository<SaleReturnItems>();
         bool isAlreadyReturned = await saleReturnItemRepo
             .GetQueryable()
-            .AnyAsync(s => s.BarCodeNo == barcodeNo);
+            .AnyAsync(s => s.BarCodeNo == barcodeNo && !s.IsDeleted);
 
         if (isAlreadyReturned)
         {
@@ -340,7 +343,6 @@ public class SaleReturnService : ISaleReturnService
         }
 
         var shipmentCompanyId = barcodeItem.Inward?.ShipMentCompanyId;
-        var unitId = barcodeItem.InwardItem?.InwardUnitId;
 
         var outwardDetailRepository = _unitOfWork.GetRepository<OutwardDetail>();
         var outwardDetails = await outwardDetailRepository.FindWithIncludesAsync(
@@ -358,17 +360,20 @@ public class SaleReturnService : ISaleReturnService
                 ErrorMessage = "This barcode was not sold (no outward record found)."
             };
         }
+        var unitName = outwardDetail.Unit;
+        var unitId = (int)Enum.Parse<UnitType>(unitName, true);
 
         var outward = outwardDetail.Outward;
-        if (outward == null || outward.BillToCompanyId != companyId)
-        {
-            return new SaleReturnValidationResult
-            {
-                IsValid = false,
-                ErrorMessage = "This barcode was not sold to the selected company."
-            };
-        }
+        //if (outward == null || outward.BillToCompanyId != companyId)
+        //{
+        //    return new SaleReturnValidationResult
+        //    {
+        //        IsValid = false,
+        //        ErrorMessage = "This barcode was not sold to the selected company."
+        //    };
+        //}
         var outwardId = outward.Id;
+        var billToCompanyId = outward.BillToCompanyId;
 
         var productRepository = _unitOfWork.GetRepository<Product>();
         var product = await productRepository.GetByIdAsync(outwardDetail.ProductId);
@@ -380,6 +385,7 @@ public class SaleReturnService : ISaleReturnService
             ProductName = productName,
             ProductId = outwardDetail.ProductId,
             ShipToId = shipmentCompanyId,
+            BillToId = billToCompanyId,
             UnitId = unitId,
             OutwardId = outwardId,
             BarcodeNo = barcodeNo

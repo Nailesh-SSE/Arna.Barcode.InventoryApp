@@ -7,15 +7,12 @@ namespace InventoryManagement.Services.Models
         public int Id { get; set; }
 
         public string SaleReturnNo { get; set; }
-
-        [Required(ErrorMessage = "Bill To Company is required.")]
-        [Range(1, int.MaxValue, ErrorMessage = "Select a valid Bill To Company.")]
-        public int BillToCompanyId { get; set; }
+        public int? BillToCompanyId { get; set; }
 
         [Required(ErrorMessage = "Sale Return Date is required.")]
         public DateTime SaleReturnDate { get; set; } = DateTime.Now;
         public DateOnly SaleReturnDateOnly => DateOnly.FromDateTime(SaleReturnDate);
-        public string BillToCompanyName { get; set; } = string.Empty;
+        public string? BillToCompanyName { get; set; } = string.Empty;
 
         public List<SaleReturnItemsModel> SaleReturnItemsList { get; set; } = new();
     }
@@ -53,6 +50,11 @@ namespace InventoryManagement.Services.Models
         //  [Range(1, int.MaxValue, ErrorMessage = "Select a valid Shipping Company.")]
         public int ShipToCompanyId { get; set; } = 0;
 
+
+        [Required(ErrorMessage = "bill To Company is required.")]
+        //  [Range(1, int.MaxValue, ErrorMessage = "Select a valid Shipping Company.")]
+        public int BillToCompanyId { get; set; } = 0;
+
         [Required(ErrorMessage = "Return Type is required.")]
         [Range(1, int.MaxValue, ErrorMessage = "Select a valid Return Type.")]
         public int ReturnType { get; set; }
@@ -68,6 +70,7 @@ namespace InventoryManagement.Services.Models
         public List<ProductModel> ProductLIst { get; set; } = new();
         public List<CategoryModel> CategoryList { get; set; } = new();
         public List<CompanyModel> ShipToCompanyList { get; set; } = new();
+        public List<CompanyModel> BillToCompanyList { get; set; } = new();
         public List<OutwardModel> OutwardList { get; set; } = new();
     }
 
@@ -78,6 +81,7 @@ namespace InventoryManagement.Services.Models
         public string ProductName { get; set; } = string.Empty;
         public int? ProductId { get; set; }
         public int? ShipToId { get; set; }
+        public int? BillToId { get; set; }
         public int? UnitId { get; set; }
         public int? OutwardId { get; set;}
         public string? BarcodeNo { get;set; }

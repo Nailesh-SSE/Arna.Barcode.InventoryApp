@@ -85,6 +85,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             new Claim(ClaimTypes.Name, user.UserName),
             new Claim("FullName", user.UserFullName),
             new Claim("UserRoleId", user.UserRoleId),
+            new Claim("UserRoleLevel",user.UserRoleLevel),
             new Claim("LoginTime", user.LoginTime.ToString("O"))
         }, "LocalStorageAuth");
 
@@ -225,4 +226,5 @@ public class AuthData
     public string UserFullName { get; set; } = string.Empty;
     public string UserRoleId { get; set; } = string.Empty;
     public DateTime LoginTime { get; set; }
+    public string UserRoleLevel { get; set; } = string.Empty;
 }
