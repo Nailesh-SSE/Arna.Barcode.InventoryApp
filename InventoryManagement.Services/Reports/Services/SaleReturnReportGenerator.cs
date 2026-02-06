@@ -130,19 +130,25 @@ namespace InventoryManagement.Services.Reports.Services
 
                     if (returnNos.Count > 0)
                     {
-                        // sr => sr.SaleReturnNo == rn1 || sr.SaleReturnNo == rn2 || ...
+                        // Build an OR expression instead of relying on EF translation to OPENJSON
                         var param = Expression.Parameter(typeof(SaleReturn), "sr");
-                        var prop = Expression.Property(param, nameof(SaleReturn.SaleReturnNo));
+                        var prop =Expression.Property(param, nameof(SaleReturn.SaleReturnNo));
 
-                        Expression body = null!;
+                        Expression? body = null;
                         foreach (var rn in returnNos)
                         {
-                            var equals = Expression.Equal(prop, Expression.Constant(rn));
+                            var constant = Expression.Constant(rn);
+                            var equals = Expression.Equal(prop, constant);
                             body = body == null ? equals : Expression.OrElse(body, equals);
                         }
 
-                        var predicate = Expression.Lambda<Func<SaleReturn, bool>>(body, param);
-                        return query.Where(predicate);
+                        var predicate = body != null
+                            ? Expression.Lambda<Func<SaleReturn, bool>>(body, param)
+                            : (Expression<Func<SaleReturn, bool>>)(sr => false);
+
+                        query = query.Where(predicate);
+
+                        return query;
                     }
                 }
                 // ---------------- Other filters (applied ONLY when ReturnNumbers is empty)
@@ -162,10 +168,10 @@ namespace InventoryManagement.Services.Reports.Services
 
                 return query;
             }
-            catch(Exception e) 
+            catch (Exception ex)
             {
-                Console.WriteLine("error" + e.Message + e.InnerException);               
-            }          
+                throw new Exception("Error generating sale return report", ex);
+            }
         }
 
         private async Task<(List<SaleReturnReportItem> Items, int TotalRecords)> ExecuteQuery(
@@ -293,9 +299,9 @@ namespace InventoryManagement.Services.Reports.Services
 
                 return (items, totalRecords);
             }
-            catch(Exception e) 
+            catch (Exception ex)
             {
-                Console.WriteLine("error" + e.Message + e.InnerException);             
+                throw new Exception("Error generating sale return report", ex);
             }
         }
 
