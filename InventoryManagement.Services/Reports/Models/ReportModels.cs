@@ -291,3 +291,38 @@ public class BarcodeReportItem
 //    public Dictionary<string, int> CountByProduct { get; set; } = new();
 //}
 #endregion
+#region UnSold Stock Report Models
+public class InStockReportResult : BaseReportResult
+{
+    public List<InStockReportItem> Items { get; set; } = new();
+    public int PageCount { get; set; }
+    public bool HasNextPage { get; set; }
+    public bool HasPreviousPage { get; set; }
+}
+public class InStockFilter : BaseReportFilter
+{
+    public bool IsInStock { get; set; } = true;
+    public List<int> ProductId { get;set; } = new();
+    public bool SummaryOnly { get; set; }
+}
+
+public class InStockReportItem
+{
+    public int BrandId { get; set; }
+    public string? BrandName { get; set; }
+    public int ProductId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
+    public string SKU { get; set; } = string.Empty;
+    public string BarcodeNo { get; set; } = string.Empty;
+    public bool IsInStock { get; set; } = true; 
+    public int CategoryId { get; set; }
+    public string CategoryName { get; set; } = string.Empty;
+    public decimal Quantity { get; set; }
+    public string Unit { get; set; } = string.Empty;
+    public int CreatedBy { get; set; }
+    public string UserName { get; set;} = string.Empty;
+    public DateTime CreatedOn { get; set; }
+    public string BatchNo { get; set; } = string.Empty;
+    public string InwardNo { get; set; }= string.Empty; 
+}
+#endregion

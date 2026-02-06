@@ -47,6 +47,7 @@ public static class ServiceExtensions
         services.AddScoped<IFormMasterService, FormMasterService>();
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IPrnDownloadService, PrnDownloadService>();
+        services.AddScoped<IInStockReportService, InStockReportService>();
 
         // Register generators
         services.AddTransient<IInwardReportService, InwardReportGenerator>();
