@@ -57,7 +57,7 @@ else
 
 <InwardItemsModal @ref="itemsModal" Title="@itemTitle" SelectedInward="selectedInward" InwardItems="inwardItems" FilteredProducts="filteredProductsbyCategory" Brands="filteredBrandsByCategory"
                   OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnDownloadPdf="DownloadSingleItemPrn" OnAddItem="AddNewItemRow"
-                  OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" DisableFields="disableitemfields" />
+                  OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" DisableFields="disableitemfields" AnyBarcodeInOutward="anybarcodeinoutward" />
 
 <ReprintBarcodeModal @ref="reprintBarcodeModal" Title="@reprintTitle" OnPrint="DownloadSingleBarcode" />
 
@@ -90,6 +90,7 @@ else
     private string Route = "/inward";
     private bool isAdmin = false;
 
+    private bool anybarcodeinoutward = false;
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
@@ -242,6 +243,7 @@ else
         }
 
         inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(inward.Id);
+        anybarcodeinoutward = inwardItems.Any(X=>X.HasOutOfStockBarcodes);
         filteredProductsbyCategory = products;
         filteredBrandsByCategory = MakeCompanies;
         if (inward.CategoryId > 0 && inward.CategoryId != null)

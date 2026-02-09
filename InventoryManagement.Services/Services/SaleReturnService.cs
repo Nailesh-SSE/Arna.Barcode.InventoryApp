@@ -28,7 +28,7 @@ public class SaleReturnService : ISaleReturnService
                          .OrderByDescending(o => o.SaleReturnDate)
                          .ThenByDescending(o => o.Id)
                          .ToListAsync();
-        if (!isAdmin) 
+        if (!isAdmin)
         {
             var today = DateTime.Today;
             saleReturns = saleReturns.Where(s => s.SaleReturnDate.Date == today).ToList();
@@ -51,7 +51,7 @@ public class SaleReturnService : ISaleReturnService
         {
             model.SaleReturnNo = await GenerateSaleReturnNumberAsync(model.SaleReturnDate);
             var newSaleReturn = await CreateSaleReturnEntityAsync(model);
-         
+
             return newSaleReturn.Id;
         }
         catch (Exception ex)
@@ -125,7 +125,7 @@ public class SaleReturnService : ISaleReturnService
             ReturnQuantity = i.ReturnQuantity,
             SerialNo = i.SerialNo,
             ShipToCompanyId = i.ShipToCompanyId,
-            BillToCompanyId=i.BillToCompanyId,
+            BillToCompanyId = i.BillToCompanyId,
             IsTakeInStock = i.IsTakeInStock,
             CreatedBy = i.CreatedBy,
             CreatedOn = i.CreatedOn,
@@ -135,7 +135,7 @@ public class SaleReturnService : ISaleReturnService
     }
     public async Task<bool> CreateSaleReturnItem(SaleReturnItemsModel model)
     {
-        try 
+        try
         {
             var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
             var saleReturns = await saleReturnRepo.GetByIdAsync(model.SaleReturnId);
@@ -154,17 +154,17 @@ public class SaleReturnService : ISaleReturnService
             }
             var item = await CreateSaleReturnItemEntity(model);
             if (item.IsTakeInStock)
-            {             
-                    var saleToInwardDto = await ConvertToDto(item);
+            {
+                var saleToInwardDto = await ConvertToDto(item);
                 await _inwardService.AddReturnItemToSaleInwardAsync(saleToInwardDto);
             }
 
             return true;
         }
         catch (Exception ez)
-        {         
+        {
             throw;
-        }      
+        }
     }
     private async Task<SaleReturnItems> CreateSaleReturnItemEntity(SaleReturnItemsModel model)
     {
@@ -176,7 +176,7 @@ public class SaleReturnService : ISaleReturnService
             SaleReturnId = model.SaleReturnId,
             ProductId = model.ProductId,
             OutwardId = model.OutwardId,
-            CategoryId = categoryId,    
+            CategoryId = categoryId,
             ShipToCompanyId = model.ShipToCompanyId,
             BillToCompanyId = model.BillToCompanyId,
             BarCodeNo = model.BarCodeNo,
@@ -200,7 +200,7 @@ public class SaleReturnService : ISaleReturnService
     {
         var saleReturnItemRepo = _unitOfWork.GetRepository<SaleReturnItems>();
         var entity = await saleReturnItemRepo.GetByIdAsync(model.Id);
-        if (entity == null )
+        if (entity == null)
             return false;
 
         await UpdateSaleReturnItemEntity(model);
@@ -245,12 +245,12 @@ public class SaleReturnService : ISaleReturnService
 
             if (item == null) return false;
             item.IsActive = false;
-            item.IsDeleted = true; 
-            item.UpdatedOn= DateTime.Now;
-            item.UpdatedBy= userId;
-            
+            item.IsDeleted = true;
+            item.UpdatedOn = DateTime.Now;
+            item.UpdatedBy = userId;
+
             itemRepo.Update(item);
-                        
+
             await _unitOfWork.SaveChangesAsync();
 
             var saleToInwardDto = await ConvertToDto(item);
@@ -260,7 +260,7 @@ public class SaleReturnService : ISaleReturnService
         }
         catch
         {
-            return false;           
+            return false;
         }
     }
     #endregion
@@ -282,7 +282,7 @@ public class SaleReturnService : ISaleReturnService
     private async Task<int> GetCategoryIdByProductId(int productId)
     {
         var productrepo = _unitOfWork.GetRepository<Product>();
-        var product =await productrepo.GetByIdAsync(productId);
+        var product = await productrepo.GetByIdAsync(productId);
         if (product == null) return 0;
         return product.CategoryId;
     }
@@ -351,7 +351,33 @@ public class SaleReturnService : ISaleReturnService
        od => od.Outward
    );
 
+        bool forceUnitToPCS = false;
         var outwardDetail = outwardDetails.FirstOrDefault();
+        if (outwardDetail == null && barcodeItem.ParentId != 0)
+        {
+            var parentBarcodeItem = (await barcodeItemRepository.FindWithIncludesAsync(
+                    bi => bi.Id == barcodeItem.ParentId && !bi.IsDeleted
+                ))
+                ?.FirstOrDefault();
+
+            if (parentBarcodeItem != null)
+            {
+                outwardDetail = (await outwardDetailRepository.FindWithIncludesAsync(
+                        od => od.BarcodeNo == parentBarcodeItem.BarcodeNo && !od.IsDeleted,
+                        CancellationToken.None,
+                        od => od.Outward
+                    ))
+                    ?.FirstOrDefault();
+
+                // force PCS for parent barcode case
+                if (outwardDetail != null)
+                {
+                    forceUnitToPCS = true;
+                //    outwardDetail.Unit = UnitType.PCS.ToString();
+                }
+            }
+        }
+
         if (outwardDetail == null)
         {
             return new SaleReturnValidationResult
@@ -360,10 +386,23 @@ public class SaleReturnService : ISaleReturnService
                 ErrorMessage = "This barcode was not sold (no outward record found)."
             };
         }
-        var unitName = outwardDetail.Unit;
-        var unitId = (int)Enum.Parse<UnitType>(unitName, true);
+        string unitName = forceUnitToPCS
+           ? UnitType.PCS.ToString()
+           : outwardDetail.Unit;
+
+        var unitId = Enum.TryParse<UnitType>(unitName, true, out var unit)
+            ? (int)unit
+            : (int)UnitType.PCS;
 
         var outward = outwardDetail.Outward;
+        if (outward == null)
+        {
+            return new SaleReturnValidationResult
+            {
+                IsValid = false,
+                ErrorMessage = "Outward record is missing for this barcode."
+            };
+        }
         //if (outward == null || outward.BillToCompanyId != companyId)
         //{
         //    return new SaleReturnValidationResult
