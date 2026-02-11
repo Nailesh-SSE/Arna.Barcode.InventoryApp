@@ -68,7 +68,7 @@ namespace InventoryManagement.Services.Reports.Services
             IRow headerRow = sheet.CreateRow(0);
             string[] headers = new string[]
             {
-                "SaleReturn Number", "Date", "Product", "SKU", "Category",
+                "No.","SaleReturn Number", "Date", "Product", "SKU", "Category",
                 "Quantity", "Unit", "Supplier", "Status"
             };
 
@@ -83,16 +83,17 @@ namespace InventoryManagement.Services.Reports.Services
                 var item = report.Items[i];
                 IRow row = sheet.CreateRow(i + 1);
 
-                row.CreateCell(0).SetCellValue(item.ReturnNo);
-                row.CreateCell(1).SetCellValue(item.ReturnDate.ToString("dd/MM/yyyy"));
-                row.CreateCell(2).SetCellValue(item.ProductName);
-                row.CreateCell(3).SetCellValue(item.SKU);
-                row.CreateCell(4).SetCellValue(item.CategoryName);
-                row.CreateCell(5).SetCellValue((double)item.Quantity);
-                row.CreateCell(6).SetCellValue(item.Unit);
-                row.CreateCell(7).SetCellValue(item.BillToCompanyName);
+                row.CreateCell(0).SetCellValue(i + 1);
+                row.CreateCell(1).SetCellValue(item.ReturnNo);
+                row.CreateCell(2).SetCellValue(item.ReturnDate.ToString("dd/MM/yyyy"));
+                row.CreateCell(3).SetCellValue(item.ProductName);
+                row.CreateCell(4).SetCellValue(item.SKU);
+                row.CreateCell(5).SetCellValue(item.CategoryName);
+                row.CreateCell(6).SetCellValue((double)item.Quantity);
+                row.CreateCell(7).SetCellValue(item.Unit);
+                row.CreateCell(8).SetCellValue(item.BillToCompanyName);
                 //row.CreateCell(8).SetCellValue(item.BatchNumber);
-                row.CreateCell(8).SetCellValue(item.IsActive ? "Active" : "Inactive");
+                row.CreateCell(9).SetCellValue(item.IsActive ? "Active" : "Inactive");
             }
 
             // Autosize all columns
