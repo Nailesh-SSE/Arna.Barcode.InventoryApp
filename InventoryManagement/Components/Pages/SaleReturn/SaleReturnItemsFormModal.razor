@@ -89,6 +89,7 @@
                             <table class="table table-bordered table-sm align-middle">
                                 <thead class="table-light">
                                     <tr>
+                                        <th class="col-1">#</th>
                                         <th class="col-3 col-md-3">Product <span class="text-danger">*</span></th>
                                         <th class="col-2">Return Company  <span class="text-danger">*</span></th>
                                         <th class="col-2">Ship To </th>
@@ -103,12 +104,17 @@
                                 </thead>
 
                                 <tbody>
+                                    @{
+                                        var totalCount = ItemsList.Count;
+                                        var index = totalCount;
+                                    }
+
                                     @foreach (var item in ItemsList)
                                     {
                                         bool isLocked = item.Id > 0 && item.IsTakeInStock;
                                         bool noPermission = !CanCreate;
                                         bool isDisabled = isLocked || noPermission;
-
+                                        
 
                                         <tr class="@(isDisabled ? "table-success text-muted disabled-row" : "")"
                                             title="@(isLocked
@@ -116,6 +122,12 @@
                                                                                                                                         : noPermission
                                                                                                                                             ? "You do not have permission to perform this action."
                                                                                                                                             : "")">
+
+                                    <td class="text-center">
+                                        @index
+                                    </td>
+
+                                    @{index--;}
                                     <!-- PRODUCT -->
                                     <td>
                                         <SearchableDropdown TItem="ProductModel"
