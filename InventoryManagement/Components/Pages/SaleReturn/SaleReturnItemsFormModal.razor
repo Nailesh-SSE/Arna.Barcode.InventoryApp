@@ -26,24 +26,24 @@
             <fieldset disabled="@DisableFields">
                 <div class="position-relative">
 
-                @if (isScanning)
+                    @if (isScanning)
+                    {
+                        <button type="button"
+                                class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2"
+                                title="Close Camera"
+                                style="z-index: 10;"
+                                @onclick="CloseCamera">
+                            <Icon Name="IconName.XCircle" />
+                        </button>
+                        <div class="scanner-wrapper">
+                            <div id="reader"></div>
+                        </div>
+                    }
+                </div>
+                @if (CanCreate)
                 {
-                    <button type="button"
-                            class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2"
-                            title="Close Camera"
-                            style="z-index: 10;"
-                            @onclick="CloseCamera">
-                        <Icon Name="IconName.XCircle" />
-                    </button>
-                    <div class="scanner-wrapper">
-                        <div id="reader"></div>
-                    </div>
-                }
-            </div>
-            @if (CanCreate)
-            {
-                <!-- BARCODE SECTION -->
-                <div class="d-flex align-items-center gap-2 mb-3 flex-nowrap">
+                    <!-- BARCODE SECTION -->
+                    <div class="d-flex align-items-center gap-2 mb-3 flex-nowrap">
                         <InputText class="form-control flex-grow-1"
                                    placeholder="Enter Barcode"
                                    @bind-Value="ItemsModel.BarCodeNo"
@@ -66,13 +66,30 @@
             {
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0">Items List (@ItemsList.Count) | Total Item Qty (@TotalItemQty) | Total Box Qty (@TotalBoxQty)</h5>
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h5 class="mb-0">Items List (@ItemsList.Count) | Total Item Qty (@TotalItemQty) | Total Box Qty (@TotalBoxQty)</h5>
+                            </div>
+                            <div class="col-auto">
+                                @if (CanCreate)
+                                {
+                                    <button type="button"
+                                            class="btn btn-success btn-sm"
+                                            disabled="@hideAddNewButton"
+                                            @onclick="HandleAddItem">
+                                        <i class="bi bi-plus-circle me-1"></i>
+                                        Add New Item
+                                    </button>
+                                }
+                            </div>
+                        </div>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive" style="height: 650px; overflow-y: auto;">
                             <table class="table table-bordered table-sm align-middle">
                                 <thead class="table-light">
                                     <tr>
+                                        <th class="col-1">#</th>
                                         <th class="col-3 col-md-3">Product <span class="text-danger">*</span></th>
                                         <th class="col-2">Return Company  <span class="text-danger">*</span></th>
                                         <th class="col-2">Ship To </th>
@@ -87,29 +104,40 @@
                                 </thead>
 
                                 <tbody>
+                                    @{
+                                        var totalCount = ItemsList.Count;
+                                        var index = totalCount;
+                                    }
+
                                     @foreach (var item in ItemsList)
                                     {
                                         bool isLocked = item.Id > 0 && item.IsTakeInStock;
                                         bool noPermission = !CanCreate;
                                         bool isDisabled = isLocked || noPermission;
-
+                                        
 
                                         <tr class="@(isDisabled ? "table-success text-muted disabled-row" : "")"
                                             title="@(isLocked
-                                                                                            ? "This item is already taken in stock. You cannot edit it."
-                                                                                            : noPermission
-                                                                                                ? "You do not have permission to perform this action."
-                                                                                                : "")">
-                                    <!-- PRODUCT -->                          
-                                            <td>
-                                                <SearchableDropdown TItem="ProductModel"
-                                                                    Items="@ProductList.Where(p=>p.IsActive || p.Id==item.ProductId)"
-                                                                    ItemTextSelector="@(p => p.SKU)"
-                                                                    SelectedText="@item.ProductSearchText"
-                                                                    Placeholder="Search product..."
-                                                                    OnItemSelected="@(p => OnProductDropdownSelected(item, p))"
-                                                                    ShowValidationMessage="@(showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))"
-                                                                    IsDisabled="@isDisabled" />
+                                                                                                                                        ? "This item is already taken in stock. You cannot edit it."
+                                                                                                                                        : noPermission
+                                                                                                                                            ? "You do not have permission to perform this action."
+                                                                                                                                            : "")">
+
+                                    <td class="text-center">
+                                        @index
+                                    </td>
+
+                                    @{index--;}
+                                    <!-- PRODUCT -->
+                                    <td>
+                                        <SearchableDropdown TItem="ProductModel"
+                                                            Items="@ProductList.Where(p=>p.IsActive || p.Id==item.ProductId)"
+                                                            ItemTextSelector="@(p => p.SKU)"
+                                                            SelectedText="@item.ProductSearchText"
+                                                            Placeholder="Search product..."
+                                                            OnItemSelected="@(p => OnProductDropdownSelected(item, p))"
+                                                            ShowValidationMessage="@(showValidation && item.ProductId == 0 && IsLastUnsavedItem(item))"
+                                                            IsDisabled="@isDisabled" />
                                         @if (showValidation && item.ProductId == 0)
                                                 {
                                                     <small class="text-danger">Required</small>
@@ -117,7 +145,7 @@
                                             </td>
                                             <!-- Return Company -->
                                             <td>
-                                                <InputSelect class="form-select" @bind-Value="@item.BillToCompanyId" disabled="@isDisabled">
+                                                <InputSelect class="form-select w-auto" @bind-Value="@item.BillToCompanyId" disabled="@isDisabled">
                                                     <option value="0">Select</option>
                                                     @foreach (var bill in BillToCompanyList.Where(c => c.IsActive || c.Id == item.BillToCompanyId))
                                                     {
@@ -125,13 +153,13 @@
                                                     }
                                                 </InputSelect>
                                                 @if (showValidation && item.BillToCompanyId == 0 && IsLastUnsavedItem(item))
-                                            {
-                                                <small class="text-danger">Required</small>
-                                            }
+                                                {
+                                                    <small class="text-danger">Required</small>
+                                                }
                                             </td>
                                             <!-- SHIP TO -->
                                             <td>
-                                                <InputSelect class="form-select" @bind-Value="@item.ShipToCompanyId" disabled="@isDisabled">
+                                                <InputSelect class="form-select" style="width: 200px;" @bind-Value="@item.ShipToCompanyId" disabled="@isDisabled">
                                                     <option value="0">Select</option>
                                                     @foreach (var ship in CompanyList.Where(c => c.IsActive || c.Id == item.ShipToCompanyId))
                                                     {
@@ -146,7 +174,7 @@
 
                                             <!-- UNIT -->
                                             <td>
-                                                <InputSelect class="form-select" @bind-Value="@item.UnitId" disabled="@isDisabled">
+                                                <InputSelect class="form-select w-auto" @bind-Value="@item.UnitId" disabled="@isDisabled">
                                                     <option value="0">Select</option>
                                                     @foreach (var unit in Units)
                                                     {
@@ -161,14 +189,14 @@
 
                                             <!-- QTY (NARROW) -->
                                             <td class="col-1">
-                                                <InputNumber class="form-control p-1" min="1" @bind-Value="@item.ReturnQuantity" disabled="@isDisabled" />
+                                                <InputNumber class="form-control p-1" style="width: 75px;" min="1" @bind-Value="@item.ReturnQuantity" disabled="@isDisabled" />
                                                 @if (showValidation && item.ReturnQuantity <= 0 && IsLastUnsavedItem(item))
                                                 {
                                                     <small class="text-danger">Min 1</small>
                                                 }
                                             </td>
 
-                                            <!-- OUTWARD (WIDER) -->                                                                      
+                                            <!-- OUTWARD (WIDER) -->
                                             @* <td style="width:100px;">
                                                 <SearchableDropdown TItem="OutwardModel"
                                                                     Items="OutwardList.Where(o=>o.IsActive || o.Id==item.OutwardId)"
@@ -181,7 +209,7 @@
 
                                             <!-- RETURN TYPE -->
                                             <td>
-                                                <InputSelect class="form-select" @bind-Value="@item.ReturnType" disabled="@isDisabled">
+                                                <InputSelect class="form-select w-auto" @bind-Value="@item.ReturnType" disabled="@isDisabled">
                                                     <option value="0">Select</option>
                                                     @foreach (var type in Enum.GetValues(typeof(ReturnType)))
                                                     {
@@ -197,7 +225,7 @@
                                             <!-- TAKE TO STOCK -->
                                             <td>
                                                 <InputSelect TValue="bool"
-                                                             class="form-select"
+                                                             class="form-select w-auto"
                                                              @bind-Value="item.IsTakeInStock"
                                                              disabled="@isDisabled">
 
@@ -247,16 +275,6 @@
                                     }
                                 </tbody>
                             </table>
-                            <fieldset disabled="@DisableFields">
-                                <div class="text-end mt-3">
-                                    <button type="button"
-                                            disabled="@hideAddNewButton"
-                                            class="btn btn-success "
-                                            @onclick="HandleAddItem">
-                                        <i class="bi bi-plus-circle me-1"></i>Add New Item
-                                    </button>
-                                </div>
-                            </fieldset>
                         </div>
                     </div>
                 </div>
@@ -486,7 +504,7 @@
         if(item.BillToCompanyId <=0)
         {
             ShowErrorMessage("Return Company is required.");
-            return false;           
+            return false;
         }
 
         if (item.ReturnQuantity <= 0)

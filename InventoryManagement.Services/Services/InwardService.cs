@@ -130,7 +130,7 @@ public class InwardService : IInwardService
         var query = itemRepo.GetQueryable();
 
         var items = await query.Include(a => a.InwardBarcodeItems).Include(a => a.Product)
-            .Where(ii => ii.InwardId == inwardId && !ii.IsDeleted)
+            .Where(ii => ii.InwardId == inwardId && !ii.IsDeleted).OrderByDescending(i => i.Id).ThenByDescending(i => i.CreatedOn)
             .ToListAsync();
 
 

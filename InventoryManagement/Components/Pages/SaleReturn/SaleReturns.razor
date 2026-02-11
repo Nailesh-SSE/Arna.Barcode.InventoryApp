@@ -342,7 +342,7 @@ else
     private async Task AddNewItemRow(SaleReturnValidationResult? data)
     {
         SaleReturnItems ??= new List<SaleReturnItemsModel>();
-        var lastRow = SaleReturnItems.LastOrDefault(x => x.Id == 0);
+        var lastRow = SaleReturnItems.FirstOrDefault(x => x.Id == 0);
         bool isBarcodeScan = data != null && data.ProductId > 0;
 
         if (lastRow != null)
@@ -385,7 +385,7 @@ else
                 .OutwardNo ?? string.Empty;
         }
 
-        SaleReturnItems.Add(new SaleReturnItemsModel
+        SaleReturnItems.Insert(0,new SaleReturnItemsModel
         {
             ProductId = data?.ProductId ?? 0,
             ProductSearchText = productText,
@@ -395,7 +395,9 @@ else
             OutwardId = data?.OutwardId ?? 0,
             OutwardSearchText = outwardText,
             BarCodeNo = data?.BarcodeNo ?? null,
-            ReturnQuantity = 1
+            ReturnQuantity = 1,
+            ReturnType = (int)ReturnType.Excess,
+            IsTakeInStock = true
         });
 
         if (data != null)
