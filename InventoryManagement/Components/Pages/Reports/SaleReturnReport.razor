@@ -235,14 +235,22 @@ else
                                             <thead class="table-light">
                                                 <tr>
                                                     <th>#</th>
+                                                    <th>Return Company</th>
+                                                    <th>Ship To</th>
                                                     <th>Return No</th>
-                                                    <th>Date</th>
+                                                    <th>Return Date</th>
+                                                    <th>Return Time</th>
+                                                    <th>Category</th>
+                                                    <th>Brand</th>
                                                     <th>Product</th>
                                                     <th>SKU</th>
-                                                    <th>Category</th>
-                                                    <th class="text-end">Quantity</th>
+                                                    <th>Barcode</th>
                                                     <th>Unit</th>
-                                                    <th>Supplier</th>
+                                                    <th class="text-end">Box Qty</th>
+                                                    <th class="text-end">Item Qty</th>
+                                                    <th>Type</th>
+                                                    <th>ToStock</th>
+                                                    <th>Reason</th>
                                                     @* <th>Batch</th> *@
                                                     <th>Status</th>
                                                 </tr>
@@ -252,14 +260,22 @@ else
                                                 {
                                                     <tr>
                                                         <td>@((reportResult.PageNumber - 1) * reportResult.PageSize + reportResult.Items.IndexOf(item) + 1)</td>
+                                                        <td>@item.BillToCompanyName</td>
+                                                        <td>@item.shipToCompanyName</td>
                                                         <td><span class="badge bg-primary">@item.ReturnNo</span></td>
                                                         <td>@item.ReturnDate.ToString("dd/MM/yyyy")</td>
+                                                        <td>@item.ReturnDate.ToString("HH:mm:ss")</td>
+                                                        <td>@item.CategoryName</td>
+                                                        <td>@item.BrandName</td>
                                                         <td>@item.ProductName</td>
                                                         <td><code>@item.SKU</code></td>
-                                                        <td>@item.CategoryName</td>
-                                                        <td class="text-end">@item.Quantity.ToString("N2")</td>
+                                                        <td>@item.Barcode</td>
                                                         <td>@item.Unit</td>
-                                                        <td>@item.BillToCompanyName</td>
+                                                        <td class="text-end">@item.BoxQuantity.ToString("N2")</td>
+                                                        <td class="text-end">@item.Quantity.ToString("N2")</td>
+                                                        <td>@item.Type</td>
+                                                        <td>@item.ToStock</td>
+                                                        <td>@item.Reason</td>
                                                         @* <td><span class="badge bg-secondary">@item.BatchNumber</span></td> *@
                                                         <td>
                                                             @if (item.IsActive)

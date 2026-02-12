@@ -68,10 +68,9 @@ namespace InventoryManagement.Services.Reports.Services
             IRow headerRow = sheet.CreateRow(0);
             string[] headers = new string[]
             {
-                "No.","SaleReturn Number", "Date", "Product", "SKU", "Category",
-                "Quantity", "Unit", "Supplier", "Status"
+                "No.","Return Company","Ship To","SaleReturn Number", "SaleReturn Date" , "SaleReturn Time" , "Category" ,"Brand","Product", "SKU",
+                 "Barcode","Unit","Box Qty","Item Qty","Type","ToStock","Reason","Status"
             };
-
             for (int i = 0; i < headers.Length; i++)
             {
                 headerRow.CreateCell(i).SetCellValue(headers[i]);
@@ -84,16 +83,24 @@ namespace InventoryManagement.Services.Reports.Services
                 IRow row = sheet.CreateRow(i + 1);
 
                 row.CreateCell(0).SetCellValue(i + 1);
-                row.CreateCell(1).SetCellValue(item.ReturnNo);
-                row.CreateCell(2).SetCellValue(item.ReturnDate.ToString("dd/MM/yyyy"));
-                row.CreateCell(3).SetCellValue(item.ProductName);
-                row.CreateCell(4).SetCellValue(item.SKU);
-                row.CreateCell(5).SetCellValue(item.CategoryName);
-                row.CreateCell(6).SetCellValue((double)item.Quantity);
-                row.CreateCell(7).SetCellValue(item.Unit);
-                row.CreateCell(8).SetCellValue(item.BillToCompanyName);
+                row.CreateCell(1).SetCellValue(item.BillToCompanyName);
+                row.CreateCell(2).SetCellValue(item.shipToCompanyName);
+                row.CreateCell(3).SetCellValue(item.ReturnNo);
+                row.CreateCell(4).SetCellValue(item.ReturnDate.ToString("dd/MM/yyyy"));
+                row.CreateCell(5).SetCellValue(item.ReturnDate.ToString("HH:mm:ss"));
+                row.CreateCell(6).SetCellValue(item.CategoryName);
+                row.CreateCell(7).SetCellValue(item.BrandName);
+                row.CreateCell(8).SetCellValue(item.ProductName);
+                row.CreateCell(9).SetCellValue(item.SKU);
+                row.CreateCell(10).SetCellValue(item.Barcode);
+                row.CreateCell(11).SetCellValue(item.Unit);
+                row.CreateCell(12).SetCellValue((double)item.BoxQuantity);
+                row.CreateCell(13).SetCellValue((double)item.Quantity);
+                row.CreateCell(14).SetCellValue(item.Type);
+                row.CreateCell(15).SetCellValue(item.ToStock ? "Yes" : "No");
+                row.CreateCell(16).SetCellValue(item.Reason);
                 //row.CreateCell(8).SetCellValue(item.BatchNumber);
-                row.CreateCell(9).SetCellValue(item.IsActive ? "Active" : "Inactive");
+                row.CreateCell(17).SetCellValue(item.IsActive ? "Active" : "Inactive");
             }
 
             // Autosize all columns
@@ -199,11 +206,16 @@ namespace InventoryManagement.Services.Reports.Services
                     from c in cat.DefaultIfEmpty()
 
                         // ⭐ BillToCompany join using effective id (item > parent)
-                    join comp in companyRepo.GetQueryable()
+                    join billcomp in companyRepo.GetQueryable()
                         on (item.BillToCompanyId != 0
                             ? item.BillToCompanyId
-                            : sr.BillToCompanyId) equals comp.Id into compJoin
-                    from comp in compJoin.DefaultIfEmpty()
+                            : sr.BillToCompanyId) equals billcomp.Id into billcompJoin
+                    from billcomp in billcompJoin.DefaultIfEmpty()
+                   
+                    // ⭐ ShipToCompany join
+                    join shipComp in companyRepo.GetQueryable()
+                           on item.ShipToCompanyId equals shipComp.Id into shipJoin
+                    from shipComp in shipJoin.DefaultIfEmpty()
 
                     select new
                     {
@@ -211,9 +223,9 @@ namespace InventoryManagement.Services.Reports.Services
                         item,
                         p,
                         c,
-                        comp
+                        billcomp,
+                        shipComp
                     };
-
                 // Filters
                 if (string.IsNullOrWhiteSpace(filter.ReturnNumbers))
                 {
@@ -252,9 +264,9 @@ namespace InventoryManagement.Services.Reports.Services
                     // SUPPLIER
                     "shipmentcompany" =>
                         desc
-                            ? query.OrderByDescending(x => x.comp.Name)
+                            ? query.OrderByDescending(x => x.billcomp.Name)
                                    .ThenByDescending(x => x.sr.SaleReturnDate)
-                            : query.OrderBy(x => x.comp.Name)
+                            : query.OrderBy(x => x.billcomp.Name)
                                    .ThenBy(x => x.sr.SaleReturnDate),
 
                     // DEFAULT
@@ -277,20 +289,31 @@ namespace InventoryManagement.Services.Reports.Services
 
                 var items = raw.Select(x => new SaleReturnReportItem
                 {
+                    BillToCompanyId = x.billcomp?.Id ?? 0,
+                    BillToCompanyName = x.billcomp?.Name ?? "",
+                    
+                    ShipToCompanyId = x.shipComp.Id,
+                    shipToCompanyName = x.shipComp?.Name ?? "",
+
                     SaleReturnId = x.sr.Id,
                     ReturnNo = x.sr.SaleReturnNo,
-                    ReturnDate = x.sr.SaleReturnDate,
-                    Unit = ((UnitType)x.item.UnitId).ToString(),
+                    ReturnDate = x.item.CreatedOn,
+
+                    CategoryName = x.c?.Name ?? "",
+                    BrandId = x.p.MakeCompanyId ,
+                    BrandName= x.p.MakeCompany,
 
                     ProductId = x.p.Id,
                     ProductName = x.p.Name,
                     SKU = x.p.SKU,
-                    CategoryName = x.c?.Name ?? "",
 
+                    Barcode = x.item.BarCodeNo ?? "",
+                    Type = ((ReturnType)x.item.ReturnType).ToString(),
+                    ToStock = x.item.IsTakeInStock,
+                    Reason = x.item.ReasonToReturn ?? "",
+                    Unit = ((UnitType)x.item.UnitId).ToString(),
+                    BoxQuantity = x.item.UnitId == (int)UnitType.BOX ? 1:0,
                     Quantity = x.item.ReturnQuantity,
-
-                    BillToCompanyId = x.comp?.Id ?? 0,
-                    BillToCompanyName = x.comp?.Name ?? "",
 
                     IsActive = x.sr.IsActive,
                     CreatedBy = x.sr.CreatedBy,
