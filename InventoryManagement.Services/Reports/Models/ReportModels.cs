@@ -109,6 +109,7 @@ public class OutwardFilter : BaseReportFilter
 {
     public string? OutwardNumbers { get; set; }
     public int? BillToCompanyId { get; set; }
+    public int? PlatformId { get; set; }
     public decimal? MinQuantity { get; set; }
     public decimal? MaxQuantity { get; set; }
     public string? ProductSKUs { get; set; }
@@ -128,7 +129,8 @@ public class OutwardReportItem
     public string SKU { get; set; } = string.Empty;
     public string CategoryName { get; set; } = string.Empty;
     public string BrandName { get; set; } = string.Empty;
-    public decimal Quantity { get; set; }
+    public int ItemQuantity { get; set; }
+    public int BoxQuantity { get; set; }
     public string Unit { get; set; } = string.Empty;
     public decimal UnitCost { get; set; }
     public decimal TotalCost { get; set; }
@@ -136,7 +138,10 @@ public class OutwardReportItem
     public string? SerialNumber { get; set; }
     public int BillToCompanyId { get; set; }
     public string BillToCompanyName { get; set; } = string.Empty;
-    public string? Remarks { get; set; }
+    public int PlatformId { get; set; }
+    public string PlatformName { get; set; } = string.Empty;
+    public string Barcode { get; set; } = string.Empty;
+    public string Remarks { get; set; } = string.Empty;
     public bool IsActive { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedOn { get; set; }
@@ -189,12 +194,22 @@ public class SaleReturnReportItem
     public string SKU { get; set; } = string.Empty;
     public string CategoryName { get; set; } = string.Empty;
     public decimal Quantity { get; set; }
+    public decimal BoxQuantity { get; set; }
     public string Unit { get; set; } = string.Empty;
     public decimal UnitCost { get; set; }
     public decimal TotalCost { get; set; }
     public string? BatchNumber { get; set; }
     public int? BillToCompanyId { get; set; }
     public string BillToCompanyName { get; set; } = string.Empty;
+    public int? ShipToCompanyId { get; set; }
+    public string shipToCompanyName { get; set; } = string.Empty;
+    public int? BrandId { get; set; }
+    public string BrandName { get; set; } = string.Empty;
+    public string? Barcode { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+    public bool ToStock { get; set; }
+    public string Reason { get; set; } = string.Empty;
+    public string Status { get; set; }
     public string? Remarks { get; set; }
     public bool IsActive { get; set; }
     public int CreatedBy { get; set; }
@@ -317,9 +332,13 @@ public class InStockReportItem
     public bool IsInStock { get; set; } = true; 
     public int CategoryId { get; set; }
     public string CategoryName { get; set; } = string.Empty;
+    public int ShipCompanyId { get; set; }
+    public string ShipCompanyname { get; set; } = string.Empty;
     public decimal Quantity { get; set; }
+    public decimal BoxQuantity { get; set; }
     public string Unit { get; set; } = string.Empty;
     public int CreatedBy { get; set; }
+    public string Remark { get; set;} = string.Empty;
     public string UserName { get; set;} = string.Empty;
     public DateTime CreatedOn { get; set; }
     public string BatchNo { get; set; } = string.Empty;

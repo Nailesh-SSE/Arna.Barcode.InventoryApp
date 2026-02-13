@@ -169,7 +169,10 @@ else
                                             <thead class="table-light">
                                                 <tr>
                                                     <th>#</th>
+                                                    <th>Category</th>
+                                                    <th>Brand</th>
                                                     <th>Product</th>
+                                                    <th>Item Name</th>
                                                     <th>Inward</th>
                                                     <th>Outward</th>
                                                     <th>SaleReturn</th>
@@ -183,6 +186,9 @@ else
                                                 {
                                                     <tr>
                                                         <td>@((reportResult.PageNumber - 1) * reportResult.PageSize + reportResult.Items.IndexOf(item) + 1)</td>
+                                                        <td>@item.CategoryName</td>
+                                                        <td>@item.MakeCompany</td>
+                                                        <td>@item.ProductName</td>
                                                         <td><code>@item.Sku</code></td>
                                                         <td>@item.Inward</td>
                                                         <td>@item.Outward</td>

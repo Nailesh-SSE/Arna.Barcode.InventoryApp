@@ -61,8 +61,8 @@ namespace InventoryManagement.Services.Reports.Services
             IRow headerRow = sheet.CreateRow(0);
             string[] headers = new string[]
             {
-              "No", "Barcode", "Date", "Status",
-              "Brand", "ProductName", "Category", "UserName","BatchNo","InwardNo"   
+              "No","InwardNo", "Inward Date" , "Inward Time" ,"Ship Company" , "Category" , 
+              "Brand","Product" ,"Item Name" , "Barcode" , "Unit","Box Qty","Item Qty", "Remark", "Status", "UserName" , "BatchNo"   
             };
 
             for (int i = 0; i < headers.Length; i++)
@@ -77,18 +77,22 @@ namespace InventoryManagement.Services.Reports.Services
                 IRow row = sheet.CreateRow(i + 1);
 
                 row.CreateCell(0).SetCellValue(i + 1); // No (sequence)
-
-                row.CreateCell(1).SetCellValue(item.BarcodeNo);
+                row.CreateCell(1).SetCellValue(item.InwardNo);
                 row.CreateCell(2).SetCellValue(item.CreatedOn.ToString("yyyy/MM/dd"));
-                row.CreateCell(3).SetCellValue(item.IsInStock ? "In Stock" : "Sold");
-
-                row.CreateCell(4).SetCellValue(item.BrandName);
-                row.CreateCell(5).SetCellValue(item.SKU);
-                row.CreateCell(6).SetCellValue(item.CategoryName);
-                row.CreateCell(7).SetCellValue(item.UserName);
-               
-                row.CreateCell(8).SetCellValue(item.BatchNo);
-                row.CreateCell(9).SetCellValue(item.InwardNo);
+                row.CreateCell(3).SetCellValue(item.CreatedOn.ToString("HH:mm:ss"));
+                row.CreateCell(4).SetCellValue(item.ShipCompanyname);
+                row.CreateCell(5).SetCellValue(item.CategoryName);
+                row.CreateCell(6).SetCellValue(item.BrandName);
+                row.CreateCell(7).SetCellValue(item.ProductName);
+                row.CreateCell(8).SetCellValue(item.SKU);
+                row.CreateCell(9).SetCellValue(item.BarcodeNo);
+                row.CreateCell(10).SetCellValue(item.Unit);
+                row.CreateCell(11).SetCellValue((double)item.BoxQuantity);
+                row.CreateCell(12).SetCellValue((double)item.Quantity);
+                row.CreateCell(13).SetCellValue(item.Remark);
+                row.CreateCell(14).SetCellValue(item.IsInStock ? "In Stock" : "Sold");
+                row.CreateCell(15).SetCellValue(item.UserName);
+                row.CreateCell(16).SetCellValue(item.BatchNo);
 
             }
 
@@ -136,6 +140,7 @@ namespace InventoryManagement.Services.Reports.Services
             var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
             var userRepo = _unitOfWork.GetRepository<Users>();
             var inwardRepo = _unitOfWork.GetRepository<Inward>();
+            var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
 
             var query = baseQuery
                 .Join(inwardItemRepo.GetQueryable(),
@@ -208,24 +213,44 @@ namespace InventoryManagement.Services.Reports.Services
             // Map to DTO
             var items = query.Select(x => new InStockReportItem
             {
-                BrandId = x.p.MakeCompanyId,
-                BrandName = x.p.MakeCompany,
-              
-                ProductId = x.p.Id,
-                SKU = x.p.SKU,
-              
-                BarcodeNo = x.ibt.BarcodeNo,
-                IsInStock = x.ibt.IsInStock,
-             
-                CategoryId = x.c.Id,
-                CategoryName = x.c.Name,
-            
-                CreatedBy = x.ibt.CreatedBy,
-                UserName = x.uc != null ? x.uc.UserName : "",
+                InwardNo = x.i.InwardNo,
                 CreatedOn = x.ibt.CreatedOn,
 
-                BatchNo= x.it.BatchNo,
-                InwardNo = x.i.InwardNo
+                ShipCompanyId = x.i.ShipMentCompanyId,
+                ShipCompanyname = x.i.ShipMentCompany.Name,
+
+                CategoryId = x.c.Id,
+                CategoryName = x.c.Name,
+                
+                BrandId = x.p.MakeCompanyId,
+                BrandName = x.p.MakeCompany,
+                
+                ProductId = x.p.Id,
+                ProductName = x.p.Name,
+                SKU = x.p.SKU,
+
+                Unit = x.it.BoxQuantity > 0 && x.ibt.ParentId == 0 ? "Box" : "PCS",
+
+                Quantity = x.it.BoxQuantity > 0 &&
+                            (x.ibt.ParentId == 0 || x.ibt.ParentId == null)
+                                ? barcodeRepo.GetQueryable()
+                                    .Count(c =>
+                                        c.ParentId == x.ibt.Id &&
+                                        (filter.IsInStock
+                                            ? c.IsInStock
+                                            : !c.IsInStock))
+                                : 1,
+
+                BoxQuantity = x.it.BoxQuantity > 0 && x.ibt.ParentId == 0 ? x.it.BoxQuantity: 0,
+
+                BarcodeNo = x.ibt.BarcodeNo,
+                IsInStock = x.ibt.IsInStock,
+                
+                Remark = x.i.Remarks,
+                CreatedBy = x.ibt.CreatedBy,
+                UserName = x.uc != null ? x.uc.UserName : "",
+
+                BatchNo= x.it.BatchNo
 
             }).ToList();
 

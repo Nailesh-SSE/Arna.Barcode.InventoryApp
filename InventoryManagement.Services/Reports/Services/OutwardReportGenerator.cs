@@ -1,10 +1,12 @@
 ﻿using InventoryManagement.Core.Entities;
+using InventoryManagement.Core.Enums;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models.ReportModels;
 using Microsoft.EntityFrameworkCore;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
+using System.Linq.Expressions;
 
 namespace InventoryManagement.Services.Reports.Services
 {
@@ -25,26 +27,19 @@ namespace InventoryManagement.Services.Reports.Services
             {
                 var query = BuildBaseQuery(filter);
 
-                var items = await ExecuteQuery(query, filter);
-
-                // Apply paging
-                var pagedItems = items.Skip((filter.PageNumber - 1) * filter.PageSize).Take(filter.PageSize).ToList();
-
-                // Generate summary
-                var summary = await GenerateSummaryAsync(filter);
+                var (items, totalRecords) = await ExecuteQuery(query, filter);
 
                 stopwatch.Stop();
 
                 return new OutwardReportResult
                 {
-                    Items = pagedItems,
-                    Summary = summary,
-                    TotalRecords = items.Count,
+                    Items = items,
+                    TotalRecords = totalRecords,
                     PageNumber = filter.PageNumber,
                     PageSize = filter.PageSize,
                     GenerationTime = stopwatch.Elapsed,
-                    PageCount = (int)Math.Ceiling((double)items.Count / filter.PageSize),
-                    HasNextPage = filter.PageNumber * filter.PageSize < items.Count,
+                    PageCount = (int)Math.Ceiling((double)totalRecords / filter.PageSize),
+                    HasNextPage = filter.PageNumber * filter.PageSize < totalRecords,
                     HasPreviousPage = filter.PageNumber > 1
                 };
             }
@@ -69,13 +64,34 @@ namespace InventoryManagement.Services.Reports.Services
             IRow headerRow = sheet.CreateRow(0);
             string[] headers = new string[]
             {
-                "Outward Number", "Date", "Brand" ,"Product", "SKU", "Category",
-                "Quantity", "Unit", "Supplier", "Status"
+              "Bill To Company", "Platform","Outward Number", "Outward Date","Outward Time",
+              "Category", "Brand" ,"Product","SKU","Barcode ",
+              "Unit","Box Quantity","Item Quantity","Remark","Status"
+            };
+
+            int[] columnWidths = new int[]
+            {
+                 40, // Bill To Company
+                 14, // Platform
+                 16, // Outward Number
+                 14, // Outward Date
+                 12, // Outward Time
+                 24, // Category
+                 18, // Brand
+                 20, // Product
+                 40, // SKU (largest)
+                 22, // Barcode (16–20 chars)
+                 8,  // Unit (3 chars)
+                 12, // Box Quantity
+                 12, // Item Quantity
+                 25, // Remark (free text)
+                 8  // Status
             };
 
             for (int i = 0; i < headers.Length; i++)
             {
                 headerRow.CreateCell(i).SetCellValue(headers[i]);
+                sheet.SetColumnWidth(i, columnWidths[i] * 256);
             }
 
             // Data rows
@@ -84,23 +100,21 @@ namespace InventoryManagement.Services.Reports.Services
                 var item = report.Items[i];
                 IRow row = sheet.CreateRow(i + 1);
 
-                row.CreateCell(0).SetCellValue(item.OutwardNumber);
-                row.CreateCell(1).SetCellValue(item.OutwardDate.ToString("dd/MM/yyyy"));
-                row.CreateCell(2).SetCellValue(item.BrandName);
-                row.CreateCell(3).SetCellValue(item.ProductName);
-                row.CreateCell(4).SetCellValue(item.SKU);
-                row.CreateCell(5).SetCellValue(item.CategoryName);
-                row.CreateCell(6).SetCellValue((double)item.Quantity);
-                row.CreateCell(7).SetCellValue(item.Unit);
-                row.CreateCell(8).SetCellValue(item.BillToCompanyName);
-                //row.CreateCell(8).SetCellValue(item.BatchNumber);
-                row.CreateCell(9).SetCellValue(item.IsActive ? "Active" : "Inactive");
-            }
-
-            // Autosize all columns
-            for (int i = 0; i < headers.Length; i++)
-            {
-                sheet.AutoSizeColumn(i);
+                row.CreateCell(0).SetCellValue(item.BillToCompanyName);                  
+                row.CreateCell(1).SetCellValue(item.PlatformName);                       
+                row.CreateCell(2).SetCellValue(item.OutwardNumber);                      
+                row.CreateCell(3).SetCellValue(item.OutwardDate.ToString("dd/MM/yyyy")); 
+                row.CreateCell(4).SetCellValue(item.CreatedOn.ToString("HH:mm"));        
+                row.CreateCell(5).SetCellValue(item.CategoryName);                       
+                row.CreateCell(6).SetCellValue(item.BrandName);                          
+                row.CreateCell(7).SetCellValue(item.ProductName);                        
+                row.CreateCell(8).SetCellValue(item.SKU);                                
+                row.CreateCell(9).SetCellValue(item.Barcode ??string.Empty);             
+                row.CreateCell(10).SetCellValue(item.Unit);                              
+                row.CreateCell(11).SetCellValue(item.BoxQuantity);                       
+                row.CreateCell(12).SetCellValue(item.ItemQuantity);                      
+                row.CreateCell(13).SetCellValue(item.Remarks);                           
+                row.CreateCell(14).SetCellValue(item.IsActive ? "Active" : "Inactive");  
             }
 
             // Write to memory stream and return as byte array
@@ -115,89 +129,215 @@ namespace InventoryManagement.Services.Reports.Services
         private IQueryable<Outward> BuildBaseQuery(OutwardFilter filter)
         {
             var outwardRepo = _unitOfWork.GetRepository<Outward>();
+
             var query = outwardRepo.GetQueryable()
-                .Include(o => o.OutwardDetails)
-                    .ThenInclude(od => od.Product)
-                        .ThenInclude(p => p.Category)
+                .AsNoTracking()
                 .Where(o => !o.IsDeleted);
+
+            if (!string.IsNullOrWhiteSpace(filter.OutwardNumbers))
+            {
+                var outwardNos = filter.OutwardNumbers
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(x => x.Trim())
+                        .Where(x => !string.IsNullOrEmpty(x))
+                        .ToList();
+                if (outwardNos.Count > 0)
+                {
+                    var param = Expression.Parameter(typeof(Outward), "sr");
+                    var prop = Expression.Property(param, nameof(Outward.OutwardNo));
+
+                    Expression? body = null;
+                    foreach (var on in outwardNos)
+                    {
+                        var constant = Expression.Constant(on);
+                        var equals = Expression.Equal(prop, constant);
+                        body = body == null ? equals : Expression.OrElse(body, equals);
+                    }
+
+                    var predicate = body != null
+                        ? Expression.Lambda<Func<Outward, bool>>(body, param)
+                        : (Expression<Func<Outward, bool>>)(sr => false);
+
+                    query = query.Where(predicate);
+
+                    return query;
+                }
+            }
 
             // Apply filters
             if (filter.StartDate.HasValue)
-                query = query.Where(i => i.OutwardDate.Date >= filter.StartDate.Value.Date);
+                query = query.Where(o => o.OutwardDate >= filter.StartDate.Value.Date);
 
             if (filter.EndDate.HasValue)
-                query = query.Where(i => i.OutwardDate.Date <= filter.EndDate.Value.Date);
+                query = query.Where(o => o.OutwardDate < filter.EndDate.Value.Date.AddDays(1));
 
             if (filter.BillToCompanyId.HasValue)
                 query = query.Where(o => o.BillToCompanyId == filter.BillToCompanyId);
 
-            if (filter.MinQuantity.HasValue)
-                query = query.Where(o => o.OutwardDetails.Sum(od => od.Quantity) >= filter.MinQuantity);
-
-            if (filter.MaxQuantity.HasValue)
-                query = query.Where(o => o.OutwardDetails.Sum(od => od.Quantity) <= filter.MaxQuantity);
-
-            if (!filter.IncludeInactive)
-                query = query.Where(o => o.IsActive);
-
-            // Apply sorting
-            query = ApplySorting(query, filter);
+            if (filter.PlatformId.HasValue)
+                query = query.Where(p => p.PlatformId == filter.PlatformId);
 
             return query;
         }
 
-        private async Task<List<OutwardReportItem>> ExecuteQuery(IQueryable<Outward> query, OutwardFilter filter)
+        private async Task<(List<OutwardReportItem> Items, int TotalRecords)> ExecuteQuery(IQueryable<Outward> basequery, OutwardFilter filter)
         {
-            
+
             List<string>? outwardNos = null;
-            var outwards = await query.ToListAsync();
-            var items = new List<OutwardReportItem>();
 
-            if (!string.IsNullOrWhiteSpace(filter.OutwardNumbers))
-            {
-                outwardNos = filter.OutwardNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList();
-            }
+            var productRepo = _unitOfWork.GetRepository<Product>().GetQueryable().AsNoTracking();
+            var categoryRepo = _unitOfWork.GetRepository<Category>().GetQueryable().AsNoTracking();
+            var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>().GetQueryable().AsNoTracking();
+            var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>().GetQueryable().AsNoTracking();
+            var companyRepo = _unitOfWork.GetRepository<Company>().GetQueryable().AsNoTracking();
+            var platfromRepo = _unitOfWork.GetRepository<Platform>().GetQueryable().AsNoTracking();
 
-            foreach (var outward in outwards)
-            {
-                foreach (var item in outward.OutwardDetails)
+            var query =
+                from o in basequery
+                from item in o.OutwardDetails.Where(d => !d.IsDeleted)
+
+                join p in productRepo
+                    on item.ProductId equals p.Id
+
+                join plat in platfromRepo
+                    on o.PlatformId equals plat.Id
+
+                join c in categoryRepo
+                    on p.CategoryId equals c.Id into cata
+                    from c in cata.DefaultIfEmpty()
+          
+                join comp in companyRepo
+                    on o.BillToCompanyId equals comp.Id into compJoin
+                    from comp in compJoin.DefaultIfEmpty()
+
+                join bc in barcodeRepo
+                    on item.BarcodeNo equals bc.BarcodeNo into bcJoin
+                    from bc in bcJoin.DefaultIfEmpty()
+
+                join it in inwardItemRepo
+                     on bc.InwardItemId equals it.Id into itJoin
+                     from it in itJoin.DefaultIfEmpty()
+
+                select new
                 {
-                    // Apply additional item-level filters
-                    if (outwardNos != null && outwardNos.Any() && !outwardNos.Contains(outward.OutwardNo)) continue;
-                    if (filter.CategoryId.HasValue && item.Product?.CategoryId != filter.CategoryId) continue;
+                    o,
+                    item,
+                    p,
+                    c,
+                    comp,
+                    plat,
+                    bc,
+                    it,
+                };
+       
+            if (filter.CategoryId.HasValue)
+                query = query.Where(x => x.p.CategoryId == filter.CategoryId);
 
-                    items.Add(new OutwardReportItem
-                    {
-                        OutwardId = outward.Id,
-                        OutwardNumber = outward.OutwardNo,
-                        OutwardDate = outward.OutwardDate,
-                        ProductName = item.Product?.Name ?? "Unknown",
-                        SKU = item.Product?.SKU ?? "",
-                        CategoryName = item.Product?.Category?.Name ?? "",
-                        BrandName = item.Product?.MakeCompany ?? "",
-                        Quantity = item.Quantity,
-                        Unit = item.Unit ?? "",
-                        BillToCompanyId = outward.BillToCompanyId,
-                        BillToCompanyName = outward.BillToCompany?.Name ?? "N/A",
-                        IsActive = outward.IsActive,
-                        CreatedBy = outward.CreatedBy,
-                        CreatedOn = outward.CreatedOn
-                    });
+            // Filters
+            if (string.IsNullOrWhiteSpace(filter.OutwardNumbers))
+            {           
+                if (filter.BillToCompanyId.HasValue)
+                {
+                    query = query.Where(x => x.o.BillToCompanyId == filter.BillToCompanyId);
+                }
+
+                if (filter.PlatformId.HasValue) 
+                {
+                    query = query.Where(x => x.o.PlatformId == filter.PlatformId);
                 }
             }
 
-            return items;
-        }
+            var totalRecords = await query.CountAsync();
+            // ---------------- Sorting----------------
 
-        private IQueryable<Outward> ApplySorting(IQueryable<Outward> query, OutwardFilter filter)
-        {
-            return filter.SortBy?.ToLower() switch
+            bool desc = filter.SortDescending;
+            query = filter.SortBy?.ToLower() switch
             {
-                "outwarddate" => filter.SortDescending ? query.OrderByDescending(o => o.OutwardDate) : query.OrderBy(o => o.OutwardDate),
-                "outwardno" => filter.SortDescending ? query.OrderByDescending(o => o.OutwardNo) : query.OrderBy(o => o.OutwardNo),
-                "shipmentcompany" => filter.SortDescending ? query.OrderByDescending(o => o.BillToCompany.Name) : query.OrderBy(o => o.BillToCompany.Name),
-                _ => query.OrderByDescending(o => o.OutwardDate)
+                // DATE
+                "outwarddate" =>
+                    desc
+                        ? query.OrderByDescending(x => x.o.OutwardDate)
+                        : query.OrderBy(x => x.o.OutwardDate),
+
+                // OUTWARD NO
+                "outwardno" =>
+                    desc
+                        ? query.OrderByDescending(x => x.o.OutwardNo)
+                        : query.OrderBy(x => x.o.OutwardNo),
+
+                // BILL TO COMPANY
+                "billtocompany" =>
+                    desc
+                        ? query.OrderByDescending(x => x.comp.Name)
+                               .ThenByDescending(x => x.o.OutwardDate)
+                        : query.OrderBy(x => x.comp.Name)
+                               .ThenBy(x => x.o.OutwardDate),
+
+                //CATEGORY
+                "category" =>
+                    desc
+                        ? query.OrderByDescending(x => x.c.Name)
+                               .ThenByDescending(x => x.o.Id)
+                        : query.OrderBy(x => x.c.Name)
+                               .ThenBy(x => x.o.Id),
+
+                //PLATFORM
+                "platform" =>
+                     desc
+                         ? query.OrderByDescending(x => x.plat.Name)
+                               .ThenByDescending(x => x.o.OutwardDate)
+
+                         : query.OrderBy(x => x.plat.Name)
+                               .ThenBy(x => x.o.OutwardDate),
+
+                // DEFAULT
+                _ =>
+                    desc
+                        ? query.OrderByDescending(x => x.o.OutwardDate)
+                        : query.OrderBy(x => x.o.OutwardDate)
             };
+
+            // Paging (ALWAYS order first)
+            query = query
+                .Skip((filter.PageNumber - 1) * filter.PageSize)
+                .Take(filter.PageSize);
+
+            // Fetch from DB
+
+            var raw = await query.ToListAsync();
+
+            // Map to DTO (AFTER DB for safety/performance)
+
+            var items = raw.Select(x => new OutwardReportItem
+            {
+                OutwardId = x.o.Id,
+                OutwardNumber = x.o.OutwardNo,
+                OutwardDate = x.o.OutwardDate,
+                Unit = x.item.Unit,
+                Barcode=x.item.BarcodeNo,
+
+                ProductId = x.p.Id,
+                ProductName = x.p.Name,
+                SKU = x.p.SKU,
+                CategoryName = x.c?.Name ?? "",
+                BrandName = x.p.MakeCompany ?? "",
+                BoxQuantity = x.item.Unit == UnitType.BOX.ToString() ? 1 : 0,
+                ItemQuantity = x.item.Unit == UnitType.PCS.ToString() ? 1 : (int)(x.it == null ? 0m : x.it.ItemQuantity),
+
+                BillToCompanyId = x.comp?.Id ?? 0,
+                BillToCompanyName = x.comp?.Name ?? "",
+
+                PlatformId = x.plat.Id,
+                PlatformName = x.plat.Name,
+
+                Remarks=x.o.Remarks?? string.Empty,
+                IsActive = x.item.IsActive,
+                CreatedBy = x.item.CreatedBy,
+                CreatedOn = x.item.CreatedOn
+            })
+            .ToList();
+
+            return (items, totalRecords);
         }
 
         private async Task<OutwardReportSummary> GenerateSummaryAsync(OutwardFilter filter)
@@ -212,7 +352,7 @@ namespace InventoryManagement.Services.Reports.Services
                 {
                     items.Add(new OutwardReportItem
                     {
-                        Quantity = item.Quantity,
+                        ItemQuantity = item.Quantity,
                         Unit = item.Unit ?? "",
                         BillToCompanyId = outward.BillToCompanyId,
                         BillToCompanyName = outward.BillToCompany?.Name ?? "",
@@ -225,11 +365,11 @@ namespace InventoryManagement.Services.Reports.Services
             return new OutwardReportSummary
             {
                 TotalOutwards = outwards.Count,
-                TotalQuantity = items.Sum(i => i.Quantity),
+                TotalQuantity = items.Sum(i => i.ItemQuantity),
                 TotalValue = items.Sum(i => i.TotalCost),
                 UniqueProductsCount = items.Select(i => i.ProductName).Distinct().Count(),
                 UniqueSuppliersCount = items.Select(i => i.BillToCompanyId).Distinct().Count(),
-                AverageQuantityPerOutward = outwards.Any() ? items.Sum(i => i.Quantity) / outwards.Count : 0,
+                AverageQuantityPerOutward = outwards.Any() ? items.Sum(i => i.ItemQuantity) / outwards.Count : 0,
                 AverageValuePerOutward = outwards.Any() ? items.Sum(i => i.TotalCost) / outwards.Count : 0,
                 CountByProduct = items.GroupBy(i => i.ProductName).ToDictionary(g => g.Key, g => g.Count())
             };
