@@ -330,6 +330,7 @@ public class InStockReportItem
     public int ShipCompanyId { get; set; }
     public string ShipCompanyname { get; set; } = string.Empty;
     public decimal Quantity { get; set; }
+    public decimal BoxQuantity { get; set; }
     public string Unit { get; set; } = string.Empty;
     public int CreatedBy { get; set; }
     public string Remark { get; set;} = string.Empty;

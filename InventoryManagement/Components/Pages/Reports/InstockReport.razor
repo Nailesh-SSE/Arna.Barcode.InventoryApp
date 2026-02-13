@@ -191,13 +191,22 @@ else
                                             <thead class="table-light">
                                                 <tr>
                                                     <th>#</th>
-                                                    <th>Barcode</th>
-                                                    <th>Date</th>
-                                                    <th>Product</th>
-                                                    <th>Brand</th>
+                                                    <th>Inward No</th>
+                                                    <th>Inward Date</th>
+                                                    <th>Inward Time</th>
+                                                    <th>Ship Company</th>
                                                     <th>Category</th>
+                                                    <th>Brand</th>
+                                                    <th>Product</th>
+                                                    <th>Item Name</th>
+                                                    <th>Barcode</th>
+                                                    <th>Unit</th>
+                                                    <th>Box Qty</th>
+                                                    <th>Item Qty</th>
+                                                    <th>Remark</th>
                                                     @* <th>IsInStock</th> *@
                                                     <th>UserName</th>
+                                                    <th>BatchNo</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -205,13 +214,24 @@ else
                                                 {
                                                     <tr>
                                                         <td>@((reportResult.PageNumber - 1) * reportResult.PageSize + reportResult.Items.IndexOf(item) + 1)</td>
+                                                        
+                                                        <td>@item.InwardNo</td>
+                                                        <td>@item.CreatedOn.ToString("dd/MM/yyy")</td>
+                                                        <td>@item.CreatedOn.ToString("HH:mm:ss")</td>
+                                                        <td>@item.ShipCompanyname </td>
+                                                        <td>@item.CategoryName</td>
+                                                        <td><span class="badge bg-primary">@item.BrandName</span></td>
+                                                        <td>@item.ProductName</td>
+                                                        <td><code>@item.SKU</code></td>
                                                         <td title="Inward No: @item.InwardNo , Batch No: @item.BatchNo">
                                                             @item.BarcodeNo
                                                         </td>
-                                                        <td>@item.CreatedOn.ToString("dd/MM/yyy")</td>
-                                                        <td><code>@item.SKU</code></td>
-                                                        <td><span class="badge bg-primary">@item.BrandName</span></td>
-                                                        <td>@item.CategoryName</td>
+                                                        <td>@item.Unit</td>
+                                                        <td>@item.BoxQuantity</td>
+                                                        <td>@item.Quantity</td>
+                                                        <td>@item.Remark</td>
+                                                        <td>@item.UserName</td>
+                                                        <td>@item.BatchNo</td>
                                                         @* <td>
                                                             @if (item.IsInStock)
                                                             {
@@ -222,7 +242,6 @@ else
                                                                 <span class="text-danger fw-bold">Sold</span>
                                                             }
                                                         </td> *@
-                                                        <td>@item.UserName</td>
                                                     </tr>
                                                 }
                                             </tbody>
