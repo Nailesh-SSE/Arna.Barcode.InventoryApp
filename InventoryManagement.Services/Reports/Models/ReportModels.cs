@@ -109,6 +109,7 @@ public class OutwardFilter : BaseReportFilter
 {
     public string? OutwardNumbers { get; set; }
     public int? BillToCompanyId { get; set; }
+    public int? PlatformId { get; set; }
     public decimal? MinQuantity { get; set; }
     public decimal? MaxQuantity { get; set; }
     public string? ProductSKUs { get; set; }
@@ -128,7 +129,8 @@ public class OutwardReportItem
     public string SKU { get; set; } = string.Empty;
     public string CategoryName { get; set; } = string.Empty;
     public string BrandName { get; set; } = string.Empty;
-    public decimal Quantity { get; set; }
+    public int ItemQuantity { get; set; }
+    public int BoxQuantity { get; set; }
     public string Unit { get; set; } = string.Empty;
     public decimal UnitCost { get; set; }
     public decimal TotalCost { get; set; }
@@ -136,7 +138,10 @@ public class OutwardReportItem
     public string? SerialNumber { get; set; }
     public int BillToCompanyId { get; set; }
     public string BillToCompanyName { get; set; } = string.Empty;
-    public string? Remarks { get; set; }
+    public int PlatformId { get; set; }
+    public string PlatformName { get; set; } = string.Empty;
+    public string Barcode { get; set; } = string.Empty;
+    public string Remarks { get; set; } = string.Empty;
     public bool IsActive { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedOn { get; set; }
