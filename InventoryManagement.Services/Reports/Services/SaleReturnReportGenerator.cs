@@ -68,7 +68,7 @@ namespace InventoryManagement.Services.Reports.Services
             IRow headerRow = sheet.CreateRow(0);
             string[] headers = new string[]
             {
-                "No.","Return Company","Ship To","SaleReturn Number", "SaleReturn Date" , "SaleReturn Time" , "Category" ,"Brand","Product", "SKU",
+                "No.","Return Company","Ship To","PlatForm","SaleReturn Number", "SaleReturn Date" , "SaleReturn Time" , "Category" ,"Brand","Product", "SKU",
                  "Barcode","Unit","Box Qty","Item Qty","Type","ToStock","Reason","Status"
             };
             for (int i = 0; i < headers.Length; i++)
@@ -85,22 +85,23 @@ namespace InventoryManagement.Services.Reports.Services
                 row.CreateCell(0).SetCellValue(i + 1);
                 row.CreateCell(1).SetCellValue(item.BillToCompanyName);
                 row.CreateCell(2).SetCellValue(item.shipToCompanyName);
-                row.CreateCell(3).SetCellValue(item.ReturnNo);
-                row.CreateCell(4).SetCellValue(item.ReturnDate.ToString("dd/MM/yyyy"));
-                row.CreateCell(5).SetCellValue(item.ReturnDate.ToString("HH:mm:ss"));
-                row.CreateCell(6).SetCellValue(item.CategoryName);
-                row.CreateCell(7).SetCellValue(item.BrandName);
-                row.CreateCell(8).SetCellValue(item.ProductName);
-                row.CreateCell(9).SetCellValue(item.SKU);
-                row.CreateCell(10).SetCellValue(item.Barcode);
-                row.CreateCell(11).SetCellValue(item.Unit);
-                row.CreateCell(12).SetCellValue((double)item.BoxQuantity);
-                row.CreateCell(13).SetCellValue((double)item.Quantity);
-                row.CreateCell(14).SetCellValue(item.Type);
-                row.CreateCell(15).SetCellValue(item.ToStock ? "Yes" : "No");
-                row.CreateCell(16).SetCellValue(item.Reason);
+                row.CreateCell(3).SetCellValue(item.PlatformName);
+                row.CreateCell(4).SetCellValue(item.ReturnNo);
+                row.CreateCell(5).SetCellValue(item.ReturnDate.ToString("dd/MM/yyyy"));
+                row.CreateCell(6).SetCellValue(item.ReturnDate.ToString("HH:mm:ss"));
+                row.CreateCell(7).SetCellValue(item.CategoryName);
+                row.CreateCell(8).SetCellValue(item.BrandName);
+                row.CreateCell(9).SetCellValue(item.ProductName);
+                row.CreateCell(10).SetCellValue(item.SKU);
+                row.CreateCell(11).SetCellValue(item.Barcode);
+                row.CreateCell(12).SetCellValue(item.Unit);
+                row.CreateCell(13).SetCellValue((double)item.BoxQuantity);
+                row.CreateCell(14).SetCellValue((double)item.Quantity);
+                row.CreateCell(15).SetCellValue(item.Type);
+                row.CreateCell(16).SetCellValue(item.ToStock ? "Yes" : "No");
+                row.CreateCell(17).SetCellValue(item.Reason);
                 //row.CreateCell(8).SetCellValue(item.BatchNumber);
-                row.CreateCell(17).SetCellValue(item.IsActive ? "Active" : "Inactive");
+                row.CreateCell(18).SetCellValue(item.IsActive ? "Active" : "Inactive");
             }
 
             // Autosize all columns
@@ -123,7 +124,7 @@ namespace InventoryManagement.Services.Reports.Services
             try 
             {
                 var saleReturnRepo = _unitOfWork.GetRepository<SaleReturn>();
-
+                
                 var query = saleReturnRepo.GetQueryable()
                     .AsNoTracking()
                     .Where(sr => !sr.IsDeleted);
@@ -193,6 +194,9 @@ namespace InventoryManagement.Services.Reports.Services
                 var productRepo = _unitOfWork.GetRepository<Product>();
                 var categoryRepo = _unitOfWork.GetRepository<Category>();
                 var companyRepo = _unitOfWork.GetRepository<Company>();
+                var outwardRepo = _unitOfWork.GetRepository<Outward>();
+                var outwardDetailRepo = _unitOfWork.GetRepository<OutwardDetail>();
+                var platformRepo = _unitOfWork.GetRepository<Platform>();
 
                 var query =
                     from sr in baseQuery
@@ -204,6 +208,18 @@ namespace InventoryManagement.Services.Reports.Services
                     join c in categoryRepo.GetQueryable()
                         on p.CategoryId equals c.Id into cat
                     from c in cat.DefaultIfEmpty()
+                    
+                    join od in outwardDetailRepo.GetQueryable().Where(y => !y.IsDeleted)
+                        on item.BarCodeNo equals od.BarcodeNo into odJoin
+                    from od in odJoin.DefaultIfEmpty()
+
+                    join o in outwardRepo.GetQueryable()
+                        on item.OutwardId equals o.Id into oJoin
+                    from o in oJoin.DefaultIfEmpty()
+
+                    join plat in platformRepo.GetQueryable()
+                        on o.PlatformId equals plat.Id into platJoin
+                    from plat in platJoin.DefaultIfEmpty()
 
                         // ⭐ BillToCompany join using effective id (item > parent)
                     join billcomp in companyRepo.GetQueryable()
@@ -224,7 +240,9 @@ namespace InventoryManagement.Services.Reports.Services
                         p,
                         c,
                         billcomp,
-                        shipComp
+                        shipComp,
+                        o,
+                        plat
                     };
                 // Filters
                 if (string.IsNullOrWhiteSpace(filter.ReturnNumbers))
@@ -292,6 +310,9 @@ namespace InventoryManagement.Services.Reports.Services
                     BillToCompanyId = x.billcomp?.Id ?? 0,
                     BillToCompanyName = x.billcomp?.Name ?? "",
                     
+                    PlatformId = x.plat?.Id ?? 0,
+                    PlatformName = x.plat?.Name ?? "",
+
                     ShipToCompanyId = x.shipComp.Id,
                     shipToCompanyName = x.shipComp?.Name ?? "",
 
