@@ -1,7 +1,8 @@
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 
 namespace InventoryManagement.Core.Entities;
-
+[ExcludeFromCodeCoverage]
 public class Category : Common
 {
     [Key]
