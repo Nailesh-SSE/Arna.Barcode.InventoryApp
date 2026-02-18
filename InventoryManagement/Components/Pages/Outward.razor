@@ -122,14 +122,12 @@ else
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Outward Date <span class="text-danger">*</span></label>
-                        <InputDate class="form-control" @bind-Value="outward.OutwardDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        <InputDate class="form-control" @bind-Value="DatePart" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
                         <ValidationMessage For="@(() => outward.OutwardDate)" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">SaleReturn Time</label>
-                        <input type="time" class="form-control"
-                               value="@outward.OutwardDate.ToString(@"hh\:mm")"
-                               @onchange="OnTimeChanged" required />
+                        <input type="time" class="form-control" @bind="TimePart" required />
                     </div>
 
                 </div>
@@ -358,9 +356,20 @@ else
     private System.Threading.Timer? errorTimer;
     private string Route = "/outward";
     private bool isAdmin = false;
-
     // Reference for JS Interop
     private DotNetObjectReference<Outward>? dotNetHelper;
+
+    private DateTime DatePart
+    {
+        get => outward.OutwardDate.Date;
+        set => outward.OutwardDate = value.Date + outward.OutwardDate.TimeOfDay;
+    }
+
+    private TimeOnly TimePart
+    {
+        get => TimeOnly.FromDateTime( outward.OutwardDate);
+        set => outward.OutwardDate = outward.OutwardDate.Date + value.ToTimeSpan();
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -469,7 +478,7 @@ else
             ValidateBillToCompany();
             ValidatePlatform();
             if (editContext.GetValidationMessages().Any()) return;
-
+            
             bool result;
             if (isEditMode)
             {
@@ -766,14 +775,6 @@ else
     {
         outward.PlatformId = selected.Id ?? 0;
         ValidatePlatform();
-    }
-    private void OnTimeChanged(ChangeEventArgs e)
-    {
-        if (TimeSpan.TryParse(e.Value?.ToString(), out TimeSpan time))
-        {
-            outward.OutwardDate =
-                outward.OutwardDate.Date + time;
-        }
     }
     private void ShowError(string message)
     {

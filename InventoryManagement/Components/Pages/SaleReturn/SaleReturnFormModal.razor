@@ -9,16 +9,14 @@
                     <div class="row">
                             <div class="col-md-6">
                                 <label class="form-label">SaleReturn Date <span class="text-danger">*</span></label>
-                                <InputDate @bind-Value="SaleReturnModel.SaleReturnDate" @onblur="HandleDateValidation"
+                                <InputDate @bind-Value="DatePart" @onblur="HandleDateValidation"
                                            class="form-control"
                                            max="@DateTime.Today.ToString("yyyy-MM-dd")" />
                                 <ValidationMessage For="@(() => SaleReturnModel.SaleReturnDate)" />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">SaleReturn Time</label>
-                                <input type="time" class="form-control"
-                                       value="@SaleReturnModel.SaleReturnDate.ToString(@"hh\:mm")"
-                                       @onchange="OnTimeChanged" required />
+                                <input type="time" class="form-control" @bind="TimePart" required />
                             </div>
                         
                         @* <div class="col-md-6 mb-3">
@@ -58,6 +56,18 @@
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool OnEditMode { get; set; }
     [Parameter] public bool DisableFields { get; set; }
+
+    private DateTime DatePart
+    {
+        get => SaleReturnModel.SaleReturnDate;
+        set => SaleReturnModel.SaleReturnDate = value.Date + SaleReturnModel.SaleReturnDate.TimeOfDay;
+    }
+
+    private TimeOnly TimePart
+    {
+        get => TimeOnly.FromDateTime(SaleReturnModel.SaleReturnDate);
+        set => SaleReturnModel.SaleReturnDate = SaleReturnModel.SaleReturnDate.Date + value.ToTimeSpan();
+    }
 
     protected override void OnParametersSet()
     {
@@ -121,14 +131,6 @@
         if (SaleReturnModel.SaleReturnDate.Date > DateTime.Now.Date)
         {
             validationMessage.Add(() => SaleReturnModel.SaleReturnDate, "Sale Return date cannot be in the future.");
-        }
-    }
-    private void OnTimeChanged(ChangeEventArgs e)
-    {
-        if (TimeSpan.TryParse(e.Value?.ToString(), out TimeSpan time))
-        {
-            SaleReturnModel.SaleReturnDate =
-                SaleReturnModel.SaleReturnDate.Date + time;
         }
     }
 }
