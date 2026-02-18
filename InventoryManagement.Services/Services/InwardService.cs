@@ -894,6 +894,27 @@ public class InwardService : IInwardService
 
         }
     }
+    public async Task<bool> DeleteSingleBarcode(string barcode,int userId)
+    {
+        var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+        var singleBarcode = await barcodeRepo
+            .GetQueryable()
+            .FirstOrDefaultAsync(b => b.BarcodeNo == barcode && !b.IsDeleted);
+     
+        if (singleBarcode == null) return false;
+     
+        singleBarcode.IsActive = false;
+        singleBarcode.IsInStock = false;
+        singleBarcode.IsDeleted = true;
+        singleBarcode.UpdatedOn = DateTime.Now;
+        singleBarcode.UpdatedBy = userId;
+    
+        barcodeRepo.Update(singleBarcode);
+        await _unitOfWork.SaveChangesAsync();
+
+        return true;
+
+    }
 
     private InwardBarcodeItem CreateBarcodeEntity(InwardItem item, int counter, DateTime transactionDate, int parentId)
     {

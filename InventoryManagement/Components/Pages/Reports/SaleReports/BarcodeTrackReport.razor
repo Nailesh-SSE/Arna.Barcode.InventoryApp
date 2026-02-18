@@ -100,6 +100,15 @@ else
                                     <button type="button" class="btn btn-dark" @onclick="ReprintBarcode">
                                         <Icon Name="IconName.Printer" /> Reprint Barcode
                                     </button>
+                                    @if (IsAdmin() || IsFactoryAdmin() )
+                                    {
+                                        <button type="button"
+                                                class="btn btn-danger"
+                                                @onclick="DeleteBarcode"
+                                                disabled="@(!isReportGenerated)">
+                                            <Icon Name="IconName.Trash" /> Delete
+                                        </button>
+                                    }                               
                                     <button type="button" class="btn btn-outline-secondary" @onclick="ClearFilters">
                                         <Icon Name="IconName.XCircle" /> Clear
                                     </button>
@@ -198,6 +207,7 @@ else
     private List<CompanyModel> shipCompanies = new();
     private List<CategoryModel> categories = new();
     private bool isLoading;
+    private bool isReportGenerated = false;
     private int loadingProgress;
     private string? alertMessage;
     private string? barcodeError;
@@ -257,11 +267,13 @@ else
             reportResult = await BarcodeTrackingReportService.GenerateBarcodeTarckReportAsync(filter);
             loadingProgress = 100;
             ShowAlert("success", "Report generated successfully.");
+            isReportGenerated = true;
 
         }
         catch (Exception ex)
         {
             ShowAlert("danger", $"Failed to generate report: {ex.Message}");
+            isReportGenerated = false;
         }
         finally
         {
@@ -290,6 +302,44 @@ else
 
     }
 
+    private async Task DeleteBarcode()
+    {
+        var currentUserId = Convert.ToInt32(CurrentUserId);
+        var barcode = filter.barcode ?? string.Empty;
+
+        if (!ValidateBarcode())
+        {
+            ShowAlert("warning", barcodeError!);
+            StateHasChanged();
+            return;
+        }
+        var validationBarcode = await InwardService.ValidateBarcodeForReprintAsync(barcode);
+
+        if (!validationBarcode.IsValid)
+        {
+            barcodeError = validationBarcode.ErrorMessage;
+            reportResult = new BarCodeReportResult();
+            return;
+        }
+       
+        var confirmed = await JS.InvokeAsync<bool>( "confirm",$"Are you sure you want to delete barcode {barcode}?");
+
+        if (!confirmed)
+            return;
+        var result = await InwardService.DeleteSingleBarcode(barcode, currentUserId);
+
+        if (result)
+        {
+            ClearFilters();
+            ShowAlert("success", $"Barcode {barcode} deleted successfully.");
+        }
+        else
+        {
+            ShowAlert("danger", $"Failed to delete barcode {barcode}.");
+        }
+
+    }
+
     private Task DownloadSingleBarcode(string barcode)
     {
         return PrnDownloadService.DownloadAsync(
@@ -301,6 +351,7 @@ else
 
     private void LoadDefaultFilters()
     {
+        isReportGenerated=false;
         filter = new()
         {
             StartDate = DateTime.Today.AddDays(-30),
@@ -333,6 +384,7 @@ else
         }
         catch { }
         isScanning = false;
+        isReportGenerated = false;
         StateHasChanged();
     }
     private void ShowAlert(string type, string message)
@@ -356,8 +408,8 @@ else
         if (value.Length > 16)
             value = value[..16];
 
-        filter.barcode = value;
-
+        filter.barcode = value; 
+        
         barcodeError = null;
     }
     private bool ValidateBarcode()
