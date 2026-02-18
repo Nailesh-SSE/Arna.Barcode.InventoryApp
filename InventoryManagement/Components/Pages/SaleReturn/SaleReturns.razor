@@ -395,7 +395,7 @@ else
             OutwardId = data?.OutwardId ?? 0,
             OutwardSearchText = outwardText,
             BarCodeNo = data?.BarcodeNo ?? null,
-            ReturnQuantity = 1,
+            ReturnQuantity = data?.UnitId == (int)UnitType.BOX ? 0:1,
             ReturnType = (int)ReturnType.Excess,
             IsTakeInStock = true
         });

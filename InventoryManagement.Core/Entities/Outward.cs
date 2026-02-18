@@ -12,7 +12,7 @@ public class Outward : Common
     public string OutwardNo { get; set; } = string.Empty;
 
     [Required]
-    public DateTime OutwardDate { get; set; } = DateTime.UtcNow.Date;
+    public DateTime OutwardDate { get; set; } = DateTime.UtcNow;
 
     [Required]
     public int BillToCompanyId { get; set; }

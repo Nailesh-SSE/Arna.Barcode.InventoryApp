@@ -6,15 +6,21 @@
             <DataAnnotationsValidator />
             <fieldset disabled="@DisableFields">
                 <div class="container-fluid">
-                    <div class="row m-2">
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label">SaleReturn Date <span class="text-danger">*</span></label>
-                            <InputDate @bind-Value="SaleReturnModel.SaleReturnDate" @onblur="HandleDateValidation"
-                                       class="form-control"
-                                       max="@DateTime.Today.ToString("yyyy-MM-dd")" />
-                            <ValidationMessage For="@(() => SaleReturnModel.SaleReturnDate)" />
-                        </div>
-
+                    <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">SaleReturn Date <span class="text-danger">*</span></label>
+                                <InputDate @bind-Value="SaleReturnModel.SaleReturnDate" @onblur="HandleDateValidation"
+                                           class="form-control"
+                                           max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                                <ValidationMessage For="@(() => SaleReturnModel.SaleReturnDate)" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">SaleReturn Time</label>
+                                <input type="time" class="form-control"
+                                       value="@SaleReturnModel.SaleReturnDate.ToString(@"hh\:mm")"
+                                       @onchange="OnTimeChanged" required />
+                            </div>
+                        
                         @* <div class="col-md-6 mb-3">
                             <label class="form-label">Return Company <span class="text-danger">*</span></label>
                             <InputSelect @bind-Value="SaleReturnModel.BillToCompanyId" @onchange="HandleBillToValidation" class="form-select" disabled="@OnEditMode">
@@ -31,9 +37,9 @@
                 <div class="modal-footer-section mt-3 text-end">
                     <button type="button" class="btn btn-secondary me-2" @onclick="HandleCancel">Cancel</button>
                     <button type="submit" class="btn btn-primary" disabled="@DisableFields">
-                    @(SaleReturnModel.Id > 0 ? "Update" : "Next")
-                </button>
-                </div>         
+                        @(SaleReturnModel.Id > 0 ? "Update" : "Next")
+                    </button>
+                </div>
             </fieldset>
         </EditForm>
     </BodyTemplate>
@@ -71,7 +77,7 @@
 
     public async Task HandleSubmit()
     {
-       // await ValidateBillTo();
+        // await ValidateBillTo();
         await ValidateDate();
         await OnSave.InvokeAsync();
 
@@ -115,6 +121,14 @@
         if (SaleReturnModel.SaleReturnDate.Date > DateTime.Now.Date)
         {
             validationMessage.Add(() => SaleReturnModel.SaleReturnDate, "Sale Return date cannot be in the future.");
+        }
+    }
+    private void OnTimeChanged(ChangeEventArgs e)
+    {
+        if (TimeSpan.TryParse(e.Value?.ToString(), out TimeSpan time))
+        {
+            SaleReturnModel.SaleReturnDate =
+                SaleReturnModel.SaleReturnDate.Date + time;
         }
     }
 }
