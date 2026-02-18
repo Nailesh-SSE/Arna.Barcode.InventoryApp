@@ -113,6 +113,7 @@ public class SaleReturnService : ISaleReturnService
         return items.Select(i => new SaleReturnItemsModel
         {
             Id = i.Id,
+            PlatformId = i.platformId,
             SaleReturnId = i.SaleReturnId,
             ProductId = i.ProductId,
             ReturnDate = i.ReturnDate,
@@ -187,7 +188,7 @@ public class SaleReturnService : ISaleReturnService
             ReasonToReturn = model.ReasonToReturn,
             UnitId = model.UnitId,
             ReturnQuantity = model.ReturnQuantity,
-
+            platformId = model.PlatformId,
             CreatedBy = model.CreatedBy,
             CreatedOn = model.CreatedOn
         };
@@ -228,7 +229,7 @@ public class SaleReturnService : ISaleReturnService
         entity.IsTakeInStock = model.IsTakeInStock;
         entity.UnitId = model.UnitId;
         entity.ReturnQuantity = model.ReturnQuantity;
-
+        entity.platformId = model.PlatformId;
         entity.UpdatedBy = model.UpdatedBy;
         entity.UpdatedOn = DateTime.UtcNow;
 
@@ -427,7 +428,8 @@ public class SaleReturnService : ISaleReturnService
             BillToId = billToCompanyId,
             UnitId = unitId,
             OutwardId = outwardId,
-            BarcodeNo = barcodeNo
+            BarcodeNo = barcodeNo,
+            PlatformId = outward.PlatformId
 
         };
     }

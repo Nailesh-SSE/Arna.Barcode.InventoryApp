@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using InventoryManagement.Core.Entities;
+using System.ComponentModel.DataAnnotations;
 
 namespace InventoryManagement.Services.Models
 {
@@ -63,10 +64,12 @@ namespace InventoryManagement.Services.Models
 
         [StringLength(200, ErrorMessage = "Reason cannot exceed 200 characters.")]
         public string? ReasonToReturn { get; set; } = null;
-
+        public int? PlatformId { get; set; }
+        public string? PlatformName { get; set; }
         public DateTime? ReturnDate { get; set; } = DateTime.Now;
         public string? ProductSearchText { get; set; } = string.Empty;
         public string? OutwardSearchText { get; set; } = string.Empty;
+        public List<Platform> PlatformList { get; set; } = new();
         public List<ProductModel> ProductLIst { get; set; } = new();
         public List<CategoryModel> CategoryList { get; set; } = new();
         public List<CompanyModel> ShipToCompanyList { get; set; } = new();
@@ -85,6 +88,8 @@ namespace InventoryManagement.Services.Models
         public int? UnitId { get; set; }
         public int? OutwardId { get; set;}
         public string? BarcodeNo { get;set; }
+        public int PlatformId { get; set; }
+        public string? Platform { get; set; } 
 
     }
 }
