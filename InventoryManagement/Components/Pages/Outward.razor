@@ -55,7 +55,7 @@ else
                 </GridColumn>
 
                 <GridColumn TItem="OutwardModel" HeaderText="Outward Date" PropertyName="OutwardDateOnly" SortString="OutwardDateOnly" SortKeySelector="item => item.OutwardDateOnly" FilterTextboxWidth="130">
-                    @context.OutwardDate.ToString("dd/MM/yyyy")
+                    @context.OutwardDate.ToString("dd/MM/yyyy hh:mm tt")
                 </GridColumn>
 
                 <GridColumn TItem="OutwardModel" HeaderText="Bill To Company" PropertyName="BillToCompanyName" SortString="BillToCompanyName" SortKeySelector="item => item.BillToCompanyName" FilterTextboxWidth="80">
@@ -122,12 +122,18 @@ else
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Outward Date <span class="text-danger">*</span></label>
-                        <InputDate class="form-control" @bind-Value="outward.OutwardDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        <InputDate class="form-control" @bind-Value="DatePart" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
                         <ValidationMessage For="@(() => outward.OutwardDate)" />
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label">SaleReturn Time</label>
+                        <input type="time" class="form-control" @bind="TimePart" required />
+                    </div>
 
-                    <div class="col-md-6 mb-3">
-                        <fieldset disabled="@isEditMode">
+                </div>
+                <fieldset disabled="@isEditMode">
+                    <div class="row">
+                        <div class="col-md-6">
                             <label class="form-label">Bill To Company <span class="text-danger">*</span></label>
                             <DropDown TItem="CompanyModel"
                                       Items="@billCompanies.Where(c=>c.IsActive || c.Id == outward.BillToCompanyId)"
@@ -137,24 +143,23 @@ else
                                       Placeholder="-- Select Company --"
                                       OnValueChanged="OnBillToCompanySelected" />
                             <ValidationMessage For="@(() => outward.BillToCompanyId)" />
-                        </fieldset>
-                    </div>
-                </div>
-                <div class="col-md-12 mb-3">
-                    <fieldset disabled="@isEditMode">
-                        <label class="form-label">Platform <span class="text-danger">*</span></label>
-                        <DropDown TItem="PlatformModel"
-                                  Items="@platforms.Where(p=>p.IsActive || p.Id == outward.PlatformId)"
-                                  SelectedId="@outward.PlatformId"
-                                  ValueSelector="x => x.Id"
-                                  TextSelector="x => x.Name"
-                                  Placeholder="-- Select Platform --"
-                                  OnValueChanged="OnPlatformSelected" />
-                        <ValidationMessage For="@(() => outward.PlatformId)" />
-                    </fieldset>
-                </div>
 
-                <div class="mb-3">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Platform <span class="text-danger">*</span></label>
+                            <DropDown TItem="PlatformModel"
+                                      Items="@platforms.Where(p=>p.IsActive || p.Id == outward.PlatformId)"
+                                      SelectedId="@outward.PlatformId"
+                                      ValueSelector="x => x.Id"
+                                      TextSelector="x => x.Name"
+                                      Placeholder="-- Select Platform --"
+                                      OnValueChanged="OnPlatformSelected" />
+                            <ValidationMessage For="@(() => outward.PlatformId)" />
+                        </div>
+                    </div>
+                </fieldset>
+
+                <div class="mt-3 ">
                     <label class="form-label">Remarks</label>
                     <InputTextArea class="form-control" rows="3" @bind-Value="outward.Remarks" />
                 </div>
@@ -260,9 +265,9 @@ else
                             <tbody>
                                 @if (itemList.Any())
                                 {
-                                    @for (int i = 0; i<itemList.Count(); i++)
+                                    @for (int i = 0; i < itemList.Count(); i++)
                                     {
-                                        var index = itemList.Count()-i;
+                                        var index = itemList.Count() - i;
                                         var item = itemList[i];
                                         <tr>
                                             <td>@(index)</td>
@@ -351,9 +356,20 @@ else
     private System.Threading.Timer? errorTimer;
     private string Route = "/outward";
     private bool isAdmin = false;
-
     // Reference for JS Interop
     private DotNetObjectReference<Outward>? dotNetHelper;
+
+    private DateTime DatePart
+    {
+        get => outward.OutwardDate.Date;
+        set => outward.OutwardDate = value.Date + outward.OutwardDate.TimeOfDay;
+    }
+
+    private TimeOnly TimePart
+    {
+        get => TimeOnly.FromDateTime( outward.OutwardDate);
+        set => outward.OutwardDate = outward.OutwardDate.Date + value.ToTimeSpan();
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -462,7 +478,7 @@ else
             ValidateBillToCompany();
             ValidatePlatform();
             if (editContext.GetValidationMessages().Any()) return;
-
+            
             bool result;
             if (isEditMode)
             {
@@ -760,7 +776,6 @@ else
         outward.PlatformId = selected.Id ?? 0;
         ValidatePlatform();
     }
-
     private void ShowError(string message)
     {
         errorMessage = message;

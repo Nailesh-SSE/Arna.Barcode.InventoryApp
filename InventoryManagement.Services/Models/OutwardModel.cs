@@ -7,7 +7,7 @@ public class OutwardModel:CommonModel
 {
     public int Id { get; set; }
     public string OutwardNo { get; set; } = string.Empty;
-    public DateTime OutwardDate { get; set; } = DateTime.UtcNow.Date;
+    public DateTime OutwardDate { get; set; } = DateTime.UtcNow;
     public int BillToCompanyId { get; set; }
     public int PlatformId { get; set; }
     public string? Remarks { get; set; }

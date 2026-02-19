@@ -90,7 +90,9 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th class="col-1">#</th>
+                                        <th class="col-3 col-md-3">Barcode</th>
                                         <th class="col-3 col-md-3">Product <span class="text-danger">*</span></th>
+                                        <th class="col-3 col-md-3">Platform</th>
                                         <th class="col-2">Return Company  <span class="text-danger">*</span></th>
                                         <th class="col-2">Ship To </th>
                                         <th class="col-1">Unit <span class="text-danger">*</span></th>
@@ -127,6 +129,9 @@
                                         @index
                                     </td>
 
+                                    <td class="text-center">
+                                        @item.BarCodeNo
+                                    </td>
                                     @{index--;}
                                     <!-- PRODUCT -->
                                     <td>
@@ -142,6 +147,16 @@
                                                 {
                                                     <small class="text-danger">Required</small>
                                                 }
+                                            </td>
+                                            <!-- Platform -->
+                                            <td class="text-center">
+                                                <InputSelect class="form-select w-auto" @bind-Value="@item.PlatformId" disabled="@isDisabled">
+                                                    <option value="0">Select</option>
+                                                    @foreach (var plat in PlatformList.Where(c => c.IsActive || c.Id == item.PlatformId))
+                                                    {
+                                                        <option value="@plat?.Id">@plat?.Name</option>
+                                                    }
+                                                </InputSelect>
                                             </td>
                                             <!-- Return Company -->
                                             <td>
@@ -174,7 +189,13 @@
 
                                             <!-- UNIT -->
                                             <td>
-                                                <InputSelect class="form-select w-auto" @bind-Value="@item.UnitId" disabled="@isDisabled">
+                                                <InputSelect TValue="int"
+                                                             class="form-select w-auto"
+                                                             Value="@item.UnitId"
+                                                             ValueChanged="@(val => OnUnitChanged(item, val))"
+                                                             ValueExpression="() => item.UnitId"
+                                                             disabled="@isDisabled">
+
                                                     <option value="0">Select</option>
                                                     @foreach (var unit in Units)
                                                     {
@@ -322,12 +343,13 @@
     private Dictionary<int, (int BoxCount, decimal ItemQty)> _savedTotals = new();
     // private EditContext editContext;
     // private ValidationMessageStore? validationMessage;
-
+    
     [Parameter] public SaleReturnModel? SelectedSaleReturn { get; set; }
     [Parameter] public SaleReturnItemsModel ItemsModel { get; set; } = new();
     [Parameter] public List<SaleReturnItemsModel?> ItemsList { get; set; } = new();
     [Parameter] public OperationResponse? ResponseDto { get; set; } = new();
 
+    [Parameter] public List<PlatformModel?> PlatformList { get; set; } = new();
     [Parameter] public List<ProductModel?> ProductList { get; set; } = new();
     [Parameter] public List<CompanyModel?> CompanyList { get; set; } = new();
     [Parameter] public List<CompanyModel?> BillToCompanyList { get; set; } = new();
@@ -566,6 +588,23 @@
         await ValidateBarcode(ItemsModel.BarCodeNo);
         if (errorMessage != string.Empty) return;
         await OnBarcodeVal.InvokeAsync();
+    }
+
+    private void OnUnitChanged(SaleReturnItemsModel item, int selectedUnitId)
+    {
+        item.UnitId = selectedUnitId;
+
+        // Assuming BOX enum value is something like:
+        if (selectedUnitId == (int)UnitType.BOX)
+        {
+            item.ReturnQuantity = 0;
+        }
+        else
+        {
+            item.ReturnQuantity = 1;
+        }
+
+        StateHasChanged();
     }
 
     private async Task HandleClose()

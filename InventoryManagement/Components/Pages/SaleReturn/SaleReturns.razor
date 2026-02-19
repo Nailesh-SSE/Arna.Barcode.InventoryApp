@@ -4,6 +4,7 @@
 @inject IProductService ProductService
 @inject ICategoryService CategoryService
 @inject IOutwardService OutwardService
+@inject IPlatformService PlatformService
 @using InventoryManagement.Services.DTO
 
 @inject IJSRuntime JSRuntime
@@ -61,6 +62,7 @@ else
     SelectedSaleReturn="selectedSaleReturn"
     ItemsList="SaleReturnItems"
     ItemsModel="itemsModel"
+    PlatformList="PlatformList"
     ProductList="ProductList"
     CompanyList="ShipToCompanyList"
     BillToCompanyList="BillToCompanyList"
@@ -95,6 +97,7 @@ else
     private List<ProductModel> ProductList = new();
     private List<ProductModel> FilteredProducts { get; set; } = new();
     private List<OutwardModel> OutwardList { get; set; } = new();
+    private List<PlatformModel> PlatformList { get; set; } = new();
 
     private SaleReturnFormModal? saleReturnFormModal;
     private SaleReturnItemsFormModal? saleReturnItemsFormModal;
@@ -132,6 +135,7 @@ else
             ShipToCompanyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
             ProductList = (await ProductService.GetAllProductsAsync()).ToList();
             OutwardList = (await OutwardService.GetAllOutwardsAsync(true)).Where(o => o.IsFinished).ToList();
+            PlatformList = (await PlatformService.GetAllPlatformAsync()).ToList();
             FilteredProducts = ProductList;
         }
         catch
@@ -395,8 +399,9 @@ else
             OutwardId = data?.OutwardId ?? 0,
             OutwardSearchText = outwardText,
             BarCodeNo = data?.BarcodeNo ?? null,
-            ReturnQuantity = 1,
+            ReturnQuantity = data?.UnitId == (int)UnitType.BOX ? 0:1,
             ReturnType = (int)ReturnType.Excess,
+            PlatformId = data?.PlatformId ?? 0,
             IsTakeInStock = true
         });
 
