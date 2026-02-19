@@ -237,6 +237,7 @@ else
                                                     <th>#</th>
                                                     <th>Return Company</th>
                                                     <th>Ship To</th>
+                                                    <th>PlatForm</th>
                                                     <th>Return No</th>
                                                     <th>Return Date</th>
                                                     <th>Return Time</th>
@@ -262,6 +263,7 @@ else
                                                         <td>@((reportResult.PageNumber - 1) * reportResult.PageSize + reportResult.Items.IndexOf(item) + 1)</td>
                                                         <td>@item.BillToCompanyName</td>
                                                         <td>@item.shipToCompanyName</td>
+                                                        <td>@item.PlatformName</td>
                                                         <td><span class="badge bg-primary">@item.ReturnNo</span></td>
                                                         <td>@item.ReturnDate.ToString("dd/MM/yyyy")</td>
                                                         <td>@item.ReturnDate.ToString("HH:mm:ss")</td>
