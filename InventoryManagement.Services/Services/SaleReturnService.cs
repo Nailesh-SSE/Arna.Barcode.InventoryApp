@@ -5,6 +5,7 @@ using InventoryManagement.Services.DTO;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic;
 
 
 namespace InventoryManagement.Services.Services;
@@ -153,6 +154,16 @@ public class SaleReturnService : ISaleReturnService
                                               );
                 model.ShipToCompanyId = shipTo != null ? shipTo.Id : 0;
             }
+            if (model.PlatformId == 0 || model.PlatformId == null)
+            {
+                var plat= await _unitOfWork.GetRepository<Platform>()
+                                              .GetQueryable()
+                                              .FirstOrDefaultAsync(p =>
+                                                  p.Name.ToLower() == "other" &&
+                                                  !p.IsDeleted
+                                              );
+                model.PlatformId = plat != null ? plat.Id : 0;
+            }
             var item = await CreateSaleReturnItemEntity(model);
             if (item.IsTakeInStock)
             {
@@ -193,7 +204,7 @@ public class SaleReturnService : ISaleReturnService
             CreatedOn = model.CreatedOn
         };
         await saleReturnItemRepo.AddAsync(entity);
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync();        
         return entity;
 
     }

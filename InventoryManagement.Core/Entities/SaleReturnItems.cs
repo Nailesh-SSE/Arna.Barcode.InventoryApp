@@ -26,7 +26,7 @@ public class SaleReturnItems : Common
     public int BillToCompanyId { get; set; } = 0;
     [Required]
     public int ReturnType { get; set; }
-    public int? platformId { get; set; }
+    public int? platformId { get; set; } = 0;
     public bool IsTakeInStock { get; set; } = false;
     [StringLength(200)]
     public string? ReasonToReturn { get; set; } = null;
@@ -35,6 +35,6 @@ public class SaleReturnItems : Common
     public virtual Product Product { get; set; } = null!;
     public virtual Category Category { get; set; } = null!;
     public virtual Company ShipToCompany { get; set; } = null!;
-    public virtual Platform platform { get; set; } = null;
+    public virtual Platform platform { get; set; } = null!;
     public virtual SaleReturn SaleReturn { get; set; } = null!;
 }

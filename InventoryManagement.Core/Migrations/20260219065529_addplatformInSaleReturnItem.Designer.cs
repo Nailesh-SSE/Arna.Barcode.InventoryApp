@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InventoryManagement.Core.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    [Migration("20260217112844_addplatformInSaleReturnItem")]
+    [Migration("20260219065529_addplatformInSaleReturnItem")]
     partial class addplatformInSaleReturnItem
     {
         /// <inheritdoc />
