@@ -150,7 +150,8 @@ else
                                             <tr>
                                                 <th>Transaction</th>
                                                 <th>TransactionNo</th>
-                                                <th>BarcodeNo</th>
+                                                <th> Item BarcodeNo</th>
+                                                <th> Box BarcodeNo</th>
                                                 <th>CreationTime</th>
                                                 <th> User</th>
                                                 <th>Status</th>
@@ -167,7 +168,8 @@ else
                                                         </span>
                                                     </td>
                                                     <td>@item.TransactionNo</td>
-                                                    <td>@item.BarCodeNo</td>
+                                                    <td>@item.Item_Barcode</td>
+                                                    <td>@item.Box_Barcode</td>
                                                     <td>@item.TransactionTime</td>
                                                     <td>@item.UserName</td>
                                                     <td><span class="badge bg-danger">@item.Status</span></td>
