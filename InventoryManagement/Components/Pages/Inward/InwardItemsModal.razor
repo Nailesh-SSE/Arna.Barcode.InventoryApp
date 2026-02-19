@@ -43,6 +43,7 @@
                                         <table class="table table-bordered align-middle">
                                             <thead class="table-light">
                                                 <tr>
+                                                    <th class="col-1 col-md-1">#</th>
                                                     <th class="col-1 col-md-1">Brand</th>
                                                     <th class="col-4 col-md-4">Product</th>
                                                     <th class="col-1 col-md-1 text-center">Units</th>
@@ -52,6 +53,10 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
+                                                @{
+                                                    var totalCount = InwardItems.Count;
+                                                    var index = totalCount;
+                                                }
                                                 @foreach (var item in InwardItems)
                                                 {
                                                     var brandClass = $"form-select form-select-sm {GetValidationClass(item, "brand")} w-auto";
@@ -63,6 +68,11 @@
 
                                                     <tr class="@GetRowClass(item)"
                                                         title="@GetRowTitle(item)">
+                                                        <td class="text-center">
+                                                            @index
+                                                        </td>
+                                                        @{index--;}
+                     
                                                         <td>
                                                             <select class="@brandClass"
                                                                     value="@item.BrandId"
