@@ -336,23 +336,27 @@ public class SaleReturnService : ISaleReturnService
             return new SaleReturnValidationResult
             {
                 IsValid = false,
-                ErrorMessage = "Barcode indicates item is still in stock. Can't accept return for an item that was not sold."
+                ErrorMessage = "Barcode indicates item is still in stock at Inward No: "+ (barcodeItem.Inward?.InwardNo ?? "N/A")
             };
         }
 
         var saleReturnItemRepo = _unitOfWork.GetRepository<SaleReturnItems>();
-        bool isAlreadyReturned = await saleReturnItemRepo
-            .GetQueryable()
-            .AnyAsync(s => s.BarCodeNo == barcodeNo && !s.IsDeleted);
-
-        if (isAlreadyReturned)
+        var saleReturnItem = (await saleReturnItemRepo
+            .FindWithIncludesAsync(
+                s => s.BarCodeNo == barcodeNo && !s.IsDeleted,
+                CancellationToken.None,
+                s => s.SaleReturn
+            )).FirstOrDefault();
+     
+        if (saleReturnItem !=null)
         {
             return new SaleReturnValidationResult
             {
                 IsValid = false,
-                ErrorMessage = "This Barcode Already Returned"
+                ErrorMessage = "This Barcode Already Returned at Sale Return No: " + (saleReturnItem.SaleReturn?.SaleReturnNo ?? "N/A")
             };
         }
+        
 
         var shipmentCompanyId = barcodeItem.Inward?.ShipMentCompanyId;
 

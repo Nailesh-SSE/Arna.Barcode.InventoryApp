@@ -71,7 +71,7 @@ namespace InventoryManagement.Services.Reports.Services
         {
             var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
             var barcodeItems = await barcodeItemRepository.FindAsync(bi =>
-                bi.BarcodeNo == barcodeNo && !bi.IsDeleted);
+                bi.BarcodeNo == barcodeNo);
 
             var barcodeItem = barcodeItems.FirstOrDefault();
 

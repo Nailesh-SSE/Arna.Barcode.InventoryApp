@@ -306,8 +306,13 @@ else
 
     private async Task DeleteBarcode()
     {
-        var currentUserId = Convert.ToInt32(CurrentUserId);
         var barcode = filter.barcode ?? string.Empty;
+        var currentUserId = Convert.ToInt32(CurrentUserId);
+
+        var confirmed = await JS.InvokeAsync<bool>( "confirm",$"Are you sure you want to delete barcode {barcode}?");
+
+        if (!confirmed)
+            return;
 
         if (!ValidateBarcode())
         {
@@ -324,10 +329,6 @@ else
             return;
         }
        
-        var confirmed = await JS.InvokeAsync<bool>( "confirm",$"Are you sure you want to delete barcode {barcode}?");
-
-        if (!confirmed)
-            return;
         var result = await InwardService.DeleteSingleBarcode(barcode, currentUserId);
 
         if (result)
