@@ -32,3 +32,7 @@
 /InventoryManagement.Infrastructure/bin/Release/net8.0
 /InventoryManagement.Services/bin/Release/net8.0
 /InventoryManagement/bin/Release/net8.0
+/InventoryManagement.Test/bin/Debug/net8.0
+/InventoryManagement.Test/obj/Debug/net8.0/ref
+/InventoryManagement.Test/obj/Debug/net8.0/refint
+/InventoryManagement.Test/obj/Debug/net8.0
