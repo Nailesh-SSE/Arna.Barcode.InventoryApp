@@ -86,7 +86,7 @@
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive" style="height: 650px; overflow-y: auto;">
-                            <table class="table table-bordered table-sm align-middle">
+                            <table class="table table-bordered table-sm align-middle" id="itemsTable">
                                 <thead class="table-light">
                                     <tr>
                                         <th class="col-1">#</th>
@@ -118,12 +118,11 @@
                                         bool isDisabled = isLocked || noPermission;
                                         
 
-                                        <tr class="@(isDisabled ? "table-success text-muted disabled-row" : "")"
-                                            title="@(isLocked
-                                                                                                                                        ? "This item is already taken in stock. You cannot edit it."
-                                                                                                                                        : noPermission
-                                                                                                                                            ? "You do not have permission to perform this action."
-                                                                                                                                            : "")">
+                                        <tr class="@(isDisabled ? "table-success text-muted disabled-row" : "")" 
+                                            title="@(isLocked ? "This item is already taken in stock. You cannot edit it."
+                                                              : noPermission
+                                                                 ? "You do not have permission to perform this action."
+                                                                 : "")">
 
                                     <td class="text-center">
                                         @index
@@ -266,10 +265,13 @@
                                                 <div class="d-flex align-items-center justify-content-center gap-1">
                                                     @if (CanCreate)
                                                     {
-                                                        <Button Class="btn btn-success btn-sm p-1" title="Save"
-                                                                @onclick="(() => HandleSubmit(item))" disabled="@isDisabled">
-                                                            <Icon Name="IconName.Floppy" />
-                                                        </Button>
+                                                        <button type="button"
+                                                                class="btn btn-success btn-sm p-1 save-btn @(item.Id == 0 ? "new-row-save" : "")"
+                                                                title="Save"
+                                                                @onclick="() => HandleSubmit(item)"
+                                                                disabled="@isDisabled">
+                                                            <i class="bi bi-floppy"></i>
+                                                        </button>
                                                     }
 
                                                     @if (item.Id > 0)
@@ -371,6 +373,7 @@
 
     [Parameter] public bool DisableFields { get; set; }
 
+    private bool shouldFocusSaveButton = false;
     // protected override void OnParametersSet()
     // {
     //     InitializeEditContext();
@@ -382,6 +385,16 @@
     //     validationMessage = new ValidationMessageStore(editContext);
 
     // }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (shouldFocusSaveButton)
+        {
+            shouldFocusSaveButton = false;
+            await JS.InvokeVoidAsync("focusNewRowSaveButton");
+        }
+    }
+
     private void UpdateTotalQtys()
     {
         _savedTotals.Clear();
@@ -588,6 +601,9 @@
         await ValidateBarcode(ItemsModel.BarCodeNo);
         if (errorMessage != string.Empty) return;
         await OnBarcodeVal.InvokeAsync();
+
+        shouldFocusSaveButton = true;
+        await InvokeAsync(StateHasChanged);
     }
 
     private void OnUnitChanged(SaleReturnItemsModel item, int selectedUnitId)
@@ -867,5 +883,20 @@
             const reader = document.getElementById("reader");
             if (reader) reader.innerHTML = "";
         }
+    };
+              window.focusNewRowSaveButton = () => {
+        setTimeout(() => {
+
+            const newSaveButton = document.querySelector("button.new-row-save:not([disabled])");
+
+            if (!newSaveButton) {
+                console.log("No new row save button found");
+                return;
+            }
+
+            newSaveButton.focus();
+            console.log("Focused new row save button");
+
+        }, 150);
     };
 </script>
