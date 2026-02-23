@@ -55,9 +55,9 @@ namespace InventoryManagement.Services.Reports.Services
             try
             {
                 var result = new List<BarcodeTrackDTO>();
-                var barcodeParam = new SqlParameter("@BarcodeNo", SqlDbType.NVarChar) { Value = barcode ?? (object)DBNull.Value };
+                var barcodeParam = new SqlParameter("@ItemBarcodeNo", SqlDbType.NVarChar) { Value = barcode ?? (object)DBNull.Value };
 
-                result = await _db.BarcodeTrackDTO.FromSqlRaw("EXEC sp_BarcodeTracking @BarcodeNo", barcodeParam)
+                result = await _db.BarcodeTrackDTO.FromSqlRaw("EXEC sp_BarcodeTracking @ItemBarcodeNo", barcodeParam)
                     .AsNoTracking()
                     .ToListAsync();
                 return result;
@@ -71,7 +71,7 @@ namespace InventoryManagement.Services.Reports.Services
         {
             var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
             var barcodeItems = await barcodeItemRepository.FindAsync(bi =>
-                bi.BarcodeNo == barcodeNo && !bi.IsDeleted);
+                bi.BarcodeNo == barcodeNo);
 
             var barcodeItem = barcodeItems.FirstOrDefault();
 

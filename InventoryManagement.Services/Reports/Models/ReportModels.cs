@@ -330,7 +330,8 @@ public class InStockReportItem
     public int ProductId { get; set; }
     public string ProductName { get; set; } = string.Empty;
     public string SKU { get; set; } = string.Empty;
-    public string BarcodeNo { get; set; } = string.Empty;
+    public string ItemBarcodeNo { get; set; } = string.Empty;
+    public string BoxBarcodeNo { get; set; } = string.Empty;
     public bool IsInStock { get; set; } = true; 
     public int CategoryId { get; set; }
     public string CategoryName { get; set; } = string.Empty;

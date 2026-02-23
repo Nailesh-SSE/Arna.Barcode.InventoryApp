@@ -185,7 +185,8 @@ public class UserService : IUserService
             RoleId = userRoles
              .Where(ur => ur.UserId == u.Id)
              .Select(ur => ur.RoleId)
-             .FirstOrDefault()
+             .FirstOrDefault(),
+            Password =u.Password,
         }).ToList();
         return result;
     }

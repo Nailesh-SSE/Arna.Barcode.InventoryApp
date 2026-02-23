@@ -62,7 +62,7 @@ namespace InventoryManagement.Services.Reports.Services
             string[] headers = new string[]
             {
               "No","InwardNo", "Inward Date" , "Inward Time" ,"Ship Company" , "Category" , 
-              "Brand","Product" ,"Item Name" , "Barcode" , "Unit","Box Qty","Item Qty", "Remark", "Status", "UserName" , "BatchNo"   
+              "Brand","Product" ,"Product Name" , " Item Barcode" ,"BoxBarcode", "Unit","Box Qty","Item Qty", "Remark", "Status", "UserName" , "BatchNo"   
             };
 
             for (int i = 0; i < headers.Length; i++)
@@ -76,7 +76,7 @@ namespace InventoryManagement.Services.Reports.Services
                 var item = report.Items[i];
                 IRow row = sheet.CreateRow(i + 1);
 
-                row.CreateCell(0).SetCellValue(i + 1); // No (sequence)
+                row.CreateCell(0).SetCellValue(i + 1); 
                 row.CreateCell(1).SetCellValue(item.InwardNo);
                 row.CreateCell(2).SetCellValue(item.CreatedOn.ToString("yyyy/MM/dd"));
                 row.CreateCell(3).SetCellValue(item.CreatedOn.ToString("HH:mm:ss"));
@@ -85,14 +85,15 @@ namespace InventoryManagement.Services.Reports.Services
                 row.CreateCell(6).SetCellValue(item.BrandName);
                 row.CreateCell(7).SetCellValue(item.ProductName);
                 row.CreateCell(8).SetCellValue(item.SKU);
-                row.CreateCell(9).SetCellValue(item.BarcodeNo);
-                row.CreateCell(10).SetCellValue(item.Unit);
-                row.CreateCell(11).SetCellValue((double)item.BoxQuantity);
-                row.CreateCell(12).SetCellValue((double)item.Quantity);
-                row.CreateCell(13).SetCellValue(item.Remark);
-                row.CreateCell(14).SetCellValue(item.IsInStock ? "In Stock" : "Sold");
-                row.CreateCell(15).SetCellValue(item.UserName);
-                row.CreateCell(16).SetCellValue(item.BatchNo);
+                row.CreateCell(9).SetCellValue(item.ItemBarcodeNo);
+                row.CreateCell(10).SetCellValue(item.BoxBarcodeNo);
+                row.CreateCell(11).SetCellValue(item.Unit);
+                row.CreateCell(12).SetCellValue((double)item.BoxQuantity);
+                row.CreateCell(13).SetCellValue((double)item.Quantity);
+                row.CreateCell(14).SetCellValue(item.Remark);
+                row.CreateCell(15).SetCellValue(item.IsInStock ? "In Stock" : "Sold");
+                row.CreateCell(16).SetCellValue(item.UserName);
+                row.CreateCell(17).SetCellValue(item.BatchNo);
 
             }
 
@@ -135,37 +136,55 @@ namespace InventoryManagement.Services.Reports.Services
             IQueryable<InwardBarcodeItem> baseQuery,
             InStockFilter filter)
         {
-            var productRepo = _unitOfWork.GetRepository<Product>();
-            var categoryRepo = _unitOfWork.GetRepository<Category>();
-            var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
-            var userRepo = _unitOfWork.GetRepository<Users>();
-            var inwardRepo = _unitOfWork.GetRepository<Inward>();
-            var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+            var productRepo = _unitOfWork.GetRepository<Product>().GetQueryable().AsNoTracking();
+            var categoryRepo = _unitOfWork.GetRepository<Category>().GetQueryable().AsNoTracking();
+            var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>().GetQueryable().AsNoTracking();
+            var userRepo = _unitOfWork.GetRepository<Users>().GetQueryable().AsNoTracking();
+            var inwardRepo = _unitOfWork.GetRepository<Inward>().GetQueryable().AsNoTracking();
+            var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>().GetQueryable().AsNoTracking();
 
             var query = baseQuery
-                .Join(inwardItemRepo.GetQueryable(),
+                .Join(inwardItemRepo,
                     ibt => ibt.InwardItemId,
                     it => it.Id,
                     (ibt, it) => new { ibt, it })
-                .Join(productRepo.GetQueryable(),
+                .Join(productRepo,
                     x => x.it.ProductId,
                     p => p.Id,
                     (x, p) => new { x.ibt, x.it, p })
-                .Join(categoryRepo.GetQueryable(),
+                .Join(categoryRepo,
                     x => x.p.CategoryId,
                     c => c.Id,
                     (x, c) => new { x.ibt, x.it, x.p, c })
-                .Join(inwardRepo.GetQueryable(),
+                .Join(inwardRepo,
                     x => x.ibt.InwardId,
                     i => i.Id,
                     (x, i) => new { x.ibt, x.it, x.p, x.c, i })
-                .GroupJoin(userRepo.GetQueryable(),
+ 
+                 .GroupJoin(barcodeRepo,
+                     x => x.ibt.ParentId,     // child.ParentId
+                     b => b.Id,               // parent.Id
+                     (x, parents) => new { x, parents })
+
+                 .SelectMany(
+                     x => x.parents.DefaultIfEmpty(),
+                     (x, parentBarcode) => new
+                     {
+                         x.x.ibt,
+                         x.x.it,
+                         x.x.p,
+                         x.x.c,
+                         x.x.i,
+                         ParentBarcode = parentBarcode
+                     })
+
+                .GroupJoin(userRepo,
                     x => x.ibt.CreatedBy,
                     uc => uc.Id,
                     (x, ucs) => new { x, ucs })
                 .SelectMany(
                     x => x.ucs.DefaultIfEmpty(),
-                    (x, uc) => new { x.x.ibt, x.x.it, x.x.p, x.x.c, x.x.i, uc });
+                    (x, uc) => new { x.x.ibt, x.x.it, x.x.p, x.x.c, x.x.i, x.x.ParentBarcode,uc });
 
             // Filters
             if (filter.CategoryId.HasValue)
@@ -229,11 +248,11 @@ namespace InventoryManagement.Services.Reports.Services
                 ProductName = x.p.Name,
                 SKU = x.p.SKU,
 
-                Unit = x.it.BoxQuantity > 0 && x.ibt.ParentId == 0 ? "Box" : "PCS",
+                Unit = x.it.BoxQuantity > 0 && x.ibt.ParentId == 0 ? "BOX" : "PCS",
 
                 Quantity = x.it.BoxQuantity > 0 &&
                             (x.ibt.ParentId == 0 || x.ibt.ParentId == null)
-                                ? barcodeRepo.GetQueryable()
+                                ? barcodeRepo
                                     .Count(c =>
                                         c.ParentId == x.ibt.Id &&
                                         (filter.IsInStock
@@ -243,7 +262,8 @@ namespace InventoryManagement.Services.Reports.Services
 
                 BoxQuantity = x.it.BoxQuantity > 0 && x.ibt.ParentId == 0 ? x.it.BoxQuantity: 0,
 
-                BarcodeNo = x.ibt.BarcodeNo,
+                ItemBarcodeNo = x.ibt.BarcodeNo,
+                BoxBarcodeNo = x.ParentBarcode != null ? x.ParentBarcode.BarcodeNo : string.Empty,
                 IsInStock = x.ibt.IsInStock,
                 
                 Remark = x.i.Remarks,

@@ -2,7 +2,8 @@
 
 public class BarcodeTrackDTO
 {
-    public string BarCodeNo { get; set; }
+    public string? Item_Barcode { get; set; }
+    public string? Box_Barcode { get; set; }
     public DateTime TransactionTime { get; set; }
     public string TransactionNo { get; set; }
     public string TransactionType { get; set; }

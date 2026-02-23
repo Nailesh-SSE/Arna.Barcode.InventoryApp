@@ -199,7 +199,8 @@ else
                                                     <th>Brand</th>
                                                     <th>Product</th>
                                                     <th>Item Name</th>
-                                                    <th>Barcode</th>
+                                                    <th>Item Barcode</th>
+                                                    <th>Box Barcode</th>
                                                     <th>Unit</th>
                                                     <th>Box Qty</th>
                                                     <th>Item Qty</th>
@@ -224,8 +225,9 @@ else
                                                         <td>@item.ProductName</td>
                                                         <td><code>@item.SKU</code></td>
                                                         <td title="Inward No: @item.InwardNo , Batch No: @item.BatchNo">
-                                                            @item.BarcodeNo
+                                                            @item.ItemBarcodeNo
                                                         </td>
+                                                        <td> @item.BoxBarcodeNo</td>                                                                            
                                                         <td>@item.Unit</td>
                                                         <td>@item.BoxQuantity</td>
                                                         <td>@item.Quantity</td>

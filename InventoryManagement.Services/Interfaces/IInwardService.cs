@@ -16,6 +16,7 @@ public interface IInwardService
     Task<bool> UpdateInwardItemAsync(InwardItemModel model);
     Task<bool> DeleteInwardItemAsync(int id, int userId);
     Task<bool> DeleteSalesReturnInwardItemAsync(SaleToInwardDto saleReturnItems);
+    Task<bool> DeleteSingleBarcode(string barcode, int userId);
     Task<bool> AddReturnItemToSaleInwardAsync(SaleToInwardDto saleReturnItems);  
     Task<byte[]> GenerateItemBarcodePrnAsync(int inwardItemId);
     Task<byte[]> GenerateSingleBarcodePrnAsync(string barcodeNo);
