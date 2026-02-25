@@ -33,7 +33,7 @@
                                     <div class="col-auto">
                                         <button type="button" disabled="@(hideAddNewButton || SelectedInward.IsSalesReturn)" class="btn btn-success btn-sm" @onclick="HandleAddItem">
                                             <i class="bi bi-plus-circle me-1"></i>Add New Item
-                                        </button>
+                                        </button> 
                                     </div>
                                 </div>
                             </div>
@@ -156,26 +156,23 @@
                                                         </td>
                                                         <td>
                                                             <div class="d-flex gap-1 justify-content-start">
-                                                                <button type="button"
-                                                                        class="btn btn-primary btn-sm"
-                                                                        @onclick="@(() => HandleSaveItem(item))"
-                                                                        disabled="@( SelectedInward.IsSalesReturn || AnyBarcodeInOutward && item.Id > 0 )">
+                                                                <LoadingButton Class="btn btn-primary btn-sm"
+                                                                               OnClick="() => HandleSaveItem(item)"
+                                                                               Disabled="@(SelectedInward.IsSalesReturn || AnyBarcodeInOutward && item.Id > 0)">
                                                                     Save
-                                                                </button>
+                                                                </LoadingButton>
                                                                 @if (item.Id > 0)
                                                                 {
-                                                                    <button type="button"
-                                                                            class="btn btn-danger btn-sm"
-                                                                            @onclick="@(() => HandleDeleteItem(item.Id))"
-                                                                            disabled="@( SelectedInward.IsSalesReturn || item.HasOutOfStockBarcodes)">
+                                                                    <LoadingButton Class="btn btn-danger btn-sm"
+                                                                                   OnClick="() => HandleDeleteItem(item.Id)"
+                                                                                   Disabled="@(SelectedInward.IsSalesReturn || item.HasOutOfStockBarcodes)">
                                                                         Delete
-                                                                    </button>
+                                                                    </LoadingButton>
 
-                                                                    <button type="button"
-                                                                            class="btn btn-dark btn-md"
-                                                                            @onclick="@(() => OnDownloadPdf.InvokeAsync(item))">
+                                                                    <LoadingButton Type="ButtonType.Button" Class="btn btn-dark btn-md" 
+                                                                                   OnClick="() => OnDownloadPdf.InvokeAsync(item)">
                                                                         <Icon Name="IconName.UpcScan" />
-                                                                    </button>
+                                                                    </LoadingButton>
                                                                 }
                                                                 else
                                                                 {

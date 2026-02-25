@@ -44,21 +44,30 @@
             <div class="d-flex gap-1">
                 @if (CanCreate)
                 {
-                    <Button Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
+                    <LoadingButton Class="text-nowrap"
+                                   Color="ButtonColor.Success"
+                                   Size="ButtonSize.Small"
+                                   OnClick="() => OnAddItems.InvokeAsync(context)">
                         <Icon Name="IconName.Plus" /> Add Items
-                    </Button>
+                    </LoadingButton>
                 }
                 else
                 {
-                    <Button Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
-                        <Icon Name="IconName.Eye" /> View Items
-                    </Button>
+                    <LoadingButton Class="text-nowrap"
+                                   Color="ButtonColor.Success"
+                                   Size="ButtonSize.Small"
+                                   OnClick="() => OnAddItems.InvokeAsync(context)">
+                        <Icon Name="IconName.Plus" /> View Items
+                    </LoadingButton>
                 }
                 @if (CanEdit)
                 {
-                    <Button Class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => OnEdit.InvokeAsync(context)">
+                    <LoadingButton Class="text-nowrap"
+                                   Color="ButtonColor.Warning"
+                                   Size="ButtonSize.Small"
+                                   OnClick="() => OnEdit.InvokeAsync(context)">
                         <Icon Name="IconName.PencilSquare" /> Edit
-                    </Button>
+                    </LoadingButton>
                 }
                 @*
                 @if (CanEdit)
