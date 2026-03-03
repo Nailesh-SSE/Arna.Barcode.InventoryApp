@@ -27,10 +27,12 @@ namespace InventoryManagement.Services.Models
         public int SaleReturnId { get; set; }
 
         public int? OutwardId { get; set; } = null;
+        public string? OutwardNo { get; set; }
 
         [Required(ErrorMessage = "Product is required.")]
         [Range(1, int.MaxValue, ErrorMessage = "Select a valid Product.")]
         public int ProductId { get; set; }
+        public string? ProductName { get; set; }
 
         public int SerialNo { get; set; }
         public string? BarCodeNo { get; set; } = null;
@@ -38,28 +40,29 @@ namespace InventoryManagement.Services.Models
         [Required(ErrorMessage = "Unit is required.")]
         [Range(1, int.MaxValue, ErrorMessage = "Select a valid Unit.")]
         public int UnitId { get; set; }
+        public string UnitName => UnitId switch
+        {
+            1 => "PCS",
+            2 => "BOX",
+            _ => UnitId.ToString()
+        };
 
         [Required(ErrorMessage = "Return Quantity is required.")]
         [Range(1, int.MaxValue, ErrorMessage = "Return Quantity must be at least 1.")]
         public decimal ReturnQuantity { get; set; } = 1;
-
-        [Required(ErrorMessage = "Category is required.")]
-        [Range(1, int.MaxValue, ErrorMessage = "Select a valid Category.")]
         public int CategoryId { get; set; }
 
         [Required(ErrorMessage = "Ship To Company is required.")]
         //  [Range(1, int.MaxValue, ErrorMessage = "Select a valid Shipping Company.")]
         public int ShipToCompanyId { get; set; } = 0;
-
-
-        [Required(ErrorMessage = "bill To Company is required.")]
-        //  [Range(1, int.MaxValue, ErrorMessage = "Select a valid Shipping Company.")]
+        public string? ShipToCompanyName { get; set; }
+        [Required(ErrorMessage = "Return  Company is required.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Select a valid Return Company.")]
         public int BillToCompanyId { get; set; } = 0;
-
+        public string? BillToCompanyName { get; set; }  
         [Required(ErrorMessage = "Return Type is required.")]
         [Range(1, int.MaxValue, ErrorMessage = "Select a valid Return Type.")]
         public int ReturnType { get; set; }
-
         public bool IsTakeInStock { get; set; } = false;
 
         [StringLength(200, ErrorMessage = "Reason cannot exceed 200 characters.")]

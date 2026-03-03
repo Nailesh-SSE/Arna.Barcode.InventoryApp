@@ -105,35 +105,74 @@ public class SaleReturnService : ISaleReturnService
     #region ReturnItems
     public async Task<List<SaleReturnItemsModel>> GetSaleReturnItemsByReturnId(int saleReturnId)
     {
-        var saleReturnItemRepo = _unitOfWork.GetRepository<SaleReturnItems>();
-        var items = await saleReturnItemRepo.GetQueryable()
-                    .Where(i => !i.IsDeleted && i.SaleReturnId == saleReturnId)
-                    .OrderByDescending(i => i.Id)
-                    .ThenByDescending(i => i.ReturnDate)
-                    .ToListAsync();
-        return items.Select(i => new SaleReturnItemsModel
-        {
-            Id = i.Id,
-            PlatformId = i.platformId,
-            SaleReturnId = i.SaleReturnId,
-            ProductId = i.ProductId,
-            ReturnDate = i.ReturnDate,
-            ReturnType = i.ReturnType,
-            ReasonToReturn = i.ReasonToReturn,
-            BarCodeNo = i.BarCodeNo,
-            OutwardId = i.OutwardId,
-            CategoryId = i.CategoryId,
-            UnitId = i.UnitId,
-            ReturnQuantity = i.ReturnQuantity,
-            SerialNo = i.SerialNo,
-            ShipToCompanyId = i.ShipToCompanyId,
-            BillToCompanyId = i.BillToCompanyId,
-            IsTakeInStock = i.IsTakeInStock,
-            CreatedBy = i.CreatedBy,
-            CreatedOn = i.CreatedOn,
-            UpdatedBy = i.UpdatedBy,
-            UpdatedOn = i.UpdatedOn
-        }).ToList();
+        var saleReturnItemsRepo = _unitOfWork.GetRepository<SaleReturnItems>().GetQueryable().AsNoTracking();
+        var productRepo = _unitOfWork.GetRepository<Product>().GetQueryable().AsNoTracking();
+        var platformRepo = _unitOfWork.GetRepository<Platform>().GetQueryable().AsNoTracking();
+        var companyRepo = _unitOfWork.GetRepository<Company>().GetQueryable().AsNoTracking();
+        var outwardRepo = _unitOfWork.GetRepository<Outward>().GetQueryable().AsNoTracking();
+
+        var query =
+       from item in saleReturnItemsRepo
+
+       join p in productRepo
+           on item.ProductId equals p.Id into prod
+       from p in prod.DefaultIfEmpty()
+
+       join plat in platformRepo
+           on item.platformId equals plat.Id into plat
+       from pl in plat.DefaultIfEmpty()
+
+       join bill in companyRepo
+           on item.BillToCompanyId equals bill.Id into billCo
+       from bill in billCo.DefaultIfEmpty()
+
+       join ship in companyRepo
+           on item.ShipToCompanyId equals ship.Id into shipCo
+       from ship in shipCo.DefaultIfEmpty()
+
+       join o in outwardRepo
+           on item.OutwardId equals o.Id into outw
+       from o in outw.DefaultIfEmpty()
+
+       where !item.IsDeleted && item.SaleReturnId == saleReturnId
+       orderby item.Id descending, item.ReturnDate descending
+
+       select new SaleReturnItemsModel
+       {
+           Id = item.Id,
+           SaleReturnId = item.SaleReturnId,
+
+           ProductId = item.ProductId,
+           ProductName = p != null ? p.SKU : string.Empty,
+
+           PlatformId = item.platformId,
+           PlatformName = pl != null ? pl.Name : string.Empty,
+
+           BillToCompanyId = item.BillToCompanyId,
+           BillToCompanyName = bill != null ? bill.Name : string.Empty,
+
+           ShipToCompanyId = item.ShipToCompanyId,
+           ShipToCompanyName = ship != null ? ship.Name : string.Empty,
+
+           OutwardId = item.OutwardId,
+           OutwardNo = o != null ? o.OutwardNo : string.Empty,
+
+           BarCodeNo = item.BarCodeNo,
+           ReturnQuantity = item.ReturnQuantity,
+           ReturnType = item.ReturnType,
+           IsTakeInStock = item.IsTakeInStock,
+           ReasonToReturn = item.ReasonToReturn,
+           ReturnDate = item.ReturnDate,
+
+           UnitId = item.UnitId,
+           CategoryId = item.CategoryId,
+           SerialNo = item.SerialNo,
+
+           CreatedBy = item.CreatedBy,
+           CreatedOn = item.CreatedOn
+       };
+
+        return await query.ToListAsync();
     }
     public async Task<bool> CreateSaleReturnItem(SaleReturnItemsModel model)
     {
@@ -301,7 +340,7 @@ public class SaleReturnService : ISaleReturnService
     #endregion
 
     #region BarcodeOperation
-    public async Task<SaleReturnValidationResult> ValidateBarcodeForSaleReturnAsync(string barcodeNo, int? companyId)
+    public async Task<SaleReturnValidationResult> ValidateBarcodeForSaleReturnAsync(string barcodeNo)
     {
         if (string.IsNullOrWhiteSpace(barcodeNo))
         {
