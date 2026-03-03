@@ -4,6 +4,7 @@
         Size="@Size"
         Disabled="@IsDisabled"
         Type="@Type"
+        title="@Title"
         @onclick="HandleClick">
 
     @ChildContent
@@ -21,6 +22,7 @@
     [Parameter] public EventCallback OnClick { get; set; }
 
     [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Title { get; set; }
     [Parameter] public ButtonType Type { get; set; }
     [Parameter] public ButtonColor Color { get; set; }
     [Parameter] public ButtonSize Size { get; set; }

@@ -98,11 +98,11 @@ else
                     }
                     @if (CanDelete(Route))
                     {
-                        <Button class="text-nowrap" Color="ButtonColor.Danger"
+                        <LoadingButton class="text-nowrap" Color="ButtonColor.Danger"
                                 Size="ButtonSize.Small"
-                                @onclick="() => Delete(context.Id)">
+                                onclick="() => Delete(context.Id)">
                             <Icon Name="IconName.Trash" /> Delete
-                        </Button>
+                        </LoadingButton>
                     }
                 </div>
             </GridColumn>
@@ -200,6 +200,7 @@ else
     Grid<FormPermissionModel>? grid;
     string? title;
     private const string Route = "/form-permission";
+    private bool isSaveBtnLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -269,25 +270,35 @@ else
 
     async Task Save()
     {
-        await ValidateRole();
-        await ValidateForm();
-        if (editContext.GetValidationMessages().Any()) return;
+        if (isSaveBtnLoading) return;
+        try
+        {
+            isSaveBtnLoading = true;
+            await ValidateRole();
+            await ValidateForm();
+            if (editContext.GetValidationMessages().Any()) return;
 
-        var result = await ValidateDuplicate(model.RoleId, model.FormId, model.Id);
-        if (result) return;
+            var result = await ValidateDuplicate(model.RoleId, model.FormId, model.Id);
+            if (result) return;
 
 
-        if (model.Id > 0)
-            await Service.UpdateAsync(model);
-        else
-            await Service.CreateAsync(model);
+            if (model.Id > 0)
+                await Service.UpdateAsync(model);
+            else
+                await Service.CreateAsync(model);
 
-        if (modal is not null)
-            await modal.HideAsync();
+            if (modal is not null)
+                await modal.HideAsync();
 
-        await LoadData();
-        if (grid is not null)
-            await grid.RefreshDataAsync();
+            await LoadData();
+            if (grid is not null)
+                await grid.RefreshDataAsync();
+        }
+        catch(Exception){}
+        finally
+        {
+            isSaveBtnLoading = false;
+        }
     }
 
     async Task Delete(int id)

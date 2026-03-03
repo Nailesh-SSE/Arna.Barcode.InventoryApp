@@ -81,7 +81,7 @@ else
                     <div class="d-flex gap-1">
                         @if (CanCreate(Route))
                         {
-                            <Button Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
+                            <LoadingButton Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" onclick="() => ShowItemModal(context)">
                                 @if (context.IsFinished)
                                 {
                                     <Icon Name="IconName.Eye" />
@@ -92,13 +92,13 @@ else
                                     <Icon Name="IconName.PlusCircle" />
                                     @: &nbsp;Add Item
                                 }
-                            </Button>
+                            </LoadingButton>
                         }
                         else
                         {
-                            <Button Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
+                            <LoadingButton Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" onclick="() => ShowItemModal(context)">
                                 <Icon Name="IconName.Eye" />View Item
-                            </Button>
+                            </LoadingButton>
                         }
                         @if (CanEdit(Route))
                         {
@@ -311,7 +311,7 @@ else
                 <fieldset disabled="@disableitemfields">
                     @if (!selectedOutward.IsFinished)
                     {
-                        <Button Color="ButtonColor.Primary" @onclick="() => FinalizeOutward(selectedOutward)">Finish</Button>
+                        <LoadingButton Color="ButtonColor.Primary" onclick="() => FinalizeOutward(selectedOutward)">Finish</LoadingButton>
                     }
                     else
                     {
@@ -356,6 +356,9 @@ else
     private System.Threading.Timer? errorTimer;
     private string Route = "/outward";
     private bool isAdmin = false;
+    private bool isItemSaveBtnLoading = false;
+    private bool isOutwardSaveBtnLoading = false;
+
     // Reference for JS Interop
     private DotNetObjectReference<Outward>? dotNetHelper;
 
@@ -472,13 +475,15 @@ else
 
     private async Task SaveOutward()
     {
+        if (isOutwardSaveBtnLoading) return;
         try
         {
+            isOutwardSaveBtnLoading = true;
             if (!editContext.Validate()) return;
             ValidateBillToCompany();
             ValidatePlatform();
             if (editContext.GetValidationMessages().Any()) return;
-            
+
             bool result;
             if (isEditMode)
             {
@@ -515,6 +520,10 @@ else
         {
             await HideModal();
             ShowError("Connectivity issue happened, operation failed");
+        }
+        finally
+        {
+            isOutwardSaveBtnLoading = false;
         }
     }
 
@@ -605,8 +614,10 @@ else
 
     private async Task AddItemToList()
     {
+        if (isItemSaveBtnLoading) return;
         try
         {
+            isItemSaveBtnLoading = true;
             barcodeErrorMessage = string.Empty;
 
             if (string.IsNullOrWhiteSpace(newItem.BarcodeNo))
@@ -655,6 +666,10 @@ else
         catch (Exception)
         {
             barcodeErrorMessage = "Connectivity issue happened, operation failed";
+        }
+        finally
+        {
+            isItemSaveBtnLoading = false;
         }
     }
 

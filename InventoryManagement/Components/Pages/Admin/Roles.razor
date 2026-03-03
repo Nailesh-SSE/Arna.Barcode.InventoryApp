@@ -88,16 +88,16 @@ else
                     <div class="d-flex gap-1 justify-content-start">
                         @if (CanEdit(Route))
                         {
-                            <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                            <LoadingButton class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" onclick="() => ShowEditModal(context)">
                                 <Icon Name="IconName.PencilSquare" /> Edit
-                            </Button>
+                            </LoadingButton>
                         }
 
                         @if (CanDelete(Route))
                         {
-                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteRole(context.Id)">
+                            <LoadingButton class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" onclick="() => DeleteRole(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
-                            </Button>
+                            </LoadingButton>
                         }
                     </div>
                 </GridColumn>
@@ -152,6 +152,7 @@ else
     private EditContext editContext { get; set; }
     private ValidationMessageStore validationMessage;
     private bool isShowRoleLevel = false;
+    private bool isSaveBtnLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -181,10 +182,10 @@ else
         }
         catch (Exception ex)
         {
-            
+
             throw;
         }
-   }
+    }
 
     public void InitializeEditContextAsync()
     {
@@ -226,26 +227,36 @@ else
     }
     private async Task SaveRole()
     {
-        if (!editContext.Validate()) return;
-        await ValidateNameAsync();
-        if (editContext.GetValidationMessages().Any())
-            return;
-        await ValidateDuplicateRoleName();
-        if (editContext.GetValidationMessages().Any())
-            return;
+        if (isSaveBtnLoading) return;
+        try
+        {
+            isSaveBtnLoading = true;
+            if (!editContext.Validate()) return;
+            await ValidateNameAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
+            await ValidateDuplicateRoleName();
+            if (editContext.GetValidationMessages().Any())
+                return;
 
-        if (isEditMode)
-        {
-            await roleService.UpdateRoleAsync(roleModel);
+            if (isEditMode)
+            {
+                await roleService.UpdateRoleAsync(roleModel);
+            }
+            else
+            {
+                await roleService.CreateRoleAsync(roleModel);
+            }
+            await HideModal();
+            await LoadRole();
+            if (roleGrid != null)
+                await roleGrid.RefreshDataAsync();
         }
-        else
+        catch(Exception){}
+        finally
         {
-            await roleService.CreateRoleAsync(roleModel);
+            isSaveBtnLoading = false;
         }
-        await HideModal();
-        await LoadRole();
-        if (roleGrid != null)
-            await roleGrid.RefreshDataAsync();
     }
 
     private async Task DeleteRole(int id)

@@ -93,9 +93,9 @@ else
                         }
                         @if (CanDelete(Route))
                         {
-                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteProduct(context.Id)">
+                            <LoadingButton class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" onclick="() => DeleteProduct(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
-                            </Button>
+                            </LoadingButton>
                         }
                     </div>
                 </GridColumn>
@@ -203,6 +203,7 @@ else
     private ValidationMessageStore messageStore;
     private List<UnitModel> Units => CommonUtils.UnitList;
     private string Route = "/products";
+    private bool isSaveBtnLoading = false;
 
 
 
@@ -283,8 +284,10 @@ else
 
     private async Task SaveProduct()
     {
+        if(isSaveBtnLoading) return;
         try
         {
+            isSaveBtnLoading = true;
             if (!editContext.Validate()) return;
             await HandleAllFieldsAsync();
             if (editContext.GetValidationMessages().Any())
@@ -312,6 +315,10 @@ else
         }
         catch (Exception ex)
         {
+        }
+        finally
+        {
+            isSaveBtnLoading = false;
         }
     }
 

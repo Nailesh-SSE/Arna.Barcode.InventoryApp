@@ -32,9 +32,9 @@ else
             <div class="col-auto">
                 @if (CanCreate(Route))
                 {
-                    <LoadingButton Class="btn btn-primary" OnClick="ShowAddModal">
+                    <Button Class="btn btn-primary" @onclick="ShowAddModal">
                         <Icon Name="IconName.Plus" />  Add New Inward
-                    </LoadingButton>                   
+                    </Button>
                 }
             </div>
         </div>
@@ -91,10 +91,10 @@ else
     private bool isAdmin = false;
 
     private bool anybarcodeinoutward = false;
-    private bool _isAddItemsBtnLoading;
-    private bool _isEditBtnLoading;
-    private bool _isAddInwardBtnLoading;
-    private bool _isReprintBtnLoading;
+    private bool isAddItemsBtnLoading;
+    private bool isEditBtnLoading;
+    private bool isReprintBtnLoading;
+    private bool isInwardSaveBtnLoading;
 
     protected override async Task OnInitializedAsync()
     {
@@ -128,38 +128,26 @@ else
 
     private void ShowAddModal()
     {
-        if (_isAddInwardBtnLoading) return;
-        _isAddInwardBtnLoading = true;
-        try
+        modalTitle = "Add Inward";
+        isEditMode = false;
+        disablefields = false;
+        inward = new InwardModel
         {
-            modalTitle = "Add Inward";
-            isEditMode = false;
-            disablefields = false;
-            inward = new InwardModel
-                {
-                    InwardDate = DateTime.Now,
-                    InwardTime = DateTime.Now.TimeOfDay,
-                    IsActive = true,
-                    CreatedBy = Convert.ToInt32(CurrentUserId),
-                    CreatedOn = DateTime.Now
-                };
-            inwardItems = new();
-            inwardFormModal?.Show();
-        }
-        catch(Exception)
-        {
-        }
-        finally
-        {
-            _isAddInwardBtnLoading = false;
-        }
+            InwardDate = DateTime.Now,
+            InwardTime = DateTime.Now.TimeOfDay,
+            IsActive = true,
+            CreatedBy = Convert.ToInt32(CurrentUserId),
+            CreatedOn = DateTime.Now
+        };
+        inwardItems = new();
+        inwardFormModal?.Show();
     }
 
     private async Task ShowEditModal(InwardModel edit)
     {
-        if (_isEditBtnLoading) return;
+        if (isEditBtnLoading) return;
 
-        _isEditBtnLoading = true;
+        isEditBtnLoading = true;
         try
         {
 
@@ -207,38 +195,49 @@ else
         }
         finally
         {
-            _isEditBtnLoading = false;
+            isEditBtnLoading = false;
         }
     }
 
     private async Task SaveInward()
     {
-        isLoading = true;
-        inward.InwardDate = inward.InwardDate.Date.Add(inward.InwardTime);
-        inward.InwardItems = inwardItems;
-        // Ensure user fields are set before saving
-        if (isEditMode)
-        {
-            inward.UpdatedBy = Convert.ToInt32(CurrentUserId);
-            inward.UpdatedOn = DateTime.Now;
-            await InwardService.UpdateAsync(inward);
-            await HideModal();
-            await LoadData();
-        }
-        else
-        {
-            inward.CreatedBy = Convert.ToInt32(CurrentUserId);
-            inward.CreatedOn = DateTime.Now;
-            var inwardId = await InwardService.CreateAsync(inward);
+        if (isInwardSaveBtnLoading) return;
 
-            await HideModal();
-            await LoadData();
-
-            if (inwardId != 0)
+        try
+        {
+            isInwardSaveBtnLoading = true;
+            isLoading = true;
+            inward.InwardDate = inward.InwardDate.Date.Add(inward.InwardTime);
+            inward.InwardItems = inwardItems;
+            // Ensure user fields are set before saving
+            if (isEditMode)
             {
-                inward.Id = inwardId;
-                await OpenAddItemModal(inward);
+                inward.UpdatedBy = Convert.ToInt32(CurrentUserId);
+                inward.UpdatedOn = DateTime.Now;
+                await InwardService.UpdateAsync(inward);
+                await HideModal();
+                await LoadData();
             }
+            else
+            {
+                inward.CreatedBy = Convert.ToInt32(CurrentUserId);
+                inward.CreatedOn = DateTime.Now;
+                var inwardId = await InwardService.CreateAsync(inward);
+
+                await HideModal();
+                await LoadData();
+
+                if (inwardId != 0)
+                {
+                    inward.Id = inwardId;
+                    await OpenAddItemModal(inward);
+                }
+            }
+        }
+        catch(Exception){}
+        finally
+        {
+            isInwardSaveBtnLoading = false;
         }
     }
 
@@ -260,8 +259,8 @@ else
 
     private async Task OpenAddItemModal(InwardModel inward)
     {
-        if (_isAddItemsBtnLoading) return;
-        _isAddItemsBtnLoading = true;
+        if (isAddItemsBtnLoading) return;
+        isAddItemsBtnLoading = true;
         try
         {
             selectedInward = inwards.FirstOrDefault(i => i.Id == inward.Id);
@@ -296,7 +295,7 @@ else
         }
         finally
         {
-            _isAddItemsBtnLoading = false;
+            isAddItemsBtnLoading = false;
             isLoading = false;
         }
     }
@@ -382,9 +381,9 @@ else
     }
     private async Task ShowReprintModal()
     {
-        if (_isReprintBtnLoading) return;
+        if (isReprintBtnLoading) return;
 
-        _isReprintBtnLoading = true;
+        isReprintBtnLoading = true;
 
         try
         {
@@ -393,7 +392,7 @@ else
         catch(Exception){}
         finally
         {
-            _isReprintBtnLoading = false;
+            isReprintBtnLoading = false;
         }
     }
 
