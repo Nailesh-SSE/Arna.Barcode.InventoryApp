@@ -41,13 +41,13 @@
             <div class="d-flex gap-1">
                 @if (CanCreate)
                 {
-                    <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
+                    <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context.Id)">
                         <Icon Name="IconName.Plus" /> Add Items
                     </Button>
                 }
                 else
                 {
-                    <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context)">
+                    <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context.Id)">
                         <Icon Name="IconName.Eye" /> View Items
                     </Button>
                 }
@@ -77,7 +77,7 @@
     [Parameter] public List<CompanyModel> BillToCompanies { get; set; } = new();
     [Parameter] public EventCallback<SaleReturnModel> OnEditSaleReturn { get; set; }
     [Parameter] public EventCallback<int> OnDelete { get; set; }
-    [Parameter] public EventCallback<SaleReturnModel?> OnAddItems { get; set; }
+    [Parameter] public EventCallback<int> OnAddItems { get; set; }
     [Parameter] public bool CanEdit { get; set; }
     [Parameter] public bool CanCreate { get; set; }
     [Parameter] public bool CanDelete { get; set; }
