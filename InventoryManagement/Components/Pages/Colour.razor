@@ -76,9 +76,9 @@ else
 
                         @if (CanDelete(Route))
                         {
-                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteColour(context.Id)">
+                            <LoadingButton class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" onclick="() => DeleteColour(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
-                            </Button>
+                            </LoadingButton>
                         }
                     </div>
                 </GridColumn>
@@ -128,6 +128,7 @@ else
     private string Route = "/colour";
     private EditContext editContext { get; set; }
     private ValidationMessageStore validationMessage;
+    private bool isSaveBtnLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -183,29 +184,40 @@ else
     }
     private async Task SaveColour()
     {
-        if (!editContext.Validate()) return;
-        await ValidateNameAsync();
-        await ValidateCodeAsync();
-        if (editContext.GetValidationMessages().Any())
-            return;
-
-        await ValidateDuplicateColourCode();
-        await ValidateDuplicateColourName();
-        if (editContext.GetValidationMessages().Any())
-            return;
-
-        if (isEditMode)
+        if (isSaveBtnLoading) return;
+        try
         {
-            await ColourService.UpdateColourAsync(colourModel);
+            isSaveBtnLoading = true;
+
+            if (!editContext.Validate()) return;
+            await ValidateNameAsync();
+            await ValidateCodeAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
+
+            await ValidateDuplicateColourCode();
+            await ValidateDuplicateColourName();
+            if (editContext.GetValidationMessages().Any())
+                return;
+
+            if (isEditMode)
+            {
+                await ColourService.UpdateColourAsync(colourModel);
+            }
+            else
+            {
+                await ColourService.CreateColourAsync(colourModel);
+            }
+            await HideModal();
+            await LoadColour();
+            if (ColourGrid != null)
+                await ColourGrid.RefreshDataAsync();
         }
-        else
+        catch(Exception){}
+        finally
         {
-            await ColourService.CreateColourAsync(colourModel);
+            isSaveBtnLoading = false;
         }
-        await HideModal();
-        await LoadColour();
-        if (ColourGrid != null)
-            await ColourGrid.RefreshDataAsync();
     }
 
     private async Task DeleteColour(int id)

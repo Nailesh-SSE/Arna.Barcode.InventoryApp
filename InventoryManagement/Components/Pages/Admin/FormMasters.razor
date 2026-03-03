@@ -96,11 +96,11 @@ else
                             }
                             @if (CanDelete(Route))
                             {
-                                <Button class="text-nowrap" Color="ButtonColor.Danger"
+                                <LoadingButton class="text-nowrap" Color="ButtonColor.Danger"
                                         Size="ButtonSize.Small"
-                                        @onclick="() => DeleteForm(context.Id)">
+                                        onclick="() => DeleteForm(context.Id)">
                                     <Icon Name="IconName.Trash" /> Delete
-                                </Button>
+                                </LoadingButton>
                             }
                         </div>
                     </GridColumn>
@@ -204,6 +204,7 @@ else
 
     private EditContext editContext;
     private ValidationMessageStore validationMessage;
+    private bool isSaveBtnLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -215,11 +216,11 @@ else
     {
         try
         {
-            
+
             isLoading = true;
             formList = await FormService.GetAllAsync(CurrentUserRoleId);
-                if (formList.Any())
-                    parentformList = formList.Where(a => a.Route == "#").ToList();
+            if (formList.Any())
+                parentformList = formList.Where(a => a.Route == "#").ToList();
             isLoading = false;
         }
         catch (Exception ex)
@@ -274,26 +275,36 @@ else
 
     private async Task SaveForm()
     {
-        if (!editContext.Validate())
-            return;
+        if (isSaveBtnLoading) return;
+        try
+        {
+            isSaveBtnLoading = true;
+            if (!editContext.Validate())
+                return;
 
-        await ValidateDuplicateNameAsync();
-        if (editContext.GetValidationMessages().Any())
-            return;
+            await ValidateDuplicateNameAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
 
-        await ValidateIsDisplayIndexInUseAsync();
-        if (editContext.GetValidationMessages().Any())
-            return;
+            await ValidateIsDisplayIndexInUseAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
 
-        formModel.ParentName = formList.FirstOrDefault(f => f.Id == formModel.ParentId)?.FormName ?? string.Empty;
-        if (isEditMode)
-            await FormService.UpdateAsync(formModel);
-        else
-            await FormService.CreateAsync(formModel);
+            formModel.ParentName = formList.FirstOrDefault(f => f.Id == formModel.ParentId)?.FormName ?? string.Empty;
+            if (isEditMode)
+                await FormService.UpdateAsync(formModel);
+            else
+                await FormService.CreateAsync(formModel);
 
-        await HideModal();
-        await LoadForms();
-        await FormGrid.RefreshDataAsync();
+            await HideModal();
+            await LoadForms();
+            await FormGrid.RefreshDataAsync();
+        }
+        catch(Exception){}
+        finally
+        {
+            isSaveBtnLoading = false;
+        }
     }
 
     private async Task DeleteForm(int id)
