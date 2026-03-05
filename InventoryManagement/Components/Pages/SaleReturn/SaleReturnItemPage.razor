@@ -11,9 +11,15 @@
 @inherits InventoryManagement.Components.Auth.AuthComponentBase
 @inject IJSRuntime JS
 
+<PageTitle>Sale Return Item</PageTitle>
+@if (!CanView(Route))
+{
+    <AccessDenied />
+}
+else
+{
 <EditForm Model="@formModel" OnvalidSubmit="SaveSaleReturnItem" OnInvalidSubmit="HandleInvalidSubmit">
     <DataAnnotationsValidator />
-
     <div class="card shadow-sm">
         @* <div class="card-header bg-light d-flex align-items-center justify-content-between">
             <h6 class="mb-0 fw-semibold">Add Item</h6>
@@ -43,6 +49,7 @@
         }
 
         <div class="card-body py-2 px-3">
+            <fieldset disabled="@cancreate">
             <div class="position-relative">
 
                 @if (isScanning)
@@ -102,7 +109,7 @@
                     </div>
                     <ValidationMessage For="@(() => formModel.BarCodeNo)" />
 
-                </div>
+                </div>               
             </div>
 
             <!-- Form Fields -->
@@ -231,6 +238,7 @@
                     </div>
                 </div>
             </div>
+            </fieldset>
 
             <!-- Actions -->
             <div class="d-flex justify-content-between mt-4">
@@ -243,6 +251,7 @@
                     <span>Back</span>
                 </button>
 
+                <fieldset disabled="@cancreate">
                 <!-- Right side -->
                 <div class="d-flex gap-2">
                     <button type="reset"
@@ -263,6 +272,7 @@
                         <span>Save</span>
                     </button>
                 </div>
+                </fieldset>
             </div>
 
         </div>
@@ -379,11 +389,11 @@
 
                         @if (CanDelete(Route))
                         {
-                            <Button Color="ButtonColor.Danger"
+                            <LoadingButton Color="ButtonColor.Danger"
                                     Size="ButtonSize.Small"
-                                    @onclick="() => HandleDelete(context.Id)">
+                                    onclick="() => HandleDelete(context.Id)">
                                 <Icon Name="IconName.Trash" />
-                            </Button>
+                            </LoadingButton>
                         }
                     </div>
                 </GridColumn>
@@ -400,6 +410,7 @@
         }
     </div>
 </div>
+}
 @code {
     [Parameter] public int id { get; set; }
     private bool isLoading = false;
@@ -438,6 +449,8 @@
     private decimal TotalBoxQty => _savedTotals.Values.Count > 0 ?
         _savedTotals.Values.Sum(v => v.BoxCount) : 0;
     private Dictionary<int, (int BoxCount, decimal ItemQty)> _savedTotals = new();
+    private bool isItemSaveBtnloading = false;
+    private bool cancreate;
 
     protected override async Task OnInitializedAsync()
     {
@@ -448,6 +461,7 @@
             NavigationManager.NavigateTo("/logout", forceLoad: true);
             return;
         }
+        NavigationManager.LocationChanged += OnLocationChanged;
 
         isLoading = false;
     }
@@ -462,8 +476,20 @@
         formModel.IsTakeInStock = true;
         formModel.ReturnType = (int)ReturnType.Excess;
 
+        if (!CanCreate(Route))
+            cancreate = true;
         await LoadData();
     }
+
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
+    }
+
 
     private async Task LoadData()
     {
@@ -499,42 +525,54 @@
 
     private async Task SaveSaleReturnItem()
     {
-        var item = formModel;
+        if(isItemSaveBtnloading) return;
 
-        if (saleReturnId <= 0)
+        try
         {
-            ShowErrorMessage("Sale Return is not selected");
-            return;
-        }
-        bool isUpdate = item.Id > 0;
-        item.SaleReturnId = saleReturnId;
+            var item = formModel;
 
-        if (!isUpdate)
+            if (saleReturnId <= 0)
+            {
+                ShowErrorMessage("Sale Return is not selected");
+                return;
+            }
+            bool isUpdate = item.Id > 0;
+            item.SaleReturnId = saleReturnId;
+
+            if (!isUpdate)
+            {
+                item.CreatedBy = Convert.ToInt32(CurrentUserId);
+                item.CreatedOn = DateTime.Now;
+            }
+            else
+            {
+                item.UpdatedBy = Convert.ToInt32(CurrentUserId);
+                item.UpdatedOn = DateTime.Now;
+            }
+
+            bool success = isUpdate
+                ? await SaleReturnService.UpdateSaleReturnItem(item)
+                : await SaleReturnService.CreateSaleReturnItem(item);
+
+            if (!success)
+            {
+                ShowErrorMessage("Operation failed");
+                return;
+            }
+
+            itemList = await SaleReturnService.GetSaleReturnItemsByReturnId(saleReturnId);
+            ShowSuccessMessage(isUpdate ? "Updated successfully" : "Saved successfully");
+            UpdateTotalQtys();
+
+            await ResetForm();
+        }
+        catch(Exception)
         {
-            item.CreatedBy = Convert.ToInt32(CurrentUserId);
-            item.CreatedOn = DateTime.Now;
         }
-        else
+        finally
         {
-            item.UpdatedBy = Convert.ToInt32(CurrentUserId);
-            item.UpdatedOn = DateTime.Now;
+            isItemSaveBtnloading = false;
         }
-
-        bool success = isUpdate
-            ? await SaleReturnService.UpdateSaleReturnItem(item)
-            : await SaleReturnService.CreateSaleReturnItem(item);
-
-        if (!success)
-        {
-            ShowErrorMessage("Operation failed");
-            return;
-        }
-
-        itemList = await SaleReturnService.GetSaleReturnItemsByReturnId(saleReturnId);
-        ShowSuccessMessage(isUpdate ? "Updated successfully" : "Saved successfully");
-        UpdateTotalQtys();
-
-        await ResetForm();
     }
 
     private void SyncSearchTextForItem(SaleReturnItemsModel item)
@@ -859,6 +897,11 @@
 
     private void GoBack()
     {
+        try
+        {
+            JS.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
         NavigationManager.NavigateTo("/sale-returns");
     }
 

@@ -114,6 +114,7 @@
 
     private async Task HandleLogin()
     {
+        if (isLoading) return;
         try
         {
             isLoading = true;
