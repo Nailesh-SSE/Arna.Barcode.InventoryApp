@@ -79,6 +79,7 @@ else
     private bool disablefields;
     private bool disableitemfields;
     private bool isAdmin = false;
+    private bool isSrSaveBtnLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -156,33 +157,44 @@ else
 
     private async Task SaveSaleReturn()
     {
-        isLoading = true;
-
-        if (isEditMode)
+        if (isSrSaveBtnLoading) return;
+        try
         {
-            saleReturn.UpdatedBy = Convert.ToInt32(CurrentUserId);
-            saleReturn.UpdatedOn = DateTime.Now;
-            await SaleReturnService.UpdateSaleReturnAsync(saleReturn);
-            await HideModal();
-            await LoadData();
-        }
-        else
-        {
-            saleReturn.CreatedBy = Convert.ToInt32(CurrentUserId);
-            saleReturn.CreatedOn = DateTime.Now;
-            var SaleReturnId = await SaleReturnService.CreateSaleReturnAsync(saleReturn);
+            isSrSaveBtnLoading = true;
+            isLoading = true;
 
-            await HideModal();
-            await LoadData();
-
-            if (SaleReturnId != 0)
+            if (isEditMode)
             {
-                saleReturn.Id = SaleReturnId;
-                //   await OpenAddItemModal(saleReturn);
+                saleReturn.UpdatedBy = Convert.ToInt32(CurrentUserId);
+                saleReturn.UpdatedOn = DateTime.Now;
+                await SaleReturnService.UpdateSaleReturnAsync(saleReturn);
+                await HideModal();
+                await LoadData();
             }
-        }
-        isLoading = false;
+            else
+            {
+                saleReturn.CreatedBy = Convert.ToInt32(CurrentUserId);
+                saleReturn.CreatedOn = DateTime.Now;
+                var SaleReturnId = await SaleReturnService.CreateSaleReturnAsync(saleReturn);
 
+                await HideModal();
+                await LoadData();
+
+                if (SaleReturnId != 0)
+                {
+                    saleReturn.Id = SaleReturnId;
+                    //   await OpenAddItemModal(saleReturn);
+                }
+            }
+            isLoading = false;
+        }
+        catch (Exception)
+        {    
+        }
+        finally
+        {
+            isSrSaveBtnLoading = false;
+        }
     }
     private async Task HideModal()
     {

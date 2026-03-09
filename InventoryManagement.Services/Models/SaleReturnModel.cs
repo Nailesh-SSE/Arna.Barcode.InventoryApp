@@ -30,7 +30,7 @@ namespace InventoryManagement.Services.Models
         public string? OutwardNo { get; set; }
 
         [Required(ErrorMessage = "Product is required.")]
-        [Range(1, int.MaxValue, ErrorMessage = "Select a valid Product.")]
+        //[Range(1, int.MaxValue, ErrorMessage = "Select a valid Product.")]
         public int ProductId { get; set; }
         public string? ProductName { get; set; }
 
