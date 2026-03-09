@@ -346,7 +346,7 @@ else
     private Task DownloadSingleBarcode(string barcode)
     {
         return PrnDownloadService.DownloadAsync(
-            () => InwardService.GenerateSingleBarcodePrnAsync(barcode),
+            () => InwardService.GenerateSingleBarcodePrnAsync(barcode, Convert.ToInt32(CurrentUserId)),
             $"Item_{barcode}_Barcodes.prn",
             "No barcodes found for this barcode."
         );

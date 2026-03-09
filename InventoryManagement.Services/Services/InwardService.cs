@@ -215,7 +215,7 @@ public class InwardService : IInwardService
     public async Task<bool> DeleteInwardItemAsync(int id, int userId)
     {
         try
-        {
+            {
             await DeleteBarcodesForItemAsync(id, userId);
 
             var itemRepo = _unitOfWork.GetRepository<InwardItem>();
@@ -266,6 +266,7 @@ public class InwardService : IInwardService
                 return false;
 
             var model = await ConvertDtoToItemModel(existingReturnInward.Id, saleReturnItems);
+                model.UpdatedBy = saleReturnItems.UserId;
             return await DeleteSaleReturnInwardItemAsync(model);
         }
         catch (Exception ex)
@@ -275,16 +276,30 @@ public class InwardService : IInwardService
         }
     }
 
-    public async Task<byte[]> GenerateItemBarcodePrnAsync(int inwardItemId)
+    public async Task<byte[]> GenerateItemBarcodePrnAsync(int inwardItemId,int userId)
     {
         var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
         var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
 
-        var barcodeItems = (await barcodeRepo.FindAsync(
-                b => b.InwardItemId == inwardItemId && !b.IsDeleted && b.IsActive))
-                .OrderBy(b => b.BarcodeNo)
-                .ToList();
+        var query = barcodeRepo.GetQueryable()
+         .Where(b => b.InwardItemId == inwardItemId && !b.IsDeleted && b.IsActive);
 
+        var unprintedBarcodes = await query
+                                     .Where(b => !b.IsPrinted)
+                                     .OrderBy(b => b.BarcodeNo)
+                                     .ToListAsync();
+
+        List<InwardBarcodeItem> barcodeItems;
+        if (unprintedBarcodes.Any())
+        {
+            barcodeItems = unprintedBarcodes;
+        }
+        else
+        {
+            barcodeItems = await query
+                .OrderBy(b => b.BarcodeNo)
+                .ToListAsync();
+        }
         if (!barcodeItems.Any())
             return null;
 
@@ -327,9 +342,18 @@ public class InwardService : IInwardService
             sb.AppendLine("PRINT 1,1");
         }
 
+        // Mark printed
+        foreach (var barcode in barcodeItems)
+        {
+            barcode.IsPrinted = true;
+            barcode.PrintedBy = userId;
+            barcodeRepo.Update(barcode);
+        }
+
+        await _unitOfWork.SaveChangesAsync();
         return Encoding.UTF8.GetBytes(sb.ToString());
     }
-    public async Task<byte[]> GenerateSingleBarcodePrnAsync(string barcodeNo)
+    public async Task<byte[]> GenerateSingleBarcodePrnAsync(string barcodeNo, int userId)
     {
         try
         {
@@ -366,6 +390,13 @@ public class InwardService : IInwardService
 
             sb.AppendLine("PRINT 1,1");
 
+            // Mark barcode as printed
+            barcode.IsPrinted = true;
+            barcode.PrintedBy = userId;
+
+            barcodeRepo.Update(barcode);
+
+            await _unitOfWork.SaveChangesAsync();
             return Encoding.UTF8.GetBytes(sb.ToString());
         }
         catch (Exception e)
@@ -674,19 +705,41 @@ public class InwardService : IInwardService
         try
         {
             var entity = await CreateInwardItemEntityAsync(model);
-            await CreateBarcodesForSingleItemAsync(entity, entity.CreatedOn);
+            
+            if (entity == null)
+                return false;
+
+            try
+            {
+                await CreateBarcodesForSingleItemAsync(entity, entity.CreatedOn);
+            }
+            catch
+            {
+                // rollback inward item
+                var repo = _unitOfWork.GetRepository<InwardItem>();
+
+                entity.IsDeleted = true;
+                entity.IsActive = false;
+                entity.UpdatedOn = DateTime.Now;
+                entity.UpdatedBy = model.CreatedBy;
+
+                repo.Update(entity);
+                await _unitOfWork.SaveChangesAsync();
+
+                return false;
+            }
+
             return true;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error creating SaleReturn Inward Items: {ex.Message}");
-            throw;
-        }
+            return false;
+        }   
     }
 
     private async Task<bool> UpdateSaleReturnInwardItemAsync(InwardItem existingItem, InwardItemModel model, bool isDeleting)
     {
-        var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
 
         var delta = isDeleting ? -model.ItemQuantity : model.ItemQuantity;
         var newQuantity = existingItem.ItemQuantity + delta;
@@ -694,7 +747,6 @@ public class InwardService : IInwardService
         if (newQuantity < 0)
             throw new Exception("Inward item quantity cannot be negative.");
 
-        // Delete row if quantity becomes zero
         if (newQuantity == 0)
         {
             return await DeleteInwardItemAsync(
@@ -702,22 +754,36 @@ public class InwardService : IInwardService
                 model.UpdatedBy ?? 0);
         }
 
-        // Update
-        existingItem.ItemQuantity = newQuantity;
-        existingItem.UpdatedBy = model.UpdatedBy ?? 0;
-        existingItem.UpdatedOn = DateTime.Now;
+        try
+        {
+            bool result = isDeleting
+                       ? await DeleteBarcodeOfSaleReturnInward(existingItem, model.ItemQuantity, model.UpdatedBy ?? 0)
+                       : await CreateAdditionalBarcodesAsync(existingItem, model.ItemQuantity, DateTime.Now);
 
-        if (existingItem.InwardUnitId == (int)UnitType.PCS)
-            existingItem.BoxQuantity = 0;
+            if (!result)
+                return false;
 
-        //Rebuild barcodes
-        await DeleteBarcodesForItemAsync(existingItem.Id, existingItem.UpdatedBy);
-        await CreateBarcodesForSingleItemAsync(existingItem, DateTime.Now);
+            var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>();
 
-        inwardItemRepo.Update(existingItem);
-        await _unitOfWork.SaveChangesAsync();
+            // Only update quantity AFTER barcode success
+            existingItem.ItemQuantity = newQuantity;
+            existingItem.UpdatedBy = model.UpdatedBy ?? 0;
+            existingItem.UpdatedOn = DateTime.Now;
 
-        return true;
+            if (existingItem.InwardUnitId == (int)UnitType.PCS)
+                existingItem.BoxQuantity = 0;
+
+            inwardItemRepo.Update(existingItem);
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Barcode operation failed: {ex.Message}");
+            return false;
+        }
     }
 
     private async Task<bool> SaveSalesReturnInwardItemAsync(InwardItemModel model)
@@ -839,7 +905,7 @@ public class InwardService : IInwardService
                                .Select(b => int.Parse(b.BarcodeNo[^6..]))
                                .Max() + 1;
             }
-
+                
             var parentBarcodes = new List<InwardBarcodeItem>();
 
             if (item.InwardUnitId == (int)UnitType.BOX)
@@ -881,7 +947,10 @@ public class InwardService : IInwardService
     private async Task DeleteBarcodesForItemAsync(int itemId, int userId)
     {
         var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
-        var barcodes = await barcodeRepo.FindAsync(b => b.InwardItemId == itemId);
+        var barcodes = await barcodeRepo.FindAsync(b => b.InwardItemId == itemId && !b.IsDeleted);
+
+        if (barcodes == null || !barcodes.Any())
+            return;
 
         foreach (var barcode in barcodes)
         {
@@ -894,6 +963,7 @@ public class InwardService : IInwardService
 
         }
     }
+
     public async Task<bool> DeleteSingleBarcode(string barcode,int userId)
     {
         var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
@@ -914,6 +984,82 @@ public class InwardService : IInwardService
 
         return true;
 
+    }
+
+    private async Task<bool> DeleteBarcodeOfSaleReturnInward(InwardItem item, decimal deletingQty, int userId)
+    {
+        try
+        {
+            var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+
+            var barcodesToDelete = await barcodeRepo
+                .GetQueryable()
+                .Where(b => b.InwardItemId == item.Id &&
+                            !b.IsDeleted &&
+                            b.IsInStock)
+                .OrderByDescending(b => b.Id)
+                .Take((int)deletingQty)
+                .ToListAsync();
+
+            if (!barcodesToDelete.Any())
+                return false;
+
+            foreach (var barcode in barcodesToDelete)
+            {
+                barcode.IsActive = false;
+                barcode.IsInStock = false;
+                barcode.IsDeleted = true;
+                barcode.UpdatedOn = DateTime.Now;
+                barcode.UpdatedBy = userId;
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting barcodes: {ex.Message}");
+            return false;
+        }
+    }
+
+    private async Task<bool> CreateAdditionalBarcodesAsync(InwardItem item, decimal qty, DateTime transactionDate)
+    {
+        try
+        {
+            var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+
+            var existingBarcodes = await barcodeRepo.FindAsync(b =>
+                                   b.InwardId == item.InwardId);
+
+            int maxCounter = 1; // Default start
+
+            if (existingBarcodes != null && existingBarcodes.Any())
+            {
+                maxCounter = existingBarcodes
+                               .Select(b => int.Parse(b.BarcodeNo[^6..]))
+                               .Max() + 1;
+            }
+
+            var newBarcodes = new List<InwardBarcodeItem>();
+
+            for (int i = 0; i < (int)qty; i++)
+            {
+                newBarcodes.Add(CreateBarcodeEntity(item, maxCounter, transactionDate, 0));
+                maxCounter++;
+            }
+
+            await barcodeRepo.AddRangeAsync(newBarcodes);
+            await _unitOfWork.SaveChangesAsync();
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating additional barcodes: {ex.Message}");
+            return false;
+        }
     }
 
     private InwardBarcodeItem CreateBarcodeEntity(InwardItem item, int counter, DateTime transactionDate, int parentId)
