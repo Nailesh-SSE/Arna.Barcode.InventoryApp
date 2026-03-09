@@ -247,7 +247,7 @@ else
         {
             IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
-            CreatedOn = DateTime.UtcNow,
+            CreatedOn = DateTime.Now,
             UnitId = (int)UnitType.PCS
         };
         InitializeEditContext();
@@ -276,7 +276,7 @@ else
             ColourName = editProduct.ColourName,
             ColourSearchText = editProduct.ColourName,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
-            UpdatedOn = DateTime.UtcNow
+            UpdatedOn = DateTime.Now
         };
         InitializeEditContext();
         modal.ShowAsync();
