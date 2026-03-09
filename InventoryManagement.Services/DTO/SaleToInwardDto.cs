@@ -11,6 +11,7 @@ namespace InventoryManagement.Services.DTO
         public int UnitId { get; set; }
         public string UnitName { get; set; } = string.Empty;
         public decimal ReturnQuantity { get; set; }
+        public int UserId { get; set; }  
 
     }
 }

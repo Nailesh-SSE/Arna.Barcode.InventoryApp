@@ -195,7 +195,7 @@ public class SaleReturnService : ISaleReturnService
             }
             if (model.PlatformId == 0 || model.PlatformId == null)
             {
-                var plat= await _unitOfWork.GetRepository<Platform>()
+                var plat = await _unitOfWork.GetRepository<Platform>()
                                               .GetQueryable()
                                               .FirstOrDefaultAsync(p =>
                                                   p.Name.ToLower() == "other" &&
@@ -204,17 +204,43 @@ public class SaleReturnService : ISaleReturnService
                 model.PlatformId = plat != null ? plat.Id : 0;
             }
             var item = await CreateSaleReturnItemEntity(model);
+
+            if (item == null)
+                return false;
+
             if (item.IsTakeInStock)
             {
                 var saleToInwardDto = await ConvertToDto(item);
-                await _inwardService.AddReturnItemToSaleInwardAsync(saleToInwardDto);
+
+                var inwardResult = await _inwardService
+                    .AddReturnItemToSaleInwardAsync(saleToInwardDto);
+
+                if (!inwardResult)
+                {
+                    // Soft delete SaleReturnItem
+                    var repo = _unitOfWork.GetRepository<SaleReturnItems>();
+
+                    item.IsDeleted = true;
+                    item.IsActive = false;
+                    item.UpdatedBy = model.CreatedBy;
+                    item.UpdatedOn = DateTime.Now;
+
+                    repo.Update(item);
+
+                    await _unitOfWork.SaveChangesAsync();
+
+                    return false;
+                }
             }
+          
+            await _unitOfWork.SaveChangesAsync();
 
             return true;
         }
-        catch (Exception ez)
+        catch (Exception ex)
         {
-            throw;
+            Console.WriteLine($"Error creating SaleReturnItem: {ex.Message}");
+            return false;
         }
     }
     private async Task<SaleReturnItems> CreateSaleReturnItemEntity(SaleReturnItemsModel model)
@@ -243,7 +269,7 @@ public class SaleReturnService : ISaleReturnService
             CreatedOn = model.CreatedOn
         };
         await saleReturnItemRepo.AddAsync(entity);
-        await _unitOfWork.SaveChangesAsync();        
+        await _unitOfWork.SaveChangesAsync();
         return entity;
 
     }
@@ -295,6 +321,17 @@ public class SaleReturnService : ISaleReturnService
             var item = await itemRepo.GetByIdAsync(id);
 
             if (item == null) return false;
+           
+            var saleToInwardDto = await ConvertToDto(item);
+            saleToInwardDto.UserId= userId;
+            // Try deleting inward/barcodes first
+            var inwardDeleted = await _inwardService.DeleteSalesReturnInwardItemAsync(saleToInwardDto);
+
+            if (!inwardDeleted) 
+            {
+                return false;
+            }
+
             item.IsActive = false;
             item.IsDeleted = true;
             item.UpdatedOn = DateTime.Now;
@@ -303,14 +340,11 @@ public class SaleReturnService : ISaleReturnService
             itemRepo.Update(item);
 
             await _unitOfWork.SaveChangesAsync();
-
-            var saleToInwardDto = await ConvertToDto(item);
-            await _inwardService.DeleteSalesReturnInwardItemAsync(saleToInwardDto);
-
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"Error deleting SaleReturnItem: {ex.Message}");
             return false;
         }
     }
@@ -375,7 +409,7 @@ public class SaleReturnService : ISaleReturnService
             return new SaleReturnValidationResult
             {
                 IsValid = false,
-                ErrorMessage = "Barcode indicates item is still in stock at Inward No: "+ (barcodeItem.Inward?.InwardNo ?? "N/A")
+                ErrorMessage = "Barcode indicates item is still in stock at Inward No: " + (barcodeItem.Inward?.InwardNo ?? "N/A")
             };
         }
 
@@ -386,8 +420,8 @@ public class SaleReturnService : ISaleReturnService
                 CancellationToken.None,
                 s => s.SaleReturn
             )).FirstOrDefault();
-     
-        if (saleReturnItem !=null)
+
+        if (saleReturnItem != null)
         {
             return new SaleReturnValidationResult
             {
@@ -395,7 +429,7 @@ public class SaleReturnService : ISaleReturnService
                 ErrorMessage = "This Barcode Already Returned at Sale Return No: " + (saleReturnItem.SaleReturn?.SaleReturnNo ?? "N/A")
             };
         }
-        
+
 
         var shipmentCompanyId = barcodeItem.Inward?.ShipMentCompanyId;
 
@@ -428,7 +462,7 @@ public class SaleReturnService : ISaleReturnService
                 if (outwardDetail != null)
                 {
                     forceUnitToPCS = true;
-                //    outwardDetail.Unit = UnitType.PCS.ToString();
+                    //    outwardDetail.Unit = UnitType.PCS.ToString();
                 }
             }
         }
@@ -503,7 +537,6 @@ public class SaleReturnService : ISaleReturnService
             UpdatedOn = item.UpdatedOn,
             IsDeleted = item.IsDeleted,
             IsActive = item.IsActive,
-
 
         };
         return result;

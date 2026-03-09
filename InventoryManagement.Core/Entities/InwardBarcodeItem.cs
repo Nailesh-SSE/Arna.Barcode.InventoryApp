@@ -23,6 +23,8 @@ public class InwardBarcodeItem : Common
     public bool IsInStock { get; set; } = true;
 
     public int ParentId { get; set; } = 0;
+    public bool IsPrinted { get; set; }
+    public int PrintedBy { get; set; }
 
     public virtual Inward Inward { get; set; } = null!;
     public virtual InwardItem InwardItem { get; set; } = null!;
