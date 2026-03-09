@@ -78,7 +78,7 @@ namespace InventoryManagement.Services.Reports.Services
 
                 row.CreateCell(0).SetCellValue(i + 1); 
                 row.CreateCell(1).SetCellValue(item.InwardNo);
-                row.CreateCell(2).SetCellValue(item.CreatedOn.ToString("yyyy/MM/dd"));
+                row.CreateCell(2).SetCellValue(item.CreatedOn.ToString("dd/MM/yyyy"));
                 row.CreateCell(3).SetCellValue(item.CreatedOn.ToString("HH:mm:ss"));
                 row.CreateCell(4).SetCellValue(item.ShipCompanyname);
                 row.CreateCell(5).SetCellValue(item.CategoryName);

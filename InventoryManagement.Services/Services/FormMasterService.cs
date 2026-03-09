@@ -90,7 +90,7 @@ public class FormMasterService : IFormMasterService
             IsActive = true,
             IsDeleted = false,
             CreatedBy = model.CreatedBy,
-            CreatedOn = DateTime.UtcNow
+            CreatedOn = DateTime.Now
         };
         try
         {
@@ -121,7 +121,7 @@ public class FormMasterService : IFormMasterService
             entity.ParentName = model.ParentName;
             entity.IsActive = model.IsActive;
             entity.UpdatedBy = model.UpdatedBy;
-            entity.UpdatedOn = DateTime.UtcNow;
+            entity.UpdatedOn = DateTime.Now;
 
             await _unitOfWork.SaveChangesAsync();
             return true;
@@ -143,7 +143,7 @@ public class FormMasterService : IFormMasterService
         entity.IsDeleted = true;
         entity.IsActive = false;
         entity.UpdatedBy = userId;
-        entity.UpdatedOn = DateTime.UtcNow;
+        entity.UpdatedOn = DateTime.Now;
 
         await DeleteFormPermissionAsync(id, userId);
         await _unitOfWork.SaveChangesAsync();
@@ -159,7 +159,7 @@ public class FormMasterService : IFormMasterService
             entity.IsDeleted = true;
             entity.IsActive = false;
             entity.UpdatedBy = userId;
-            entity.UpdatedOn = DateTime.UtcNow;
+            entity.UpdatedOn = DateTime.Now;
 
             permissionRepo.Update(entity);
         }

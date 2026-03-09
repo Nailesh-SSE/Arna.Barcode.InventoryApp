@@ -99,7 +99,7 @@ public class OutwardService : IOutwardService
             existing.Remarks = model.Remarks;
             existing.IsActive = model.IsActive;
             existing.UpdatedBy = model.UpdatedBy;
-            existing.UpdatedOn = DateTime.UtcNow;
+            existing.UpdatedOn = DateTime.Now;
             existing.IsFinished = model.IsFinished;
 
             outwardRepository.Update(existing);
@@ -133,7 +133,7 @@ public class OutwardService : IOutwardService
 
             outward.IsDeleted = true;
             outward.IsActive = false;
-            outward.UpdatedOn = DateTime.UtcNow;
+            outward.UpdatedOn = DateTime.Now;
             outward.UpdatedBy = userid;
             outwardRepository.Update(outward);
 
@@ -142,7 +142,7 @@ public class OutwardService : IOutwardService
             foreach (var detail in outwardDetails)
             {
                 detail.IsDeleted = true;
-                detail.UpdatedOn = DateTime.UtcNow;
+                detail.UpdatedOn = DateTime.Now;
                 detail.UpdatedBy = userid;
                 detailRepository.Update(detail);
             }
@@ -240,11 +240,11 @@ public class OutwardService : IOutwardService
             var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
             var barcodeItem = (await barcodeItemRepository.FindAsync(bi =>
                 bi.BarcodeNo == barcodeNo && !bi.IsDeleted)).FirstOrDefault();
-
+            var goodBoxQty = 0;
             if (barcodeItem == null)
                 throw new Exception("Barcode item not found.");
-
-            var inwardItemRepository = _unitOfWork.GetRepository<InwardItem>();
+           
+                var inwardItemRepository = _unitOfWork.GetRepository<InwardItem>();
             var inwardItem = await inwardItemRepository.GetByIdAsync(barcodeItem.InwardItemId);
 
             if (inwardItem == null)
@@ -252,6 +252,15 @@ public class OutwardService : IOutwardService
 
             var productRepository = _unitOfWork.GetRepository<Product>();
             var product = await productRepository.GetByIdAsync(inwardItem.ProductId);
+            
+            if ((barcodeItem.ParentId == 0 || barcodeItem.ParentId == null) &&
+                inwardItem.InwardUnitId == (int)UnitType.BOX)
+            {
+                var AvailableBoxItem = await barcodeItemRepository.FindAsync(bi => bi.ParentId == barcodeItem.Id && !bi.IsDeleted && bi.IsInStock);
+                goodBoxQty = AvailableBoxItem.Count();
+                if (goodBoxQty == 0)
+                    throw new Exception("No available items in this box.");
+            }
 
             var detailRepository = _unitOfWork.GetRepository<OutwardDetail>();
             var newDetail = new OutwardDetail
@@ -261,11 +270,16 @@ public class OutwardService : IOutwardService
                 Quantity = 1,
                 Unit = barcodeItem.ParentId > 0 ? UnitType.PCS.GetName() : inwardItem.InwardUnitName,
                 BarcodeNo = barcodeNo,
-                CreatedOn = DateTime.UtcNow,
+                CreatedOn = DateTime.Now,
                 CreatedBy = userid,
                 IsDeleted = false,
                 IsActive = true
             };
+
+            if(newDetail.Unit == UnitType.BOX.GetName())
+            {
+                newDetail.Quantity = goodBoxQty;
+            }
 
             await detailRepository.AddAsync(newDetail);
 
@@ -282,7 +296,7 @@ public class OutwardService : IOutwardService
                 ProductId = inwardItem.ProductId,
                 ProductName = product?.SKU ?? "Unknown",
                 BarcodeNo = barcodeNo,
-                Quantity = 1,
+                Quantity = newDetail.Quantity,
                 Unit = newDetail.Unit
             };
         }
@@ -306,7 +320,7 @@ public class OutwardService : IOutwardService
                 return false;
 
             detail.IsDeleted = true;
-            detail.UpdatedOn = DateTime.UtcNow;
+            detail.UpdatedOn = DateTime.Now;
             detail.UpdatedBy = userid;
             detailRepository.Update(detail);
 

@@ -180,7 +180,7 @@ else
         {
             IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
-            CreatedOn = DateTime.UtcNow
+            CreatedOn = DateTime.Now
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -199,7 +199,7 @@ else
             IsActive = editCategory.IsActive,
             SerialNumber = editCategory.SerialNumber,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
-            UpdatedOn = DateTime.UtcNow
+            UpdatedOn = DateTime.Now
         };
         InitializeEditContext();
         modal?.ShowAsync();

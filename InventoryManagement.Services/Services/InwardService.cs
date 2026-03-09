@@ -182,7 +182,7 @@ public class InwardService : IInwardService
             entity.ProductId = model.ProductId;
             entity.BrandId = model.BrandId;
             entity.UpdatedBy = model.UpdatedBy ?? 0;
-            entity.UpdatedOn = model.UpdatedOn ?? DateTime.UtcNow;
+            entity.UpdatedOn = model.UpdatedOn ?? DateTime.Now;
             entity.InwardUnitId = model.InwardUnitId;
             entity.InwardUnitName = model.InwardUnitName;
             entity.ItemQuantity = model.ItemQuantity;
@@ -560,7 +560,7 @@ public class InwardService : IInwardService
         entity.Remarks = model.Remarks;
         entity.IsActive = model.IsActive;
         entity.UpdatedBy = model.UpdatedBy ?? 0;
-        entity.UpdatedOn = model.UpdatedOn ?? DateTime.UtcNow;
+        entity.UpdatedOn = model.UpdatedOn ?? DateTime.Now;
     }
 
     #endregion

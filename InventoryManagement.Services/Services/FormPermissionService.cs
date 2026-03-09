@@ -102,7 +102,7 @@ public class FormPermissionService : IFormPermissionService
             CanEdit = model.CanEdit,
             CanDelete = model.CanDelete,
             CreatedBy = model.CreatedBy,
-            CreatedOn = DateTime.UtcNow,
+            CreatedOn = DateTime.Now,
             IsActive = true,
             IsDeleted = false,
         });
@@ -126,7 +126,7 @@ public class FormPermissionService : IFormPermissionService
         entity.CanEdit = model.CanEdit;
         entity.CanDelete = model.CanDelete;
         entity.UpdatedBy = model.UpdatedBy;
-        entity.UpdatedOn = DateTime.UtcNow;
+        entity.UpdatedOn = DateTime.Now;
         entity.IsActive = model.IsActive;
 
         repo.Update(entity);
@@ -145,7 +145,7 @@ public class FormPermissionService : IFormPermissionService
         entity.IsDeleted = true;
         entity.IsActive = false;
         entity.UpdatedBy = deletedBy;
-        entity.UpdatedOn = DateTime.UtcNow;
+        entity.UpdatedOn = DateTime.Now;
 
         repo.Update(entity);
         await _unitOfWork.SaveChangesAsync();

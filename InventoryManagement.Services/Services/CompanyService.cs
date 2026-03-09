@@ -74,7 +74,7 @@ public class CompanyService : ICompanyService
                 SerialNumber = companyModel.SerialNumber,
                 Remark = companyModel.Remark,
                 CreatedBy = companyModel.CreatedBy,
-                CreatedOn = DateTime.UtcNow
+                CreatedOn = DateTime.Now
             };
 
 
@@ -106,7 +106,7 @@ public class CompanyService : ICompanyService
             entity.IsDeleted = false;
             entity.Remark = companyModel.Remark;
             entity.UpdatedBy = companyModel.UpdatedBy;
-            entity.UpdatedOn = DateTime.UtcNow;
+            entity.UpdatedOn = DateTime.Now;
 
             companyRepository.Update(entity);
             await _unitOfWork.SaveChangesAsync();
@@ -129,7 +129,7 @@ public class CompanyService : ICompanyService
             company.IsDeleted = true;
             company.IsActive = false;
             company.UpdatedBy = deletedBy;
-            company.UpdatedOn = DateTime.UtcNow;
+            company.UpdatedOn = DateTime.Now;
             companyRepository.Update(company);
             await _unitOfWork.SaveChangesAsync();
             return true;

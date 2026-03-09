@@ -164,7 +164,7 @@ else
         {
             IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
-            CreatedOn = DateTime.UtcNow
+            CreatedOn = DateTime.Now
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -181,7 +181,7 @@ else
             Remark = editPlatform.Remark,
             IsActive = editPlatform.IsActive,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
-            UpdatedOn = DateTime.UtcNow
+            UpdatedOn = DateTime.Now
         };
         InitializeEditContext();
         modal?.ShowAsync();

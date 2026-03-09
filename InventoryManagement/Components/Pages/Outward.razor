@@ -182,7 +182,7 @@ else
     </BodyTemplate>
 </Modal>
 
-<Modal @ref="itemModal" Title="@($"Manage Items - {selectedOutward?.OutwardNo}")" Size="ModalSize.Regular" OnHidden="HideItemModal" UseStaticBackdrop>
+<Modal @ref="itemModal" Title="@($"Manage Items - {selectedOutward?.OutwardNo}")" Size="ModalSize.Large" OnHidden="HideItemModal" UseStaticBackdrop>
     <BodyTemplate>
         @if (selectedOutward != null)
         {
@@ -256,6 +256,7 @@ else
                                     <th style="width: 15%">Barcode</th>
                                     <th style="width: 45%">Product Name</th>
                                     <th style="width: 10%">Unit</th>
+                                    <th>Qty</th>
                                     @if (!selectedOutward.IsFinished && CanDelete(Route))
                                     {
                                         <th style="width: 10%">Action</th>
@@ -274,6 +275,7 @@ else
                                             <td>@item.BarcodeNo</td>
                                             <td>@item.ProductName</td>
                                             <td>@item.Unit</td>
+                                            <td>@item.Quantity</td>
                                             @if (!selectedOutward.IsFinished && CanDelete(Route))
                                             {
                                                 <td>
@@ -428,7 +430,7 @@ else
             OutwardDate = DateTime.Now,
             IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
-            CreatedOn = DateTime.UtcNow
+            CreatedOn = DateTime.Now
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -467,7 +469,7 @@ else
             Remarks = editOutward.Remarks,
             IsActive = editOutward.IsActive,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
-            UpdatedOn = DateTime.UtcNow
+            UpdatedOn = DateTime.Now
         };
         InitializeEditContext();
         await modal.ShowAsync();
@@ -663,9 +665,16 @@ else
                 ShowError("Connectivity issue happened, operation failed");
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            barcodeErrorMessage = "Connectivity issue happened, operation failed";
+            if (ex.Message == "No available items in this box.")
+            {
+                barcodeErrorMessage = ex.Message;
+            }
+            else
+            {
+                barcodeErrorMessage = "Connectivity issue happened, operation failed";
+            }
         }
         finally
         {

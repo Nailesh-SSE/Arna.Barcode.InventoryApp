@@ -100,7 +100,7 @@ public class RoleService : IRoleService
             IsActive = true,
             IsDeleted = false,
             CreatedBy = roleModel.CreatedBy,
-            CreatedOn = DateTime.UtcNow
+            CreatedOn = DateTime.Now
         };
         await RoleRepository.AddAsync(Role);
         await _unitOfWork.SaveChangesAsync();
@@ -121,7 +121,7 @@ public class RoleService : IRoleService
         Role.IsActive = roleModel.IsActive;
         Role.IsDeleted = roleModel.IsDeleted;
         Role.UpdatedBy = roleModel.UpdatedBy;
-        Role.UpdatedOn = DateTime.UtcNow;
+        Role.UpdatedOn = DateTime.Now;
 
         roleRepository.Update(Role);
         await _unitOfWork.SaveChangesAsync();
@@ -136,7 +136,7 @@ public class RoleService : IRoleService
             if (Role == null) return false;
             Role.IsDeleted = true;
             Role.IsActive = false;
-            Role.UpdatedOn = DateTime.UtcNow;
+            Role.UpdatedOn = DateTime.Now;
             Role.UpdatedBy = deletedBy;
             roleRepository.Update(Role);
             await _unitOfWork.SaveChangesAsync();

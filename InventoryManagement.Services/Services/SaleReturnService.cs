@@ -307,7 +307,7 @@ public class SaleReturnService : ISaleReturnService
         entity.ReturnQuantity = model.ReturnQuantity;
         entity.platformId = model.PlatformId;
         entity.UpdatedBy = model.UpdatedBy;
-        entity.UpdatedOn = DateTime.UtcNow;
+        entity.UpdatedOn = DateTime.Now;
 
         saleReturnItemRepo.Update(entity);
         await _unitOfWork.SaveChangesAsync();
