@@ -1,0 +1,48 @@
+﻿
+<Button Class="@Class"
+        Color="@Color"
+        Size="@Size"
+        Disabled="@IsDisabled"
+        Type="@Type"
+        title="@Title"
+        @onclick="HandleClick">
+
+    @ChildContent
+
+    @if (_isLoading)
+    {
+        <span class="spinner-border spinner-border-sm ms-1"></span>
+    }
+</Button>
+
+@code {
+    private bool _isLoading;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public ButtonType Type { get; set; }
+    [Parameter] public ButtonColor Color { get; set; }
+    [Parameter] public ButtonSize Size { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    private bool IsDisabled => Disabled || _isLoading;
+
+    private async Task HandleClick()
+    {
+        if (_isLoading) return;
+
+        _isLoading = true;
+        try
+        {
+            await OnClick.InvokeAsync();
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+}

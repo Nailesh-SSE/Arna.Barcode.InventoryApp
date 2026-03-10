@@ -93,9 +93,9 @@ else
                         }
                         @if (CanDelete(Route))
                         {
-                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteProduct(context.Id)">
+                            <LoadingButton class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" onclick="() => DeleteProduct(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
-                            </Button>
+                            </LoadingButton>
                         }
                     </div>
                 </GridColumn>
@@ -203,6 +203,7 @@ else
     private ValidationMessageStore messageStore;
     private List<UnitModel> Units => CommonUtils.UnitList;
     private string Route = "/products";
+    private bool isSaveBtnLoading = false;
 
 
 
@@ -246,7 +247,7 @@ else
         {
             IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
-            CreatedOn = DateTime.UtcNow,
+            CreatedOn = DateTime.Now,
             UnitId = (int)UnitType.PCS
         };
         InitializeEditContext();
@@ -275,7 +276,7 @@ else
             ColourName = editProduct.ColourName,
             ColourSearchText = editProduct.ColourName,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
-            UpdatedOn = DateTime.UtcNow
+            UpdatedOn = DateTime.Now
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -283,8 +284,10 @@ else
 
     private async Task SaveProduct()
     {
+        if(isSaveBtnLoading) return;
         try
         {
+            isSaveBtnLoading = true;
             if (!editContext.Validate()) return;
             await HandleAllFieldsAsync();
             if (editContext.GetValidationMessages().Any())
@@ -312,6 +315,10 @@ else
         }
         catch (Exception ex)
         {
+        }
+        finally
+        {
+            isSaveBtnLoading = false;
         }
     }
 

@@ -43,7 +43,7 @@ public class ColourService: IColourService
             IsActive = true,
             IsDeleted = false,
             CreatedBy=colourModel.CreatedBy,
-            CreatedOn = DateTime.UtcNow
+            CreatedOn = DateTime.Now
         };
         await colourRepository.AddAsync(colour);
         await _unitOfWork.SaveChangesAsync();
@@ -60,7 +60,7 @@ public class ColourService: IColourService
         colour.IsActive = colourModel.IsActive;
         colour.IsDeleted = colourModel.IsDeleted;
         colour.UpdatedBy = colourModel.UpdatedBy;
-        colour.UpdatedOn = DateTime.UtcNow;
+        colour.UpdatedOn = DateTime.Now;
 
         colourRepository.Update(colour);
         await _unitOfWork.SaveChangesAsync();
@@ -76,7 +76,7 @@ public class ColourService: IColourService
             if (colour == null) return false;
             colour.IsDeleted = true;
             colour.IsActive = false;
-            colour.UpdatedOn = DateTime.UtcNow;
+            colour.UpdatedOn = DateTime.Now;
             colour.UpdatedBy = deletedBy;
             colourRepository.Update(colour);
             await _unitOfWork.SaveChangesAsync();

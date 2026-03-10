@@ -66,7 +66,7 @@ public class PlatformService : IPlatformService
         existingPlatform.Name = platformModel.Name;
         existingPlatform.Remark = platformModel.Remark;
         existingPlatform.UpdatedBy = platformModel.UpdatedBy;
-        existingPlatform.UpdatedOn = DateTime.UtcNow;
+        existingPlatform.UpdatedOn = DateTime.Now;
         existingPlatform.IsActive = platformModel.IsActive;
         existingPlatform.IsDeleted = platformModel.IsDeleted;
 
@@ -83,7 +83,7 @@ public class PlatformService : IPlatformService
         existingPlatform.IsDeleted = true;
         existingPlatform.IsActive = false;
         existingPlatform.UpdatedBy = userid;
-        existingPlatform.UpdatedOn = DateTime.UtcNow;
+        existingPlatform.UpdatedOn = DateTime.Now;
         platformRepository.Update(existingPlatform);
         await _unitOfWork.SaveChangesAsync();
         return true;

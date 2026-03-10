@@ -81,7 +81,7 @@ else
                     <div class="d-flex gap-1">
                         @if (CanCreate(Route))
                         {
-                            <Button Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
+                            <LoadingButton Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" onclick="() => ShowItemModal(context)">
                                 @if (context.IsFinished)
                                 {
                                     <Icon Name="IconName.Eye" />
@@ -92,13 +92,13 @@ else
                                     <Icon Name="IconName.PlusCircle" />
                                     @: &nbsp;Add Item
                                 }
-                            </Button>
+                            </LoadingButton>
                         }
                         else
                         {
-                            <Button Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => ShowItemModal(context)">
+                            <LoadingButton Class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" onclick="() => ShowItemModal(context)">
                                 <Icon Name="IconName.Eye" />View Item
-                            </Button>
+                            </LoadingButton>
                         }
                         @if (CanEdit(Route))
                         {
@@ -182,7 +182,7 @@ else
     </BodyTemplate>
 </Modal>
 
-<Modal @ref="itemModal" Title="@($"Manage Items - {selectedOutward?.OutwardNo}")" Size="ModalSize.Regular" OnHidden="HideItemModal" UseStaticBackdrop>
+<Modal @ref="itemModal" Title="@($"Manage Items - {selectedOutward?.OutwardNo}")" Size="ModalSize.Large" OnHidden="HideItemModal" UseStaticBackdrop>
     <BodyTemplate>
         @if (selectedOutward != null)
         {
@@ -245,7 +245,9 @@ else
 
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Items List (@itemList.Count)</h5>
+                    <h5 class="mb-0">
+                        Items List (@itemList.Count) | Total Qty (@itemList.Sum(x => x.Quantity)) | Total Box Qty (@itemList.Count(x => x.Unit == UnitType.BOX.ToString()))
+                    </h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
@@ -256,6 +258,7 @@ else
                                     <th style="width: 15%">Barcode</th>
                                     <th style="width: 45%">Product Name</th>
                                     <th style="width: 10%">Unit</th>
+                                    <th>Qty</th>
                                     @if (!selectedOutward.IsFinished && CanDelete(Route))
                                     {
                                         <th style="width: 10%">Action</th>
@@ -274,6 +277,7 @@ else
                                             <td>@item.BarcodeNo</td>
                                             <td>@item.ProductName</td>
                                             <td>@item.Unit</td>
+                                            <td>@item.Quantity</td>
                                             @if (!selectedOutward.IsFinished && CanDelete(Route))
                                             {
                                                 <td>
@@ -311,7 +315,7 @@ else
                 <fieldset disabled="@disableitemfields">
                     @if (!selectedOutward.IsFinished)
                     {
-                        <Button Color="ButtonColor.Primary" @onclick="() => FinalizeOutward(selectedOutward)">Finish</Button>
+                        <LoadingButton Color="ButtonColor.Primary" onclick="() => FinalizeOutward(selectedOutward)">Finish</LoadingButton>
                     }
                     else
                     {
@@ -356,6 +360,9 @@ else
     private System.Threading.Timer? errorTimer;
     private string Route = "/outward";
     private bool isAdmin = false;
+    private bool isItemSaveBtnLoading = false;
+    private bool isOutwardSaveBtnLoading = false;
+
     // Reference for JS Interop
     private DotNetObjectReference<Outward>? dotNetHelper;
 
@@ -425,7 +432,7 @@ else
             OutwardDate = DateTime.Now,
             IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
-            CreatedOn = DateTime.UtcNow
+            CreatedOn = DateTime.Now
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -464,7 +471,7 @@ else
             Remarks = editOutward.Remarks,
             IsActive = editOutward.IsActive,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
-            UpdatedOn = DateTime.UtcNow
+            UpdatedOn = DateTime.Now
         };
         InitializeEditContext();
         await modal.ShowAsync();
@@ -472,13 +479,15 @@ else
 
     private async Task SaveOutward()
     {
+        if (isOutwardSaveBtnLoading) return;
         try
         {
+            isOutwardSaveBtnLoading = true;
             if (!editContext.Validate()) return;
             ValidateBillToCompany();
             ValidatePlatform();
             if (editContext.GetValidationMessages().Any()) return;
-            
+
             bool result;
             if (isEditMode)
             {
@@ -515,6 +524,10 @@ else
         {
             await HideModal();
             ShowError("Connectivity issue happened, operation failed");
+        }
+        finally
+        {
+            isOutwardSaveBtnLoading = false;
         }
     }
 
@@ -605,8 +618,10 @@ else
 
     private async Task AddItemToList()
     {
+        if (isItemSaveBtnLoading) return;
         try
         {
+            isItemSaveBtnLoading = true;
             barcodeErrorMessage = string.Empty;
 
             if (string.IsNullOrWhiteSpace(newItem.BarcodeNo))
@@ -652,9 +667,20 @@ else
                 ShowError("Connectivity issue happened, operation failed");
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            barcodeErrorMessage = "Connectivity issue happened, operation failed";
+            if (ex.Message == "No available items in this box.")
+            {
+                barcodeErrorMessage = ex.Message;
+            }
+            else
+            {
+                barcodeErrorMessage = "Connectivity issue happened, operation failed";
+            }
+        }
+        finally
+        {
+            isItemSaveBtnLoading = false;
         }
     }
 

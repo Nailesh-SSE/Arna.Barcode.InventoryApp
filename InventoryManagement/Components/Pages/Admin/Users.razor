@@ -100,10 +100,10 @@ else
                         }
                         @if (CanDelete(Route))
                         {
-                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small"
-                                    @onclick="() => DeleteUser(context.Id)">
+                            <LoadingButton class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small"
+                                    onclick="() => DeleteUser(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
-                            </Button>
+                            </LoadingButton>
                         }
                     </div>
                 </GridColumn>
@@ -279,6 +279,7 @@ else
     private EditContext editContext = default!;
     private ValidationMessageStore messageStore = default!;
     private string Route = "/users";
+    private bool isSaveBtnLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -340,23 +341,33 @@ else
 
     private async Task SaveUser()
     {
-        if (!editContext.Validate())
-            return;
+        if (isSaveBtnLoading) return;
+        try
+        {
+            isSaveBtnLoading = true;
+            if (!editContext.Validate())
+                return;
 
-        await ValidateAllFieldsAsync();
-        if (editContext.GetValidationMessages().Any())
-            return;
+            await ValidateAllFieldsAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
 
-        var result = await ValidateDuplicate(userModel.Id, userModel.UserName, userModel.ContactNo, userModel.Email);
-        if (!result) return;
-        if (userModel.Id > 0)
-            await UserService.UpdateUserAsync(userModel);
-        else
-            await UserService.CreateUserAsync(userModel);
+            var result = await ValidateDuplicate(userModel.Id, userModel.UserName, userModel.ContactNo, userModel.Email);
+            if (!result) return;
+            if (userModel.Id > 0)
+                await UserService.UpdateUserAsync(userModel);
+            else
+                await UserService.CreateUserAsync(userModel);
 
-        await HideModal();
-        await LoadData();
-        await userGrid.RefreshDataAsync();
+            await HideModal();
+            await LoadData();
+            await userGrid.RefreshDataAsync();
+        }
+        catch(Exception){}
+        finally
+        {
+            isSaveBtnLoading = false;
+        }
     }
 
     private async Task DeleteUser(int id)

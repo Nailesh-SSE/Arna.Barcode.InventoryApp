@@ -78,9 +78,9 @@ else
                         }
                         @if (CanDelete(Route))
                         {
-                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeletePlatform(context.Id)">
+                            <LoadingButton class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" onclick="() => DeletePlatform(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
-                            </Button>
+                            </LoadingButton>
                         }
                     </div>
                 </GridColumn>
@@ -131,6 +131,7 @@ else
     private EditContext editContext;
     private ValidationMessageStore messageStore;
     private string Route = "/platforms";
+    private bool isSaveBtnLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -163,7 +164,7 @@ else
         {
             IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
-            CreatedOn = DateTime.UtcNow
+            CreatedOn = DateTime.Now
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -180,7 +181,7 @@ else
             Remark = editPlatform.Remark,
             IsActive = editPlatform.IsActive,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
-            UpdatedOn = DateTime.UtcNow
+            UpdatedOn = DateTime.Now
         };
         InitializeEditContext();
         modal?.ShowAsync();
@@ -188,8 +189,10 @@ else
 
     private async Task SavePlatform()
     {
+        if (isSaveBtnLoading) return;
         try
         {
+            isSaveBtnLoading = true;
             if (!editContext.Validate()) return;
             await ValidateNameAsync();
             if (editContext.GetValidationMessages().Any())
@@ -213,6 +216,10 @@ else
         }
         catch (Exception ex)
         {
+        }
+        finally
+        {
+            isSaveBtnLoading = false;
         }
     }
 

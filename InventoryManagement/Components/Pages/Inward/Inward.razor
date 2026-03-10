@@ -24,17 +24,17 @@ else
                 <h3 class="mb-0">Inward Management</h3>
             </div>
             <div class="col-auto">
-                <button class="btn btn-dark" @onclick="ShowReprintModal">
+                <LoadingButton Class="btn btn-dark" OnClick="ShowReprintModal">
                     <Icon Name="IconName.Printer" /> Reprint
-                </button>
+                </LoadingButton>
             </div>
 
             <div class="col-auto">
                 @if (CanCreate(Route))
                 {
-                    <button class="btn btn-primary" @onclick="ShowAddModal">
+                    <Button Class="btn btn-primary" @onclick="ShowAddModal">
                         <Icon Name="IconName.Plus" />  Add New Inward
-                    </button>
+                    </Button>
                 }
             </div>
         </div>
@@ -57,7 +57,7 @@ else
 
 <InwardItemsModal @ref="itemsModal" Title="@itemTitle" SelectedInward="selectedInward" InwardItems="inwardItems" FilteredProducts="filteredProductsbyCategory" Brands="filteredBrandsByCategory"
                   OnSave="SaveInwardItems" OnSaveItem="SaveSingleItem" OnDeleteItem="DeleteSingleItem" OnDownloadPdf="DownloadSingleItemPrn" OnAddItem="AddNewItemRow"
-                  OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" DisableFields="disableitemfields" AnyBarcodeInOutward="anybarcodeinoutward" />
+                  OnRemoveUnsaved="RemoveUnsavedItem" OnClose="HideItemModal" DisableFields="disableitemfields" AnyBarcodeInOutward="anyBarcodeInOutward" />
 
 <ReprintBarcodeModal @ref="reprintBarcodeModal" Title="@reprintTitle" OnPrint="DownloadSingleBarcode" />
 
@@ -90,7 +90,12 @@ else
     private string Route = "/inward";
     private bool isAdmin = false;
 
-    private bool anybarcodeinoutward = false;
+    private bool anyBarcodeInOutward = false;
+    private bool isAddItemsBtnLoading;
+    private bool isEditBtnLoading;
+    private bool isReprintBtnLoading;
+    private bool isInwardSaveBtnLoading;
+
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
@@ -140,74 +145,99 @@ else
 
     private async Task ShowEditModal(InwardModel edit)
     {
-        if (CanEdit(Route) == true)
+        if (isEditBtnLoading) return;
+
+        isEditBtnLoading = true;
+        try
         {
-            modalTitle = $"Edit Inward {edit.InwardNo}";
-            isEditMode = true;
-            if (edit.IsSalesReturn)
+
+            if (CanEdit(Route) == true)
             {
-                disablefields = true;
+                modalTitle = $"Edit Inward {edit.InwardNo}";
+                isEditMode = true;
+                if (edit.IsSalesReturn)
+                {
+                    disablefields = true;
+                }
+                else
+                {
+                    disablefields = false;
+                }
             }
             else
             {
-                disablefields = false;
+                modalTitle = $"View Inward {edit.InwardNo}";
+                isEditMode = true;
+                disablefields = true;
             }
-        }
-        else
-        {
-            modalTitle = $"View Inward {edit.InwardNo}";
-            isEditMode = true;
-            disablefields = true;
-        }
-        inward = edit;
-        inward.InwardTime = inward.InwardDate.TimeOfDay;
-        inward.UpdatedBy = Convert.ToInt32(CurrentUserId);
-        inward.UpdatedOn = DateTime.Now;
-        inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(edit.Id);
-        filteredProductsbyCategory = products;
-        if (inward.CategoryId > 0 && inward.CategoryId != null)
-        {
-            filteredProductsbyCategory = products.Where(p => p.CategoryId == inward.CategoryId).ToList();
-        }
-        foreach (var item in inwardItems)
-        {
-            var product = filteredProductsbyCategory.FirstOrDefault(p => p.Id == item.ProductId);
-            if (product != null)
+            inward = edit;
+            inward.InwardTime = inward.InwardDate.TimeOfDay;
+            inward.UpdatedBy = Convert.ToInt32(CurrentUserId);
+            inward.UpdatedOn = DateTime.Now;
+            inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(edit.Id);
+            filteredProductsbyCategory = products;
+            if (inward.CategoryId > 0 && inward.CategoryId != null)
             {
-                item.ProductSearchText = product.SKU;
+                filteredProductsbyCategory = products.Where(p => p.CategoryId == inward.CategoryId).ToList();
             }
+            foreach (var item in inwardItems)
+            {
+                var product = filteredProductsbyCategory.FirstOrDefault(p => p.Id == item.ProductId);
+                if (product != null)
+                {
+                    item.ProductSearchText = product.SKU;
+                }
+            }
+            inwardFormModal?.Show();
         }
-        inwardFormModal?.Show();
+        catch (Exception)
+        {
+        }
+        finally
+        {
+            isEditBtnLoading = false;
+        }
     }
 
     private async Task SaveInward()
     {
-        isLoading = true;
-        inward.InwardDate = inward.InwardDate.Date.Add(inward.InwardTime);
-        inward.InwardItems = inwardItems;
-        // Ensure user fields are set before saving
-        if (isEditMode)
-        {
-            inward.UpdatedBy = Convert.ToInt32(CurrentUserId);
-            inward.UpdatedOn = DateTime.Now;
-            await InwardService.UpdateAsync(inward);
-            await HideModal();
-            await LoadData();
-        }
-        else
-        {
-            inward.CreatedBy = Convert.ToInt32(CurrentUserId);
-            inward.CreatedOn = DateTime.Now;
-            var inwardId = await InwardService.CreateAsync(inward);
+        if (isInwardSaveBtnLoading) return;
 
-            await HideModal();
-            await LoadData();
-
-            if (inwardId != 0)
+        try
+        {
+            isInwardSaveBtnLoading = true;
+            isLoading = true;
+            inward.InwardDate = inward.InwardDate.Date.Add(inward.InwardTime);
+            inward.InwardItems = inwardItems;
+            // Ensure user fields are set before saving
+            if (isEditMode)
             {
-                inward.Id = inwardId;
-                await OpenAddItemModal(inward);
+                inward.UpdatedBy = Convert.ToInt32(CurrentUserId);
+                inward.UpdatedOn = DateTime.Now;
+                await InwardService.UpdateAsync(inward);
+                await HideModal();
+                await LoadData();
             }
+            else
+            {
+                inward.CreatedBy = Convert.ToInt32(CurrentUserId);
+                inward.CreatedOn = DateTime.Now;
+                var inwardId = await InwardService.CreateAsync(inward);
+
+                await HideModal();
+                await LoadData();
+
+                if (inwardId != 0)
+                {
+                    inward.Id = inwardId;
+                    await OpenAddItemModal(inward);
+                }
+            }
+        }
+        catch(Exception){}
+        finally
+        {
+            isInwardSaveBtnLoading = false;
         }
     }
 
@@ -229,32 +259,45 @@ else
 
     private async Task OpenAddItemModal(InwardModel inward)
     {
-        selectedInward = inwards.FirstOrDefault(i => i.Id == inward.Id);
-        if (selectedInward == null) return;
-        if (CanCreate(Route))
+        if (isAddItemsBtnLoading) return;
+        isAddItemsBtnLoading = true;
+        try
         {
-            itemTitle = $"Manage Inward Items | Inward No: {selectedInward?.InwardNo}";
-            disableitemfields = false;
-        }
-        else
-        {
-            itemTitle = $"View Inward Items | Inward No: {selectedInward?.InwardNo}";
-            disableitemfields = true;
-        }
+            selectedInward = inwards.FirstOrDefault(i => i.Id == inward.Id);
+            if (selectedInward == null) return;
+            if (CanCreate(Route))
+            {
+                itemTitle = $"Manage Inward Items | Inward No: {selectedInward?.InwardNo}";
+                disableitemfields = false;
+            }
+            else
+            {
+                itemTitle = $"View Inward Items | Inward No: {selectedInward?.InwardNo}";
+                disableitemfields = true;
+            }
 
-        inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(inward.Id);
-        anybarcodeinoutward = inwardItems.Any(X=>X.HasOutOfStockBarcodes);
-        filteredProductsbyCategory = products;
-        filteredBrandsByCategory = MakeCompanies;
-        if (inward.CategoryId > 0 && inward.CategoryId != null)
-        {
-            filteredProductsbyCategory = products.Where(p => p.CategoryId == inward.CategoryId).ToList();
-            var brandList = filteredProductsbyCategory.GroupBy(p => p.MakeCompanyId).Select(g => g.Key).ToList();
-            filteredBrandsByCategory = MakeCompanies.Where(mc => brandList.Contains(mc.Id)).ToList();
+            inwardItems = await InwardService.GetInwardItemsByInwardIdAsync(inward.Id);
+            anyBarcodeInOutward = inwardItems.Any(X=>X.HasOutOfStockBarcodes);
+            filteredProductsbyCategory = products;
+            filteredBrandsByCategory = MakeCompanies;
+            if (inward.CategoryId > 0 && inward.CategoryId != null)
+            {
+                filteredProductsbyCategory = products.Where(p => p.CategoryId == inward.CategoryId).ToList();
+                var brandList = filteredProductsbyCategory.GroupBy(p => p.MakeCompanyId).Select(g => g.Key).ToList();
+                filteredBrandsByCategory = MakeCompanies.Where(mc => brandList.Contains(mc.Id)).ToList();
+            }
+            StateHasChanged();
+            await itemsModal.Show();
+            isLoading = false;
         }
-        StateHasChanged();
-        await itemsModal.Show();
-        isLoading = false;
+        catch(Exception)
+        {
+        }
+        finally
+        {
+            isAddItemsBtnLoading = false;
+            isLoading = false;
+        }
     }
 
     private async Task HideItemModal()
@@ -338,13 +381,25 @@ else
     }
     private async Task ShowReprintModal()
     {
-        await reprintBarcodeModal.ShowAsync();
+        if (isReprintBtnLoading) return;
+
+        isReprintBtnLoading = true;
+
+        try
+        {
+            await reprintBarcodeModal.ShowAsync();
+        }
+        catch(Exception){}
+        finally
+        {
+            isReprintBtnLoading = false;
+        }
     }
 
     private Task DownloadSingleItemPrn(InwardItemModel item)
     {
         return PrnDownloadService.DownloadAsync(
-            () => InwardService.GenerateItemBarcodePrnAsync(item.Id),
+            () => InwardService.GenerateItemBarcodePrnAsync(item.Id, Convert.ToInt32(CurrentUserId)),
             $"Item_{item.Id}_Barcodes.prn",
             "No barcodes found for this item."
         );
@@ -353,7 +408,7 @@ else
     private Task DownloadSingleBarcode(string barcode)
     {
         return PrnDownloadService.DownloadAsync(
-            () => InwardService.GenerateSingleBarcodePrnAsync(barcode),
+            () => InwardService.GenerateSingleBarcodePrnAsync(barcode, Convert.ToInt32(CurrentUserId)),
             $"Item_{barcode}_Barcodes.prn",
             "No barcodes found for this barcode."
         );

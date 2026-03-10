@@ -166,10 +166,10 @@ public class PermissionService : IPermissionService
                     CanDelete = true
                 }];
             }
-
-            var forms = await formRepo.FindAsync(x => !x.IsDeleted && x.IsActive, cancellationToken);
-            var rolePerms = await rolePermRepo.FindAsync(x =>
-                x.RoleId == role.Id && !x.IsDeleted, cancellationToken);
+            
+            var forms = (await formRepo.FindAsync(x => !x.IsDeleted && x.IsActive, cancellationToken)).ToList();
+            var rolePerms = (await rolePermRepo.FindAsync(x =>
+                x.RoleId == role.Id && !x.IsDeleted, cancellationToken)).ToList();
 
             var permissions = forms
                 .Select(form =>

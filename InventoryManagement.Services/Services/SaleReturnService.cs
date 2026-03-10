@@ -105,35 +105,74 @@ public class SaleReturnService : ISaleReturnService
     #region ReturnItems
     public async Task<List<SaleReturnItemsModel>> GetSaleReturnItemsByReturnId(int saleReturnId)
     {
-        var saleReturnItemRepo = _unitOfWork.GetRepository<SaleReturnItems>();
-        var items = await saleReturnItemRepo.GetQueryable()
-                    .Where(i => !i.IsDeleted && i.SaleReturnId == saleReturnId)
-                    .OrderByDescending(i => i.Id)
-                    .ThenByDescending(i => i.ReturnDate)
-                    .ToListAsync();
-        return items.Select(i => new SaleReturnItemsModel
-        {
-            Id = i.Id,
-            PlatformId = i.platformId,
-            SaleReturnId = i.SaleReturnId,
-            ProductId = i.ProductId,
-            ReturnDate = i.ReturnDate,
-            ReturnType = i.ReturnType,
-            ReasonToReturn = i.ReasonToReturn,
-            BarCodeNo = i.BarCodeNo,
-            OutwardId = i.OutwardId,
-            CategoryId = i.CategoryId,
-            UnitId = i.UnitId,
-            ReturnQuantity = i.ReturnQuantity,
-            SerialNo = i.SerialNo,
-            ShipToCompanyId = i.ShipToCompanyId,
-            BillToCompanyId = i.BillToCompanyId,
-            IsTakeInStock = i.IsTakeInStock,
-            CreatedBy = i.CreatedBy,
-            CreatedOn = i.CreatedOn,
-            UpdatedBy = i.UpdatedBy,
-            UpdatedOn = i.UpdatedOn
-        }).ToList();
+        var saleReturnItemsRepo = _unitOfWork.GetRepository<SaleReturnItems>().GetQueryable().AsNoTracking();
+        var productRepo = _unitOfWork.GetRepository<Product>().GetQueryable().AsNoTracking();
+        var platformRepo = _unitOfWork.GetRepository<Platform>().GetQueryable().AsNoTracking();
+        var companyRepo = _unitOfWork.GetRepository<Company>().GetQueryable().AsNoTracking();
+        var outwardRepo = _unitOfWork.GetRepository<Outward>().GetQueryable().AsNoTracking();
+
+        var query =
+       from item in saleReturnItemsRepo
+
+       join p in productRepo
+           on item.ProductId equals p.Id into prod
+       from p in prod.DefaultIfEmpty()
+
+       join plat in platformRepo
+           on item.platformId equals plat.Id into plat
+       from pl in plat.DefaultIfEmpty()
+
+       join bill in companyRepo
+           on item.BillToCompanyId equals bill.Id into billCo
+       from bill in billCo.DefaultIfEmpty()
+
+       join ship in companyRepo
+           on item.ShipToCompanyId equals ship.Id into shipCo
+       from ship in shipCo.DefaultIfEmpty()
+
+       join o in outwardRepo
+           on item.OutwardId equals o.Id into outw
+       from o in outw.DefaultIfEmpty()
+
+       where !item.IsDeleted && item.SaleReturnId == saleReturnId
+       orderby item.Id descending, item.ReturnDate descending
+
+       select new SaleReturnItemsModel
+       {
+           Id = item.Id,
+           SaleReturnId = item.SaleReturnId,
+
+           ProductId = item.ProductId,
+           ProductName = p != null ? p.SKU : string.Empty,
+
+           PlatformId = item.platformId,
+           PlatformName = pl != null ? pl.Name : string.Empty,
+
+           BillToCompanyId = item.BillToCompanyId,
+           BillToCompanyName = bill != null ? bill.Name : string.Empty,
+
+           ShipToCompanyId = item.ShipToCompanyId,
+           ShipToCompanyName = ship != null ? ship.Name : string.Empty,
+
+           OutwardId = item.OutwardId,
+           OutwardNo = o != null ? o.OutwardNo : string.Empty,
+
+           BarCodeNo = item.BarCodeNo,
+           ReturnQuantity = item.ReturnQuantity,
+           ReturnType = item.ReturnType,
+           IsTakeInStock = item.IsTakeInStock,
+           ReasonToReturn = item.ReasonToReturn,
+           ReturnDate = item.ReturnDate,
+
+           UnitId = item.UnitId,
+           CategoryId = item.CategoryId,
+           SerialNo = item.SerialNo,
+
+           CreatedBy = item.CreatedBy,
+           CreatedOn = item.CreatedOn
+       };
+
+        return await query.ToListAsync();
     }
     public async Task<bool> CreateSaleReturnItem(SaleReturnItemsModel model)
     {
@@ -156,7 +195,7 @@ public class SaleReturnService : ISaleReturnService
             }
             if (model.PlatformId == 0 || model.PlatformId == null)
             {
-                var plat= await _unitOfWork.GetRepository<Platform>()
+                var plat = await _unitOfWork.GetRepository<Platform>()
                                               .GetQueryable()
                                               .FirstOrDefaultAsync(p =>
                                                   p.Name.ToLower() == "other" &&
@@ -165,17 +204,43 @@ public class SaleReturnService : ISaleReturnService
                 model.PlatformId = plat != null ? plat.Id : 0;
             }
             var item = await CreateSaleReturnItemEntity(model);
+
+            if (item == null)
+                return false;
+
             if (item.IsTakeInStock)
             {
                 var saleToInwardDto = await ConvertToDto(item);
-                await _inwardService.AddReturnItemToSaleInwardAsync(saleToInwardDto);
+
+                var inwardResult = await _inwardService
+                    .AddReturnItemToSaleInwardAsync(saleToInwardDto);
+
+                if (!inwardResult)
+                {
+                    // Soft delete SaleReturnItem
+                    var repo = _unitOfWork.GetRepository<SaleReturnItems>();
+
+                    item.IsDeleted = true;
+                    item.IsActive = false;
+                    item.UpdatedBy = model.CreatedBy;
+                    item.UpdatedOn = DateTime.Now;
+
+                    repo.Update(item);
+
+                    await _unitOfWork.SaveChangesAsync();
+
+                    return false;
+                }
             }
+          
+            await _unitOfWork.SaveChangesAsync();
 
             return true;
         }
-        catch (Exception ez)
+        catch (Exception ex)
         {
-            throw;
+            Console.WriteLine($"Error creating SaleReturnItem: {ex.Message}");
+            return false;
         }
     }
     private async Task<SaleReturnItems> CreateSaleReturnItemEntity(SaleReturnItemsModel model)
@@ -204,7 +269,7 @@ public class SaleReturnService : ISaleReturnService
             CreatedOn = model.CreatedOn
         };
         await saleReturnItemRepo.AddAsync(entity);
-        await _unitOfWork.SaveChangesAsync();        
+        await _unitOfWork.SaveChangesAsync();
         return entity;
 
     }
@@ -242,7 +307,7 @@ public class SaleReturnService : ISaleReturnService
         entity.ReturnQuantity = model.ReturnQuantity;
         entity.platformId = model.PlatformId;
         entity.UpdatedBy = model.UpdatedBy;
-        entity.UpdatedOn = DateTime.UtcNow;
+        entity.UpdatedOn = DateTime.Now;
 
         saleReturnItemRepo.Update(entity);
         await _unitOfWork.SaveChangesAsync();
@@ -256,6 +321,17 @@ public class SaleReturnService : ISaleReturnService
             var item = await itemRepo.GetByIdAsync(id);
 
             if (item == null) return false;
+           
+            var saleToInwardDto = await ConvertToDto(item);
+            saleToInwardDto.UserId= userId;
+            // Try deleting inward/barcodes first
+            var inwardDeleted = await _inwardService.DeleteSalesReturnInwardItemAsync(saleToInwardDto);
+
+            if (!inwardDeleted) 
+            {
+                return false;
+            }
+
             item.IsActive = false;
             item.IsDeleted = true;
             item.UpdatedOn = DateTime.Now;
@@ -264,14 +340,11 @@ public class SaleReturnService : ISaleReturnService
             itemRepo.Update(item);
 
             await _unitOfWork.SaveChangesAsync();
-
-            var saleToInwardDto = await ConvertToDto(item);
-            await _inwardService.DeleteSalesReturnInwardItemAsync(saleToInwardDto);
-
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"Error deleting SaleReturnItem: {ex.Message}");
             return false;
         }
     }
@@ -301,7 +374,7 @@ public class SaleReturnService : ISaleReturnService
     #endregion
 
     #region BarcodeOperation
-    public async Task<SaleReturnValidationResult> ValidateBarcodeForSaleReturnAsync(string barcodeNo, int? companyId)
+    public async Task<SaleReturnValidationResult> ValidateBarcodeForSaleReturnAsync(string barcodeNo)
     {
         if (string.IsNullOrWhiteSpace(barcodeNo))
         {
@@ -336,7 +409,7 @@ public class SaleReturnService : ISaleReturnService
             return new SaleReturnValidationResult
             {
                 IsValid = false,
-                ErrorMessage = "Barcode indicates item is still in stock at Inward No: "+ (barcodeItem.Inward?.InwardNo ?? "N/A")
+                ErrorMessage = "Barcode indicates item is still in stock at Inward No: " + (barcodeItem.Inward?.InwardNo ?? "N/A")
             };
         }
 
@@ -347,8 +420,8 @@ public class SaleReturnService : ISaleReturnService
                 CancellationToken.None,
                 s => s.SaleReturn
             )).FirstOrDefault();
-     
-        if (saleReturnItem !=null)
+
+        if (saleReturnItem != null)
         {
             return new SaleReturnValidationResult
             {
@@ -356,7 +429,7 @@ public class SaleReturnService : ISaleReturnService
                 ErrorMessage = "This Barcode Already Returned at Sale Return No: " + (saleReturnItem.SaleReturn?.SaleReturnNo ?? "N/A")
             };
         }
-        
+
 
         var shipmentCompanyId = barcodeItem.Inward?.ShipMentCompanyId;
 
@@ -389,7 +462,7 @@ public class SaleReturnService : ISaleReturnService
                 if (outwardDetail != null)
                 {
                     forceUnitToPCS = true;
-                //    outwardDetail.Unit = UnitType.PCS.ToString();
+                    //    outwardDetail.Unit = UnitType.PCS.ToString();
                 }
             }
         }
@@ -464,7 +537,6 @@ public class SaleReturnService : ISaleReturnService
             UpdatedOn = item.UpdatedOn,
             IsDeleted = item.IsDeleted,
             IsActive = item.IsActive,
-
 
         };
         return result;

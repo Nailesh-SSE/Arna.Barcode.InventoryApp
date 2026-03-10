@@ -76,9 +76,9 @@ else
                         }
                         @if (CanDelete(Route))
                         {
-                            <Button class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCompany(context.Id)">
+                            <LoadingButton class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" onclick="() => DeleteCompany(context.Id)">
                                 <Icon Name="IconName.Trash" /> Delete
-                            </Button>
+                            </LoadingButton>
                         }
                     </div>
                 </GridColumn>
@@ -129,6 +129,7 @@ else
     private EditContext editContext;
     private ValidationMessageStore validationMessage;
     private string Route = "/companies/make-to";
+    private bool isSaveBtnLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -189,8 +190,10 @@ else
 
     private async Task SaveCompany()
     {
+        if (isSaveBtnLoading) return;
         try
         {
+            isSaveBtnLoading = true;
             companyModel.CompanyType = CompanyType.MakeTo;
             if (!editContext.Validate()) return;
             await ValidateNameAsync();
@@ -218,6 +221,10 @@ else
         catch (Exception ex)
         {
 
+        }
+        finally
+        {
+            isSaveBtnLoading = false;
         }
     }
 

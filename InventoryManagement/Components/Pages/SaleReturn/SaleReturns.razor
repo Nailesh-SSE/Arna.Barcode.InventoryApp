@@ -5,6 +5,7 @@
 @inject ICategoryService CategoryService
 @inject IOutwardService OutwardService
 @inject IPlatformService PlatformService
+@inject NavigationManager Nav
 @using InventoryManagement.Services.DTO
 
 @inject IJSRuntime JSRuntime
@@ -45,7 +46,7 @@ else
         <SaleReturnTable SaleReturns="saleReturnList"
         BillToCompanies="BillToCompanyList"
         OnEditSaleReturn="ShowEditModal"
-        OnAddItems="OpenItemModel" CanEdit="CanEdit(Route)" CanDelete="CanDelete(Route)" CanCreate="CanCreate(Route)" />
+        OnAddItems="OpenItemPage" CanEdit="CanEdit(Route)" CanDelete="CanDelete(Route)" CanCreate="CanCreate(Route)" />
     }
 
     <SaleReturnFormModal @ref="saleReturnFormModal"
@@ -57,50 +58,19 @@ else
     OnEditMode="isEditMode" 
     Disablefields="disablefields"/>
 
-    <SaleReturnItemsFormModal @ref="saleReturnItemsFormModal"
-    Title="@itemTitle"
-    SelectedSaleReturn="selectedSaleReturn"
-    ItemsList="SaleReturnItems"
-    ItemsModel="itemsModel"
-    PlatformList="PlatformList"
-    ProductList="ProductList"
-    CompanyList="ShipToCompanyList"
-    BillToCompanyList="BillToCompanyList"
-    OutwardList="OutwardList"
-    OnBarcodeVal="ValidateBarcode"
-    OnClose="HideItemModal"
-    OnDelete="DeleteSaleReturnItem"
-    OnSave="SaveSaleReturnItem"
-    OnSaveResponse="HandleResponse"
-    AddItemRow="AddEmptyItemRow"
-    RemoveItemRow="RemoveItemrow" 
-    DisableFields="@disableitemfields"
-    CanCreate = "CanCreate(Route)"
-    CanDelete = "CanDelete(Route)"
-    CanEdit = "CanEdit(Route)" />
 }
 @code
 {
     private bool isLoading = true;
     private bool isEditMode = false;
     private string modalTitle = "Add Sale Return";
-    private string itemTitle = "Sale Return Items";
 
     private SaleReturnModel saleReturn = new();
-    private SaleReturnModel? selectedSaleReturn;
-    private SaleReturnItemsModel itemsModel { get; set; } = new();
     private List<SaleReturnModel> saleReturnList = new();
-    private List<SaleReturnItemsModel>? SaleReturnItems { get; set; } = new();
 
     private List<CompanyModel> BillToCompanyList = new();
-    private List<CompanyModel> ShipToCompanyList = new();
-    private List<ProductModel> ProductList = new();
-    private List<ProductModel> FilteredProducts { get; set; } = new();
-    private List<OutwardModel> OutwardList { get; set; } = new();
-    private List<PlatformModel> PlatformList { get; set; } = new();
 
     private SaleReturnFormModal? saleReturnFormModal;
-    private SaleReturnItemsFormModal? saleReturnItemsFormModal;
     private List<UnitModel> Units => CommonUtils.UnitList;
 
     private string validationMessage = string.Empty;
@@ -109,6 +79,7 @@ else
     private bool disablefields;
     private bool disableitemfields;
     private bool isAdmin = false;
+    private bool isSrSaveBtnLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -129,14 +100,8 @@ else
         {
             isLoading = true;
             isAdmin = IsAdmin() || IsFactoryAdmin();
-
             saleReturnList = (await SaleReturnService.GetAllSaleReturnsAsync(isAdmin)).ToList();
             BillToCompanyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
-            ShipToCompanyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
-            ProductList = (await ProductService.GetAllProductsAsync()).ToList();
-            OutwardList = (await OutwardService.GetAllOutwardsAsync(true)).Where(o => o.IsFinished).ToList();
-            PlatformList = (await PlatformService.GetAllPlatformAsync()).ToList();
-            FilteredProducts = ProductList;
         }
         catch
         {
@@ -192,33 +157,44 @@ else
 
     private async Task SaveSaleReturn()
     {
-        isLoading = true;
-
-        if (isEditMode)
+        if (isSrSaveBtnLoading) return;
+        try
         {
-            saleReturn.UpdatedBy = Convert.ToInt32(CurrentUserId);
-            saleReturn.UpdatedOn = DateTime.Now;
-            await SaleReturnService.UpdateSaleReturnAsync(saleReturn);
-            await HideModal();
-            await LoadData();
-        }
-        else
-        {
-            saleReturn.CreatedBy = Convert.ToInt32(CurrentUserId);
-            saleReturn.CreatedOn = DateTime.Now;
-            var SaleReturnId = await SaleReturnService.CreateSaleReturnAsync(saleReturn);
+            isSrSaveBtnLoading = true;
+            isLoading = true;
 
-            await HideModal();
-            await LoadData();
-
-            if (SaleReturnId != 0)
+            if (isEditMode)
             {
-                saleReturn.Id = SaleReturnId;
-                //   await OpenAddItemModal(saleReturn);
+                saleReturn.UpdatedBy = Convert.ToInt32(CurrentUserId);
+                saleReturn.UpdatedOn = DateTime.Now;
+                await SaleReturnService.UpdateSaleReturnAsync(saleReturn);
+                await HideModal();
+                await LoadData();
             }
-        }
-        isLoading = false;
+            else
+            {
+                saleReturn.CreatedBy = Convert.ToInt32(CurrentUserId);
+                saleReturn.CreatedOn = DateTime.Now;
+                var SaleReturnId = await SaleReturnService.CreateSaleReturnAsync(saleReturn);
 
+                await HideModal();
+                await LoadData();
+
+                if (SaleReturnId != 0)
+                {
+                    saleReturn.Id = SaleReturnId;
+                    //   await OpenAddItemModal(saleReturn);
+                }
+            }
+            isLoading = false;
+        }
+        catch (Exception)
+        {    
+        }
+        finally
+        {
+            isSrSaveBtnLoading = false;
+        }
     }
     private async Task HideModal()
     {
@@ -226,247 +202,10 @@ else
     }
     #endregion
     #region ItemModal
-    private async Task OpenItemModel(SaleReturnModel data)
+    private async Task OpenItemPage(int saleReturnId)
     {
-        if(CanCreate(Route))
-        {
-            disableitemfields = false;
-        }
-        else
-        {
-            disableitemfields = true;
-        }
-        itemsModel.BarCodeNo = string.Empty;
-        selectedSaleReturn = saleReturnList.FirstOrDefault(s => s.Id == data.Id);
-        if (selectedSaleReturn == null) return;
-        itemTitle = $"Manage SaleReturn Items | SaleReturn No: {data?.SaleReturnNo}";
-        modalTitle = "Sale Return  No:" + data.SaleReturnNo;
-
-        SaleReturnItems = await SaleReturnService.GetSaleReturnItemsByReturnId(data.Id);
-        await SyncSearchText();
-
-        saleReturnItemsFormModal.ItemsList = SaleReturnItems;
-        saleReturnItemsFormModal.SelectedSaleReturn = selectedSaleReturn;
-
-        StateHasChanged();
-        await saleReturnItemsFormModal.Show();
-
-    }
-    private async Task SaveSaleReturnItem(SaleReturnItemsModel item)
-    {
-        if (selectedSaleReturn == null || selectedSaleReturn.Id == 0)
-        {
-            await SendOperationResponse(false, "Sale Return is not selected");
-            return;
-        }
-        bool isUpdate = item.Id > 0;
-        item.SaleReturnId = selectedSaleReturn.Id;
-
-        if (!isUpdate)
-        {
-            item.CreatedBy = Convert.ToInt32(CurrentUserId);
-            item.CreatedOn = DateTime.Now;
-        }
-        else
-        {
-            item.UpdatedBy = Convert.ToInt32(CurrentUserId);
-            item.UpdatedOn = DateTime.Now;
-        }
-
-        bool success = isUpdate
-            ? await SaleReturnService.UpdateSaleReturnItem(item)
-            : await SaleReturnService.CreateSaleReturnItem(item);
-
-        if (!success)
-        {
-            await SendOperationResponse(false, "Operation failed");
-            return;
-        }
-
-        SaleReturnItems = await SaleReturnService
-            .GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
-        await SyncSearchText();
-        await SendOperationResponse(
-            true,
-            isUpdate ? "Updated successfully" : "Saved successfully"
-        );
-    }
-    private async Task SendOperationResponse(bool isSuccess, string message)
-    {
-        var ResponseDto = new OperationResponse()
-        {
-            IsSuccess = isSuccess,
-            Message = message
-        };
-        await HandleResponse(ResponseDto);
-    }
-    private async Task HandleResponse(OperationResponse Dto)
-    {
-        await saleReturnItemsFormModal.HandleResponse(Dto);
-    }
-
-    private async Task DeleteSaleReturnItem(int itemId)
-    {
-        var currentUserId = Convert.ToInt32(CurrentUserId);
-        var result = await SaleReturnService.DeleteSaleReturnItem(itemId, currentUserId);
-        SaleReturnItems = await SaleReturnService.GetSaleReturnItemsByReturnId(selectedSaleReturn.Id);
-        await SyncSearchText();
-
-        await SendOperationResponse(
-           result,
-           result ? "Deleted successfully" : "Task Failed "
-        );
-    }
-    private async Task AddEmptyItemRow()
-    {
-        await AddNewItemRow(null);
-    }
-    private async Task SyncSearchText()
-    {
-        if (SaleReturnItems == null || SaleReturnItems.Count == 0)
-            return;
-
-        foreach (var item in SaleReturnItems)
-        {
-            // PRODUCT
-            if (item.ProductId > 0)
-            {
-                item.ProductSearchText = ProductList
-                    ?.FirstOrDefault(p => p.Id == item.ProductId)?.SKU ?? "";
-            }
-
-            // OUTWARD
-            if (item.OutwardId > 0)
-            {
-                item.OutwardSearchText = OutwardList
-                    ?.FirstOrDefault(o => o.Id == item.OutwardId)?.OutwardNo ?? "";
-            }
-        }
-    }
-    private async Task AddNewItemRow(SaleReturnValidationResult? data)
-    {
-        SaleReturnItems ??= new List<SaleReturnItemsModel>();
-        var lastRow = SaleReturnItems.FirstOrDefault(x => x.Id == 0);
-        bool isBarcodeScan = data != null && data.ProductId > 0;
-
-        if (lastRow != null)
-        {
-            bool hasAnyData =
-                lastRow.ProductId != 0 ||
-                !string.IsNullOrWhiteSpace(lastRow.BarCodeNo);
-
-            if (hasAnyData)
-            {
-                await SendOperationResponse(false, "Please save the previous item first.");
-                return;
-            }
-
-            if (!hasAnyData && isBarcodeScan)
-            {
-                SaleReturnItems.Remove(lastRow);
-            }
-
-            if (!hasAnyData && !isBarcodeScan)
-            {
-                await SendOperationResponse(false, "Please fill or save the previous item first.");
-                return;
-            }
-        }
-
-        string productText = string.Empty;
-        if (data?.ProductId > 0)
-        {
-            productText = ProductList?
-                .FirstOrDefault(p => p.Id == data.ProductId)?
-                .SKU ?? string.Empty;
-        }
-
-        string outwardText = string.Empty;
-        if (data?.OutwardId > 0)
-        {
-            outwardText = OutwardList?
-                .FirstOrDefault(o => o.Id == data.OutwardId)?
-                .OutwardNo ?? string.Empty;
-        }
-
-        SaleReturnItems.Insert(0,new SaleReturnItemsModel
-        {
-            ProductId = data?.ProductId ?? 0,
-            ProductSearchText = productText,
-            ShipToCompanyId = data?.ShipToId ?? 0,
-            BillToCompanyId = data?.BillToId ?? 0,
-            UnitId = data?.UnitId ?? 0,
-            OutwardId = data?.OutwardId ?? 0,
-            OutwardSearchText = outwardText,
-            BarCodeNo = data?.BarcodeNo ?? null,
-            ReturnQuantity = data?.UnitId == (int)UnitType.BOX ? 0:1,
-            ReturnType = (int)ReturnType.Excess,
-            PlatformId = data?.PlatformId ?? 0,
-            IsTakeInStock = true
-        });
-
-        if (data != null)
-        {
-            await SendOperationResponse(true, "Barcode validated successfully. Please save to confirm.");
-        }
-        StateHasChanged();
-    }
-    private async Task HideItemModal()
-    {
-        await saleReturnItemsFormModal.Hide();
-
-    }
-    private async Task RemoveItemrow(SaleReturnItemsModel item)
-    {
-        SaleReturnItems.Remove(item);
-        StateHasChanged();
+        Nav.NavigateTo($"/sale-return/items/{saleReturnId}");
     }
 
     #endregion
-
-    private async Task ValidateBarcode()
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(itemsModel.BarCodeNo))
-            {
-                validationMessage = "Please enter a barcode first.";
-                validationIsValid = false;
-                return;
-            }
-
-            if (selectedSaleReturn?.BillToCompanyId == 0)
-            {
-                validationMessage = "Please select a company first.";
-                validationIsValid = false;
-                return;
-            }
-
-            var validationResult = await SaleReturnService.ValidateBarcodeForSaleReturnAsync(
-                itemsModel.BarCodeNo,
-                selectedSaleReturn.BillToCompanyId
-            );
-
-            validationIsValid = validationResult.IsValid;
-            validationMessage = validationResult.IsValid
-               ? $"Valid barcode. Product: {validationResult.ProductName}"
-               : validationResult.ErrorMessage;
-     
-            if (validationResult.IsValid)
-            {
-                await AddNewItemRow(validationResult);
-            }
-            else
-            {
-                await SendOperationResponse(false, validationResult.ErrorMessage);
-            }
-            StateHasChanged();
-        }
-        catch
-        {
-            // validationMessage = "Connectivity issue happened, validation failed";
-            // validationIsValid = false;
-            StateHasChanged();
-        }
-    }
 }

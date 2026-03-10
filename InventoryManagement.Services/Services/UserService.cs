@@ -69,7 +69,7 @@ public class UserService : IUserService
         user.ContactNo = model.ContactNo.Trim();
         user.IsActive = model.IsActive;
         user.UpdatedBy = model.UpdatedBy;
-        user.UpdatedOn = DateTime.UtcNow;
+        user.UpdatedOn = DateTime.Now;
         user.Password = model.Password.Trim();
         await _unitOfWork.SaveChangesAsync();
 
@@ -81,7 +81,7 @@ public class UserService : IUserService
             // update the mapping to the requested role
             existingUserRole.RoleId = model.RoleId;
             existingUserRole.UpdatedBy = model.UpdatedBy;
-            existingUserRole.UpdatedOn = DateTime.UtcNow;
+            existingUserRole.UpdatedOn = DateTime.Now;
             roleRepo.Update(existingUserRole);
         }
         else
@@ -92,7 +92,7 @@ public class UserService : IUserService
                 UserId = user.Id,
                 RoleId = model.RoleId,
                 CreatedBy = model.UpdatedBy,
-                CreatedOn = DateTime.UtcNow
+                CreatedOn = DateTime.Now
             };
             await roleRepo.AddAsync(newUserRole);
         }
@@ -112,7 +112,7 @@ public class UserService : IUserService
 
             user.IsDeleted = true;
             user.IsActive = false;
-            user.UpdatedOn= DateTime.UtcNow;
+            user.UpdatedOn= DateTime.Now;
             user.UpdatedBy = updatedBy;
             userRepository.Update(user);
             await _unitOfWork.SaveChangesAsync();
@@ -124,7 +124,7 @@ public class UserService : IUserService
             {
                 ur.IsDeleted = true;
                 ur.IsActive = false;
-                ur.UpdatedOn = DateTime.UtcNow;
+                ur.UpdatedOn = DateTime.Now;
                 ur.UpdatedBy = updatedBy;
                 userInRoleRepo.Update(ur);
 
@@ -228,7 +228,7 @@ public class UserService : IUserService
                 IsActive = true,
                 IsDeleted = false,
                 CreatedBy = model.CreatedBy,
-                CreatedOn = DateTime.UtcNow,
+                CreatedOn = DateTime.Now,
                 Password = model.Password.Trim(),
             };
 
@@ -241,7 +241,7 @@ public class UserService : IUserService
                 RoleId = model.RoleId,
                 CompanyId = 1,
                 CreatedBy = model.CreatedBy,
-                CreatedOn = DateTime.UtcNow
+                CreatedOn = DateTime.Now
             });
             await _unitOfWork.SaveChangesAsync();
             return true;
@@ -270,7 +270,7 @@ public class UserService : IUserService
                 return false;
 
             user.Password = newPassword;
-            user.UpdatedOn = DateTime.UtcNow;
+            user.UpdatedOn = DateTime.Now;
 
             userRepository.Update(user);
             await _unitOfWork.SaveChangesAsync();
