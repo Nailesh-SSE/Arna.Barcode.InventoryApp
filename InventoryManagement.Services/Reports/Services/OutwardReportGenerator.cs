@@ -104,7 +104,7 @@ namespace InventoryManagement.Services.Reports.Services
                 row.CreateCell(1).SetCellValue(item.PlatformName);                       
                 row.CreateCell(2).SetCellValue(item.OutwardNumber);                      
                 row.CreateCell(3).SetCellValue(item.OutwardDate.ToString("dd/MM/yyyy")); 
-                row.CreateCell(4).SetCellValue(item.CreatedOn.ToString("HH:mm"));        
+                row.CreateCell(4).SetCellValue(item.CreatedOn.ToString("HH:mm:ss"));        
                 row.CreateCell(5).SetCellValue(item.CategoryName);                       
                 row.CreateCell(6).SetCellValue(item.BrandName);                          
                 row.CreateCell(7).SetCellValue(item.ProductName);                        
