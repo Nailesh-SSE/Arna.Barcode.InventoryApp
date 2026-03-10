@@ -1,4 +1,5 @@
 ﻿using InventoryManagement.Core.Entities;
+using InventoryManagement.Core.Enums;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Models.ReportModels;
 using InventoryManagement.Services.Reports.Interfaces;
@@ -143,49 +144,52 @@ namespace InventoryManagement.Services.Reports.Services
             var inwardRepo = _unitOfWork.GetRepository<Inward>().GetQueryable().AsNoTracking();
             var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>().GetQueryable().AsNoTracking();
 
-            var query = baseQuery
-                .Join(inwardItemRepo,
-                    ibt => ibt.InwardItemId,
-                    it => it.Id,
-                    (ibt, it) => new { ibt, it })
-                .Join(productRepo,
-                    x => x.it.ProductId,
-                    p => p.Id,
-                    (x, p) => new { x.ibt, x.it, p })
-                .Join(categoryRepo,
-                    x => x.p.CategoryId,
-                    c => c.Id,
-                    (x, c) => new { x.ibt, x.it, x.p, c })
-                .Join(inwardRepo,
-                    x => x.ibt.InwardId,
-                    i => i.Id,
-                    (x, i) => new { x.ibt, x.it, x.p, x.c, i })
- 
-                 .GroupJoin(barcodeRepo,
-                     x => x.ibt.ParentId,     // child.ParentId
-                     b => b.Id,               // parent.Id
-                     (x, parents) => new { x, parents })
+            var barcodeCounts =
+                 from b in barcodeRepo
+                 where b.ParentId != 0 && b.IsInStock == filter.IsInStock
+                 group b by b.ParentId into g
+                 select new
+                 {
+                     ParentId = g.Key,
+                     Count = g.Count()
+                 };
 
-                 .SelectMany(
-                     x => x.parents.DefaultIfEmpty(),
-                     (x, parentBarcode) => new
-                     {
-                         x.x.ibt,
-                         x.x.it,
-                         x.x.p,
-                         x.x.c,
-                         x.x.i,
-                         ParentBarcode = parentBarcode
-                     })
-
-                .GroupJoin(userRepo,
-                    x => x.ibt.CreatedBy,
-                    uc => uc.Id,
-                    (x, ucs) => new { x, ucs })
-                .SelectMany(
-                    x => x.ucs.DefaultIfEmpty(),
-                    (x, uc) => new { x.x.ibt, x.x.it, x.x.p, x.x.c, x.x.i, x.x.ParentBarcode,uc });
-
+            var query =
+                from ibt in baseQuery
+                join it in inwardItemRepo
+                    on ibt.InwardItemId equals it.Id
+             
+                join p in productRepo
+                    on it.ProductId equals p.Id
+             
+                join c in categoryRepo
+                    on p.CategoryId equals c.Id
+             
+                join i in inwardRepo
+                    on ibt.InwardId equals i.Id
+             
+                join parent in barcodeRepo
+                     on ibt.ParentId equals parent.Id into parentBarcodes
+                from parentBarcode in parentBarcodes.DefaultIfEmpty()
+             
+                join uc in userRepo
+                     on ibt.CreatedBy equals uc.Id into userGroup
+                from uc in userGroup.DefaultIfEmpty()
+              
+                join bc in barcodeCounts
+                     on ibt.Id equals bc.ParentId into bcGroup
+                from bc in bcGroup.DefaultIfEmpty()
+                select new
+                {
+                    ibt,
+                    it,
+                    p,
+                    c,
+                    i,
+                    ParentBarcode = parentBarcode,
+                    uc,
+                    BarcodeCount = (int?)bc.Count ?? 0
+                };
             // Filters
             if (filter.CategoryId.HasValue)
                 query = query.Where(x => x.p.CategoryId == filter.CategoryId);
@@ -226,53 +230,57 @@ namespace InventoryManagement.Services.Reports.Services
 
             // Paging
             query = query
-                .Skip((filter.PageNumber - 1) * filter.PageSize)
-                .Take(filter.PageSize);
+                    .Skip((filter.PageNumber - 1) * filter.PageSize)
+                    .Take(filter.PageSize);
 
             // Map to DTO
-            var items = query.Select(x => new InStockReportItem
-            {
-                InwardNo = x.i.InwardNo,
-                CreatedOn = x.ibt.CreatedOn,
-
-                ShipCompanyId = x.i.ShipMentCompanyId,
-                ShipCompanyname = x.i.ShipMentCompany.Name,
-
-                CategoryId = x.c.Id,
-                CategoryName = x.c.Name,
-                
-                BrandId = x.p.MakeCompanyId,
-                BrandName = x.p.MakeCompany,
-                
-                ProductId = x.p.Id,
-                ProductName = x.p.Name,
-                SKU = x.p.SKU,
-
-                Unit = x.it.BoxQuantity > 0 && x.ibt.ParentId == 0 ? "BOX" : "PCS",
-
-                Quantity = x.it.BoxQuantity > 0 &&
-                            (x.ibt.ParentId == 0 || x.ibt.ParentId == null)
-                                ? barcodeRepo
-                                    .Count(c =>
-                                        c.ParentId == x.ibt.Id &&
-                                        (filter.IsInStock
-                                            ? c.IsInStock
-                                            : !c.IsInStock))
-                                : 1,
-
-                BoxQuantity = x.it.BoxQuantity > 0 && x.ibt.ParentId == 0 ? x.it.BoxQuantity: 0,
-
-                ItemBarcodeNo = x.ibt.BarcodeNo,
-                BoxBarcodeNo = x.ParentBarcode != null ? x.ParentBarcode.BarcodeNo : string.Empty,
-                IsInStock = x.ibt.IsInStock,
-                
-                Remark = x.i.Remarks,
-                CreatedBy = x.ibt.CreatedBy,
-                UserName = x.uc != null ? x.uc.UserName : "",
-
-                BatchNo= x.it.BatchNo
-
-            }).ToList();
+            var items = query
+                       .Select(x => new
+                       {
+                           x,
+                           IsBox = x.it.InwardUnitId == (int)UnitType.BOX && x.ibt.ParentId == 0
+                       })
+                       .Select(t => new InStockReportItem
+                       {
+                           InwardNo = t.x.i.InwardNo,
+                           CreatedOn = t.x.ibt.CreatedOn,
+                      
+                           ShipCompanyId = t.x.i.ShipMentCompanyId,
+                           ShipCompanyname = t.x.i.ShipMentCompany.Name,
+                      
+                           CategoryId = t.x.c.Id,
+                           CategoryName = t.x.c.Name,
+                      
+                           BrandId = t.x.p.MakeCompanyId,
+                           BrandName = t.x.p.MakeCompany,
+                      
+                           ProductId = t.x.p.Id,
+                           ProductName = t.x.p.Name,
+                           SKU = t.x.p.SKU,
+                      
+                           Unit = t.IsBox ? "BOX" : "PCS",
+                      
+                           Quantity = t.IsBox
+                               ? Math.Max(0, (decimal)t.x.BarcodeCount)
+                               : 1m,
+                      
+                           BoxQuantity = t.IsBox ? t.x.it.BoxQuantity : 0,
+                      
+                           ItemBarcodeNo = t.IsBox ? string.Empty : t.x.ibt.BarcodeNo,
+                      
+                           BoxBarcodeNo = t.x.ParentBarcode != null
+                               ? t.x.ParentBarcode.BarcodeNo
+                               : (t.IsBox ? t.x.ibt.BarcodeNo : string.Empty),
+                      
+                           IsInStock = t.x.ibt.IsInStock,
+                      
+                           Remark = t.x.i.Remarks,
+                           CreatedBy = t.x.ibt.CreatedBy,
+                           UserName = t.x.uc != null ? t.x.uc.UserName : "",
+                      
+                           BatchNo = t.x.it.BatchNo
+                       })
+                       .ToList();
 
             return (items, totalRecords);
         }
