@@ -703,12 +703,11 @@ else
 
         formModel.UnitId = (int)validationResult.UnitId;
 
-        formModel.ReturnQuantity =
-            validationResult.UnitId == (int)UnitType.BOX ? 0 : 1;
-
+        formModel.ReturnQuantity = validationResult.ReturnQuantity;
+         
         formModel.ReturnType = (int)ReturnType.Excess;
         formModel.IsTakeInStock = true;
-
+        
         SyncSearchTextForItem(formModel);
 
         StateHasChanged();

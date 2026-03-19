@@ -492,6 +492,11 @@ public class SaleReturnService : ISaleReturnService
                 ErrorMessage = "Outward record is missing for this barcode."
             };
         }
+
+        var returnQuantity = unitId == (int)UnitType.PCS
+                             ? 1m
+                             : (barcodeItem.InwardItem != null 
+                                    ? barcodeItem.InwardItem.ItemQuantity : 1);
         //if (outward == null || outward.BillToCompanyId != companyId)
         //{
         //    return new SaleReturnValidationResult
@@ -517,7 +522,8 @@ public class SaleReturnService : ISaleReturnService
             UnitId = unitId,
             OutwardId = outwardId,
             BarcodeNo = barcodeNo,
-            PlatformId = outward.PlatformId
+            PlatformId = outward.PlatformId,
+            ReturnQuantity = returnQuantity
 
         };
     }

@@ -88,6 +88,7 @@ namespace InventoryManagement.Services.Models
         public string? BarcodeNo { get;set; }
         public int PlatformId { get; set; }
         public string? Platform { get; set; } 
+        public decimal ReturnQuantity { get; set; }
 
     }
 }
