@@ -1,0 +1,449 @@
+﻿@page "/reports/Return-Barcode-Mapping"
+@using InventoryManagement.Components.Auth
+@using InventoryManagement.Services.Models.ReportModels
+@using InventoryManagement.Services.Interfaces
+@using InventoryManagement.Services.Reports.Interfaces
+@inherits AuthComponentBase
+@inject IReturnedBarcodeMappingReportService ReturnedBarcodeMappingReportService
+@inject ICompanyService CompanyService
+@inject ICategoryService CategoryService
+@inject IJSRuntime JS
+
+<PageTitle>New Barcode Report</PageTitle>
+@if (!CanView(Route))
+{
+    <AccessDenied />
+}
+else
+{
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="row mb-4 align-items-center">
+            <div class="col">
+                <h3>New Barcode Report</h3>
+            </div>
+            <div class="col-auto">
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary"
+                            disabled="@isRefresh"
+                            @onclick="RefreshReport">
+                        @if (isRefresh)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Refreshing...</span>
+                        }
+                        else
+                        {
+                            <Icon Name="IconName.ArrowClockwise" />
+                            <span>Refresh</span>
+                        }
+                    </button>
+                    @* <button class="btn btn-outline-success"
+                            disabled="@isExporting"
+                            @onclick="ExportCurrentReport">
+                        @if (isExporting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Exporting...</span>
+                        }
+                        else
+                        {
+                            <Icon Name="IconName.Download" />
+                            <span>Export</span>
+                        }
+                    </button> *@
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(alertMessage))
+        {
+            <div class="alert alert-@alertType alert-dismissible fade show" role="alert">
+                @alertMessage
+                <button type="button" class="btn-close" @onclick="() => alertMessage = null"></button>
+            </div>
+        }
+
+        <div class="row">
+            <!-- Filter Panel -->
+            <div class="col-md-3 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <Icon Name="IconName.Funnel" /> Filter Options
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <EditForm Model="@filter" OnValidSubmit="GenerateReport">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label">Start Date</label>
+                                    <InputDate class="form-control" @bind-Value="filter.StartDate" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">End Date</label>
+                                    <InputDate class="form-control" @bind-Value="filter.EndDate" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Supplier</label>
+                                    <InputSelect class="form-select" @bind-Value="filter.BillToCompanyId">
+                                        <option value="">All Suppliers</option>
+                                        @foreach (var company in billCompanies)
+                                        {
+                                            <option value="@company.Id">@company.Name</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Return Numbers</label>
+                                    <InputText class="form-control" @bind-Value="filter.ReturnNumbers" placeholder="comma-separated" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Sort By</label>
+                                    <InputSelect class="form-select" @bind-Value="filter.SortBy">
+                                        <option value="ReturnDate">Date</option>
+                                        <option value="ReturnNo">Return Number</option>
+                                        <option value="ShipmentCompany">Supplier</option>
+                                        @* <option value="Quantity">Quantity</option>
+                                    <option value="TotalCost">Total Cost</option> *@
+                                    </InputSelect>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Page Size</label>
+                                    <InputSelect class="form-select" @bind-Value="filter.PageSize">
+                                        <option value="10">10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                        <option value="500">500</option>
+                                    </InputSelect>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Sort Order</label>
+                                    <div class="form-check form-switch mt-2">
+                                        <InputCheckbox class="form-check-input" @bind-Value="filter.SortDescending" />
+                                        <label class="form-check-label">Descending</label>
+                                    </div>
+                                </div>
+                                <div class="col-12 d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <Icon Name="IconName.Search" /> Generate Report
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" @onclick="ClearFilters">
+                                        <Icon Name="IconName.XCircle" /> Clear
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info" @onclick="LoadDefaultFilters">
+                                        <Icon Name="IconName.ArrowClockwise" /> Default
+                                    </button>
+                                </div>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Content -->
+            <div class="col-md-9">
+                @if (isLoading)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <div class="mt-2"><strong>Generating report...</strong></div>
+                        <div class="progress mt-2" style="height: 4px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: @loadingProgress%;"></div>
+                        </div>
+                    </div>
+                }
+                else if (reportResult is not null)
+                {
+                    <!-- Data Table -->
+                    @if (!filter.SummaryOnly && reportResult.Items.Any())
+                    {
+                        <div class="d-flex flex-column vh-100">
+                            <div class="card flex-grow-1">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Detailed Results</h5>
+                                    <small class="text-muted">
+                                        Page @reportResult.PageNumber of @reportResult.PageCount
+                                        (@reportResult.TotalRecords total records)
+                                    </small>
+                                </div>
+                                <div class="card-body p-0 overflow-auto">
+                                    <div class="table-responsive overflow-auto" style="max-height: 80vh;">
+                                        <table class="table table-striped table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Return No</th>
+                                                    <th>Inward No</th>
+                                                    <th>Old Barcode</th>
+                                                    <th>New Barcode</th>
+                                                    <th>Product</th>
+                                                    <th>SKU</th>
+                                                    <th>Unit</th>
+                                                    <th class="text-end">Box Qty</th>
+                                                    <th class="text-end">Item Qty</th>
+                                                    <th>Reason</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in reportResult.Items)
+                                                {
+                                                    <tr>
+                                                        <td>@((reportResult.PageNumber - 1) * reportResult.PageSize + reportResult.Items.IndexOf(item) + 1)</td>
+                                                        <td>@item.SaleReturnNo</td>
+                                                        <td>@item.InwardNo</td>
+                                                        <td>@item.OldBarcode</td>
+                                                        <td>@item.NewdBarcode</td>
+                                                        <td>@item.ProductName</td>
+                                                        <td><code>@item.SKU</code></td>
+                                                        <td>@item.Unit</td>
+                                                        <td class="text-end">@item.BoxQuantity.ToString("N2")</td>
+                                                        <td class="text-end">@item.Quantity.ToString("N2")</td>
+                                                        <td>@item.Reason</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Pagination -->
+                                <div class="card-footer">
+                                    <nav>
+                                        <ul class="pagination pagination-sm mb-0">
+                                            <li class="page-item @(reportResult.HasPreviousPage ? "" : "disabled")">
+                                                <button class="page-link" @onclick="() => GoToPage(1)">
+                                                    <Icon Name="IconName.ChevronDoubleLeft" />
+                                                </button>
+                                            </li>
+                                            <li class="page-item @(reportResult.HasPreviousPage ? "" : "disabled")">
+                                                <button class="page-link" @onclick="() => GoToPage(reportResult.PageNumber - 1)">
+                                                    <Icon Name="IconName.ChevronLeft" />
+                                                </button>
+                                            </li>
+                                            @for (int i = Math.Max(1, reportResult.PageNumber - 2); i <= Math.Min(reportResult.PageCount, reportResult.PageNumber + 2); i++)
+                                            {
+                                                var page = i;
+                                                <li class="page-item @(page == reportResult.PageNumber ? "active" : "")">
+                                                    <button class="page-link" @onclick="() => GoToPage(page)">@i</button>
+                                                </li>
+                                            }
+                                            <li class="page-item @(reportResult.HasNextPage ? "" : "disabled")">
+                                                <button class="page-link" @onclick="() => GoToPage(reportResult.PageNumber + 1)">
+                                                    <Icon Name="IconName.ChevronRight" />
+                                                </button>
+                                            </li>
+                                            <li class="page-item @(reportResult.HasNextPage ? "" : "disabled")">
+                                                <button class="page-link" @onclick="() => GoToPage(reportResult.PageCount)">
+                                                    <Icon Name="IconName.ChevronDoubleRight" />
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (filter.SummaryOnly)
+                    {
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Summary View</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <h6>Report Statistics</h6>
+                                        <ul class="list-unstyled">
+                                            <li><strong>Total Returns:</strong> @reportResult.Summary.TotalReturns</li>
+                                            <li><strong>Unique Products:</strong> @reportResult.Summary.UniqueProductsCount</li>
+                                            <li><strong>Unique Suppliers:</strong> @reportResult.Summary.UniqueSuppliersCount</li>
+                                            <li><strong>Average Quantity/Return:</strong> @reportResult.Summary.AverageQuantityPerReturn.ToString("N2")</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6>Financial Summary</h6>
+                                        <ul class="list-unstyled">
+                                            <li><strong>Total Quantity:</strong> @reportResult.Summary.TotalQuantity.ToString("N2")</li>
+                                            <li><strong>Total Value:</strong> @reportResult.Summary.TotalValue.ToString("C2")</li>
+                                            <li><strong>Average Value/Return:</strong> @reportResult.Summary.AverageValuePerReturn.ToString("C2")</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6>Performance</h6>
+                                        <ul class="list-unstyled">
+                                            <li><strong>Generation Time:</strong> @reportResult.GenerationTime.TotalMilliseconds.ToString("F0") ms</li>
+                                            <li><strong>Records Processed:</strong> @reportResult.TotalRecords</li>
+                                            <li><strong>Page Count:</strong> @reportResult.PageCount</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (!reportResult.Items.Any())
+                    {
+                        <div class="text-center py-5">
+                            <Icon Name="IconName.Inbox" class="text-muted" style="font-size: 3rem;" />
+                            <h5 class="mt-3 text-muted">No records found</h5>
+                            <p class="text-muted">Try adjusting your filters to see results.</p>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-center py-5">
+                        <Icon Name="IconName.FileText" class="text-muted" style="font-size: 3rem;" />
+                        <h5 class="mt-3 text-muted">No Report Generated</h5>
+                        <p class="text-muted">Configure your filters and click "Generate Report" to create a report.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+@code {
+    private string? alertMessage;
+    private string alertType = "info";
+
+    private SaleReturnFilter filter = new();
+    private List<CompanyModel> billCompanies = new();
+    private List<CategoryModel> categories = new();
+
+    private ReturnBarcodeMappingReportResult? reportResult;
+    private bool isLoading = false;
+    private bool isExporting = false;
+    private bool isRefresh = false;
+    private int loadingProgress = 0;
+    private string Route = "/reports/sale-return";
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDefaultFilters();
+        await LoadCompaniesAndCategories();
+    }
+
+    private async Task LoadCompaniesAndCategories()
+    {
+        billCompanies = await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo);
+        categories = await CategoryService.GetAllCategoriesAsync();
+    }
+
+    private async Task LoadDefaultFilters()
+    {
+        filter = new SaleReturnFilter
+        {
+            StartDate = DateTime.Today.AddDays(-30),
+            EndDate = DateTime.Today,
+            PageSize = 25,
+            SortBy = "ReturnDate",
+            SortDescending = true
+        };
+    }
+
+    private async Task ClearFilters()
+    {
+        filter = new();
+        reportResult = null;
+        ShowAlert("info", "Filters cleared.");
+    }
+
+    private async Task GenerateReport()
+    {
+        isLoading = true;
+        loadingProgress = 10;
+        StateHasChanged();
+        try
+        {
+            loadingProgress = 25;
+            reportResult = await ReturnedBarcodeMappingReportService.GenerateReturnBarcodeMappingReportAsync(filter);
+            loadingProgress = 100;
+            ShowAlert("success", $"Report {(isRefresh ? "refreshed" : "generated")} successfully.");
+        }
+        catch (Exception ex)
+        {
+            ShowAlert("danger", $"Failed to generate report: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RefreshReport()
+    {
+        if (reportResult != null)
+        {
+            isRefresh = true;
+            await GenerateReport();
+            isRefresh = false;
+        }
+        else
+        {
+            ShowAlert("warning", "No report to refresh.");
+        }
+    }
+
+    // private async Task ExportCurrentReport()
+    // {
+    //     if (reportResult == null || isExporting)
+    //     {
+    //         ShowAlert("warning", "No report available to export.");
+    //         return;
+    //     }
+    //     isExporting = true;
+    //     StateHasChanged();
+    //     try
+    //     {
+    //         var excelData = await IReturnedBarcodeMappingReportService.ExportToExcelAsync(filter);
+    //         var fileName = $"SaleReturn_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+    //         var filePath = Path.Combine(Environment.CurrentDirectory, "wwwroot", "exports");
+
+    //         if (!Directory.Exists(filePath))
+    //             Directory.CreateDirectory(filePath);
+
+    //         var fullPath = Path.Combine(filePath, fileName);
+    //         await File.WriteAllBytesAsync(fullPath, excelData);
+
+    //         //Browser downloads static file directly
+    //         var downloadUrl = $"/exports/{fileName}";
+    //         NavigationManager.NavigateTo(downloadUrl, forceLoad: true);
+
+    //         ShowAlert("success", "Report exported successfully. Check your Downloads folder.");
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         alertMessage = $"Export failed: {ex.Message}";
+    //         alertType = "danger";
+    //     }
+    //     finally
+    //     {
+    //         isExporting = false;
+    //         StateHasChanged();
+    //     }
+    // }
+
+    private async Task GoToPage(int pageNumber)
+    {
+        if (reportResult == null || pageNumber < 1 || pageNumber > reportResult.PageCount)
+            return;
+
+        filter.PageNumber = pageNumber;
+        await GenerateReport();
+    }
+
+    private void ShowAlert(string type, string message)
+    {
+        alertType = type;
+        alertMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+
+    private async Task AutoHideAlertAsync()
+    {
+        await Task.Delay(3000);
+        alertMessage = null;
+        await InvokeAsync(StateHasChanged);
+    }
+}

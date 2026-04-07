@@ -348,3 +348,35 @@ public class InStockReportItem
     public string InwardNo { get; set; }= string.Empty; 
 }
 #endregion
+
+#region Return Barcode Mapping Report Models
+public class ReturnBarcodeMappingReportResult : BaseReportResult
+{
+    public List<ReturnBarcodeMappingReportItem> Items { get; set; } = new();
+    public SaleReturnReportSummary Summary { get; set; } = new();
+    public int PageCount { get; set; }
+    public bool HasNextPage { get; set; }
+    public bool HasPreviousPage { get; set; }
+}
+public class ReturnBarcodeMappingReportItem
+{
+    public int SaleReturnId { get; set; }
+    public string SaleReturnNo { get; set; } = string.Empty;
+    public int SaleReturnItemId { get; set; }
+    public int InwardId { get; set; }
+    public string InwardNo { get; set; } = string.Empty;
+    public int InwardItemId { get; set; }
+    public string OldBarcode { get; set; } = string.Empty;
+    public string NewdBarcode { get; set; } = string.Empty;
+    public int ProductId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
+    public string SKU { get; set; } = string.Empty;
+    public decimal Quantity { get; set; }
+    public decimal BoxQuantity { get; set; }
+    public string Unit { get; set; } = string.Empty;
+    public string Reason { get; set; } = string.Empty;
+    public string? Remarks { get; set; }
+    public DateTime ReturnDate { get; set; }
+    public int? BillToCompanyId { get; set; }
+}
+#endregion
