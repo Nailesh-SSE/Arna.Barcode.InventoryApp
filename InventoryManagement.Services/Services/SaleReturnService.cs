@@ -543,7 +543,7 @@ public class SaleReturnService : ISaleReturnService
             UpdatedOn = item.UpdatedOn,
             IsDeleted = item.IsDeleted,
             IsActive = item.IsActive,
-
+            BarcodeNo = item.BarCodeNo,
         };
         return result;
     }

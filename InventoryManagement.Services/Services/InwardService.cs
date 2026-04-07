@@ -215,7 +215,7 @@ public class InwardService : IInwardService
     public async Task<bool> DeleteInwardItemAsync(int id, int userId)
     {
         try
-            {
+        {
             await DeleteBarcodesForItemAsync(id, userId);
 
             var itemRepo = _unitOfWork.GetRepository<InwardItem>();
@@ -247,7 +247,8 @@ public class InwardService : IInwardService
                 return false;
 
             var itemModel = await ConvertDtoToItemModel(inwardId, saleReturnItems);
-            return await SaveSalesReturnInwardItemAsync(itemModel);
+            var oldbarcode = saleReturnItems.BarcodeNo;
+            return await SaveSalesReturnInwardItemAsync(itemModel, oldbarcode);
         }
         catch (Exception ex)
         {
@@ -266,7 +267,7 @@ public class InwardService : IInwardService
                 return false;
 
             var model = await ConvertDtoToItemModel(existingReturnInward.Id, saleReturnItems);
-                model.UpdatedBy = saleReturnItems.UserId;
+            model.UpdatedBy = saleReturnItems.UserId;
             return await DeleteSaleReturnInwardItemAsync(model);
         }
         catch (Exception ex)
@@ -700,18 +701,18 @@ public class InwardService : IInwardService
 
     }
 
-    private async Task<bool> CreateSalesReturnInwardItemAsync(InwardItemModel model)
+    private async Task<bool> CreateSalesReturnInwardItemAsync(InwardItemModel model, string? oldBarcode = null)
     {
         try
         {
             var entity = await CreateInwardItemEntityAsync(model);
-            
+
             if (entity == null)
                 return false;
 
             try
             {
-                await CreateBarcodesForSingleItemAsync(entity, entity.CreatedOn);
+                await CreateBarcodesForSingleItemAsync(entity, entity.CreatedOn, oldBarcode);
             }
             catch
             {
@@ -735,10 +736,10 @@ public class InwardService : IInwardService
         {
             Console.WriteLine($"Error creating SaleReturn Inward Items: {ex.Message}");
             return false;
-        }   
+        }
     }
 
-    private async Task<bool> UpdateSaleReturnInwardItemAsync(InwardItem existingItem, InwardItemModel model, bool isDeleting)
+    private async Task<bool> UpdateSaleReturnInwardItemAsync(InwardItem existingItem, InwardItemModel model, bool isDeleting, string? oldBarcode = null)
     {
 
         var delta = isDeleting ? -model.ItemQuantity : model.ItemQuantity;
@@ -758,7 +759,7 @@ public class InwardService : IInwardService
         {
             bool result = isDeleting
                        ? await DeleteBarcodeOfSaleReturnInward(existingItem, model.ItemQuantity, model.UpdatedBy ?? 0)
-                       : await CreateAdditionalBarcodesAsync(existingItem, model.ItemQuantity, DateTime.Now);
+                       : await CreateAdditionalBarcodesAsync(existingItem, model.ItemQuantity, DateTime.Now, oldBarcode);
 
             if (!result)
                 return false;
@@ -786,15 +787,15 @@ public class InwardService : IInwardService
         }
     }
 
-    private async Task<bool> SaveSalesReturnInwardItemAsync(InwardItemModel model)
+    private async Task<bool> SaveSalesReturnInwardItemAsync(InwardItemModel model, string? oldBarcode = null)
     {
         var existingItem = await GetExistingItemAsync(model);
 
         if (existingItem == null || existingItem.InwardUnitId == (int)UnitType.BOX)
         {
-            return await CreateSalesReturnInwardItemAsync(model);
+            return await CreateSalesReturnInwardItemAsync(model, oldBarcode);
         }
-        return await UpdateSaleReturnInwardItemAsync(existingItem, model, false);
+        return await UpdateSaleReturnInwardItemAsync(existingItem, model, false, oldBarcode);
     }
 
     private async Task<bool> DeleteSaleReturnInwardItemAsync(InwardItemModel model)
@@ -886,11 +887,47 @@ public class InwardService : IInwardService
         }
     }
 
-    private async Task CreateBarcodesForSingleItemAsync(InwardItem item, DateTime transactionDate)
+    private async Task CreateBarcodesForSingleItemAsync(InwardItem item, DateTime transactionDate, string? oldBarcode = null)
     {
         try
         {
             var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+            int? OldBarcodeId = 0;
+            List<int?> oldBoxItemBarcodeIds = new();
+            
+            if (!string.IsNullOrEmpty(oldBarcode))
+            {
+                var oldBarcodeEntity = await barcodeRepo
+            .GetQueryable()
+            .FirstOrDefaultAsync(b => b.BarcodeNo == oldBarcode && !b.IsDeleted);
+
+                if (oldBarcodeEntity != null)
+                {
+                    if (item.InwardUnitId == (int)UnitType.PCS)
+                    {
+                        OldBarcodeId = oldBarcodeEntity.Id;
+                    }
+
+                    else if (item.InwardUnitId == (int)UnitType.BOX)
+                    {
+                        OldBarcodeId = oldBarcodeEntity.Id;
+
+                        oldBoxItemBarcodeIds = await barcodeRepo
+                            .GetQueryable()
+                            .Where(b => b.ParentId == oldBarcodeEntity.Id && !b.IsDeleted)
+                            .OrderBy(b => b.Id)
+                            .Select(b => (int?)b.Id)
+                            .ToListAsync();
+                    }
+                }
+                else
+                {
+                    OldBarcodeId = 0;
+                    oldBoxItemBarcodeIds = new List<int?>();
+
+                }
+
+            }
 
             // Get all existing barcodes for this inward to find the highest counter
             var existingBarcodes = await barcodeRepo.FindAsync(b =>
@@ -905,14 +942,14 @@ public class InwardService : IInwardService
                                .Select(b => int.Parse(b.BarcodeNo[^6..]))
                                .Max() + 1;
             }
-                
+
             var parentBarcodes = new List<InwardBarcodeItem>();
 
             if (item.InwardUnitId == (int)UnitType.BOX)
             {
                 for (int i = 0; i < item.BoxQuantity; i++)
                 {
-                    parentBarcodes.Add(CreateBarcodeEntity(item, maxCounter, transactionDate, 0));
+                    parentBarcodes.Add(CreateBarcodeEntity(item, maxCounter, transactionDate, 0, OldBarcodeId));
                     maxCounter++;
                 }
                 if (parentBarcodes.Any())
@@ -926,7 +963,23 @@ public class InwardService : IInwardService
             var parentId = parentBarcodes.Any() ? parentBarcodes.First().Id : 0;
             for (int i = 0; i < item.ItemQuantity; i++)
             {
-                childBarcodes.Add(CreateBarcodeEntity(item, maxCounter, transactionDate, parentId));
+                int? childOldId = null;
+
+                // CASE 2: BOX → map children safely
+                if (oldBoxItemBarcodeIds.Any() && i < oldBoxItemBarcodeIds.Count)
+                {
+                    childOldId = oldBoxItemBarcodeIds[i];
+                }
+                // CASE 1: PCS → single mapping
+                else if (OldBarcodeId != null && item.InwardUnitId == (int)UnitType.PCS)
+                {
+                    childOldId = OldBarcodeId;
+                }
+
+                childBarcodes.Add(
+                    CreateBarcodeEntity(item, maxCounter, transactionDate, parentId, childOldId)
+                );
+
                 maxCounter++;
             }
 
@@ -970,15 +1023,15 @@ public class InwardService : IInwardService
         var singleBarcode = await barcodeRepo
             .GetQueryable()
             .FirstOrDefaultAsync(b => b.BarcodeNo == barcode && !b.IsDeleted);
-     
+
         if (singleBarcode == null) return false;
-     
+
         singleBarcode.IsActive = false;
         singleBarcode.IsInStock = false;
         singleBarcode.IsDeleted = true;
         singleBarcode.UpdatedOn = DateTime.Now;
         singleBarcode.UpdatedBy = userId;
-    
+
         barcodeRepo.Update(singleBarcode);
         await _unitOfWork.SaveChangesAsync();
 
@@ -1024,11 +1077,23 @@ public class InwardService : IInwardService
         }
     }
 
-    private async Task<bool> CreateAdditionalBarcodesAsync(InwardItem item, decimal qty, DateTime transactionDate)
+    private async Task<bool> CreateAdditionalBarcodesAsync(InwardItem item, decimal qty, DateTime transactionDate, string? oldBarcode = null)
     {
         try
         {
             var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+
+            int? OldBarcodeId = 0;
+
+            if (!string.IsNullOrEmpty(oldBarcode))
+            {
+                var oldBarcodeEntity = await barcodeRepo
+                .GetQueryable()
+                .FirstOrDefaultAsync(b => b.BarcodeNo == oldBarcode && !b.IsDeleted);
+
+
+                OldBarcodeId = oldBarcodeEntity?.Id ?? 0;
+            }
 
             var existingBarcodes = await barcodeRepo.FindAsync(b =>
                                    b.InwardId == item.InwardId);
@@ -1046,7 +1111,7 @@ public class InwardService : IInwardService
 
             for (int i = 0; i < (int)qty; i++)
             {
-                newBarcodes.Add(CreateBarcodeEntity(item, maxCounter, transactionDate, 0));
+                newBarcodes.Add(CreateBarcodeEntity(item, maxCounter, transactionDate, 0, OldBarcodeId));
                 maxCounter++;
             }
 
@@ -1062,7 +1127,7 @@ public class InwardService : IInwardService
         }
     }
 
-    private InwardBarcodeItem CreateBarcodeEntity(InwardItem item, int counter, DateTime transactionDate, int parentId)
+    private InwardBarcodeItem CreateBarcodeEntity(InwardItem item, int counter, DateTime transactionDate, int parentId, int? oldBarcodeId = 0)
     {
         return new InwardBarcodeItem
         {
@@ -1072,7 +1137,8 @@ public class InwardService : IInwardService
             BarcodeNo = GenerateBarcodeNumber(transactionDate, item.InwardId, counter),
             TransactionDate = transactionDate,
             IsInStock = true,
-            ParentId = parentId
+            ParentId = parentId,
+            OldBarcodeId = oldBarcodeId ?? 0
         };
     }
 

@@ -23,6 +23,7 @@ public class InwardBarcodeItem : Common
     public bool IsInStock { get; set; } = true;
 
     public int ParentId { get; set; } = 0;
+    public int OldBarcodeId { get; set; } = 0;
     public bool IsPrinted { get; set; }
     public int PrintedBy { get; set; }
 
