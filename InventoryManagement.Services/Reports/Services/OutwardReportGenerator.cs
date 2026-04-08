@@ -64,13 +64,14 @@ namespace InventoryManagement.Services.Reports.Services
             IRow headerRow = sheet.CreateRow(0);
             string[] headers = new string[]
             {
-              "Bill To Company", "Platform","Outward Number", "Outward Date","Outward Time",
+              "No.","Bill To Company", "Platform","Outward Number", "Outward Date","Outward Time",
               "Category", "Brand" ,"Product","SKU","Barcode ",
-              "Unit","Box Quantity","Item Quantity","Remark","Status"
+              "Unit","Box Quantity","Item Quantity","Remark","Status","UserName","Action"
             };
 
             int[] columnWidths = new int[]
             {
+                 6,  //No.
                  40, // Bill To Company
                  14, // Platform
                  16, // Outward Number
@@ -85,7 +86,9 @@ namespace InventoryManagement.Services.Reports.Services
                  12, // Box Quantity
                  12, // Item Quantity
                  25, // Remark (free text)
-                 8  // Status
+                 8,  // Status
+                 15, // UserName
+                 8,  // Action
             };
 
             for (int i = 0; i < headers.Length; i++)
@@ -100,21 +103,24 @@ namespace InventoryManagement.Services.Reports.Services
                 var item = report.Items[i];
                 IRow row = sheet.CreateRow(i + 1);
 
-                row.CreateCell(0).SetCellValue(item.BillToCompanyName);                  
-                row.CreateCell(1).SetCellValue(item.PlatformName);                       
-                row.CreateCell(2).SetCellValue(item.OutwardNumber);                      
-                row.CreateCell(3).SetCellValue(item.OutwardDate.ToString("dd/MM/yyyy")); 
-                row.CreateCell(4).SetCellValue(item.CreatedOn.ToString("HH:mm:ss"));        
-                row.CreateCell(5).SetCellValue(item.CategoryName);                       
-                row.CreateCell(6).SetCellValue(item.BrandName);                          
-                row.CreateCell(7).SetCellValue(item.ProductName);                        
-                row.CreateCell(8).SetCellValue(item.SKU);                                
-                row.CreateCell(9).SetCellValue(item.Barcode ??string.Empty);             
-                row.CreateCell(10).SetCellValue(item.Unit);                              
-                row.CreateCell(11).SetCellValue(item.BoxQuantity);                       
-                row.CreateCell(12).SetCellValue(item.ItemQuantity);                      
-                row.CreateCell(13).SetCellValue(item.Remarks);                           
-                row.CreateCell(14).SetCellValue(item.IsActive ? "Active" : "Inactive");  
+                row.CreateCell(0).SetCellValue(i + 1);
+                row.CreateCell(1).SetCellValue(item.BillToCompanyName);                  
+                row.CreateCell(2).SetCellValue(item.PlatformName);                       
+                row.CreateCell(3).SetCellValue(item.OutwardNumber);                      
+                row.CreateCell(4).SetCellValue(item.OutwardDate.ToString("dd/MM/yyyy")); 
+                row.CreateCell(5).SetCellValue(item.CreatedOn.ToString("HH:mm:ss"));        
+                row.CreateCell(6).SetCellValue(item.CategoryName);                       
+                row.CreateCell(7).SetCellValue(item.BrandName);                          
+                row.CreateCell(8).SetCellValue(item.ProductName);                        
+                row.CreateCell(9).SetCellValue(item.SKU);                                
+                row.CreateCell(10).SetCellValue(item.Barcode ??string.Empty);             
+                row.CreateCell(11).SetCellValue(item.Unit);                              
+                row.CreateCell(12).SetCellValue(item.BoxQuantity);                       
+                row.CreateCell(13).SetCellValue(item.ItemQuantity);                      
+                row.CreateCell(14).SetCellValue(item.Remarks);                           
+                row.CreateCell(15).SetCellValue(item.IsActive ? "Active" : "Inactive");  
+                row.CreateCell(16).SetCellValue(item.UserName);  
+                row.CreateCell(17).SetCellValue(item.IsDeleted ? "Deleted" : "Saved");  
             }
 
             // Write to memory stream and return as byte array
@@ -191,10 +197,11 @@ namespace InventoryManagement.Services.Reports.Services
             var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>().GetQueryable().AsNoTracking();
             var companyRepo = _unitOfWork.GetRepository<Company>().GetQueryable().AsNoTracking();
             var platfromRepo = _unitOfWork.GetRepository<Platform>().GetQueryable().AsNoTracking();
+            var userRepo = _unitOfWork.GetRepository<Users>().GetQueryable().AsNoTracking();
 
             var query =
                 from o in basequery
-                from item in o.OutwardDetails.Where(d => !d.IsDeleted)
+                from item in o.OutwardDetails
 
                 join p in productRepo
                     on item.ProductId equals p.Id
@@ -217,6 +224,9 @@ namespace InventoryManagement.Services.Reports.Services
                 join it in inwardItemRepo
                      on bc.InwardItemId equals it.Id into itJoin
                      from it in itJoin.DefaultIfEmpty()
+                join user in userRepo
+                     on item.CreatedBy equals user.Id into userJoin
+                     from user in userJoin.DefaultIfEmpty()
 
                 select new
                 {
@@ -228,6 +238,7 @@ namespace InventoryManagement.Services.Reports.Services
                     plat,
                     bc,
                     it,
+                    user
                 };
        
             if (filter.CategoryId.HasValue)
@@ -246,6 +257,12 @@ namespace InventoryManagement.Services.Reports.Services
                     query = query.Where(x => x.o.PlatformId == filter.PlatformId);
                 }
             }
+            if (!string.IsNullOrWhiteSpace(filter.ProductName))
+                query = query.Where(x => x.p.Name == filter.ProductName);
+
+            if (filter.BrandId.HasValue && filter.BrandId > 0)
+                query = query.Where(x => x.p.MakeCompanyId == filter.BrandId.Value);
+
 
             var totalRecords = await query.CountAsync();
             // ---------------- Sorting----------------
@@ -333,7 +350,10 @@ namespace InventoryManagement.Services.Reports.Services
                 Remarks=x.o.Remarks?? string.Empty,
                 IsActive = x.item.IsActive,
                 CreatedBy = x.item.CreatedBy,
-                CreatedOn = x.item.CreatedOn
+                CreatedOn = x.item.CreatedOn,
+
+                UserName = x.user.Name,
+                IsDeleted = x.item.IsDeleted
             })
             .ToList();
 

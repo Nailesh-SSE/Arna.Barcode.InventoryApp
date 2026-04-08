@@ -44,6 +44,9 @@ public class InwardFilter : BaseReportFilter
     public bool GroupByProduct { get; set; }
     public bool GroupBySupplier { get; set; }
     public bool SummaryOnly { get; set; }
+    public int? ProductId { get; set; }
+    public string? ProductName { get; set; }
+
 }
 
 public class InwardReportItem
@@ -69,6 +72,8 @@ public class InwardReportItem
     public bool IsActive { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedOn { get; set; }
+    public bool IsDeleted { get; set; }
+    public string UserName { get; set; } = string.Empty;
 }
 
 public class InwardReportSummary
@@ -118,6 +123,9 @@ public class OutwardFilter : BaseReportFilter
     public bool GroupByProduct { get; set; }
     public bool GroupBySupplier { get; set; }
     public bool SummaryOnly { get; set; }
+    public int? ProductId { get; set; }
+    public int? BrandId { get; set; }
+    public string? ProductName { get; set; }
 }
 public class OutwardReportItem
 {
@@ -145,6 +153,8 @@ public class OutwardReportItem
     public bool IsActive { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedOn { get; set; }
+    public bool IsDeleted { get; set; }
+    public string UserName { get; set; } = string.Empty;
 }
 public class OutwardReportSummary
 {
@@ -219,6 +229,9 @@ public class SaleReturnReportItem
     public bool IsActive { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedOn { get; set; }
+    public bool IsDeleted { get; set; }
+    public string? OutwardName { get; set; }
+    public string UserName { get; set; } = string.Empty;
 }
 public class SaleReturnReportSummary
 {
@@ -322,7 +335,9 @@ public class InStockReportResult : BaseReportResult
 public class InStockFilter : BaseReportFilter
 {
     public bool IsInStock { get; set; } = true;
-    public List<int> ProductId { get;set; } = new();
+    public int? ProductId { get;set; } = new();
+    public int? BrandId { get; set; }
+    public string? ProductName { get; set; }
     public bool SummaryOnly { get; set; }
 }
 

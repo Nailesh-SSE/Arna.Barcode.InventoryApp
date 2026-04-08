@@ -62,7 +62,7 @@ namespace InventoryManagement.Services.Reports.Services
             IRow headerRow = sheet.CreateRow(0);
             string[] headers = new string[]
             {
-              "No","InwardNo", "Inward Date" , "Inward Time" ,"Ship Company" , "Category" , 
+              "No","Ship Company","InwardNo", "Inward Date" , "Inward Time"  , "Category" , 
               "Brand","Product" ,"Product Name" , " Item Barcode" ,"BoxBarcode", "Unit","Box Qty","Item Qty", "Remark", "Status", "UserName" , "BatchNo"   
             };
 
@@ -78,10 +78,10 @@ namespace InventoryManagement.Services.Reports.Services
                 IRow row = sheet.CreateRow(i + 1);
 
                 row.CreateCell(0).SetCellValue(i + 1); 
-                row.CreateCell(1).SetCellValue(item.InwardNo);
-                row.CreateCell(2).SetCellValue(item.CreatedOn.ToString("dd/MM/yyyy"));
-                row.CreateCell(3).SetCellValue(item.CreatedOn.ToString("HH:mm:ss"));
-                row.CreateCell(4).SetCellValue(item.ShipCompanyname);
+                row.CreateCell(1).SetCellValue(item.ShipCompanyname);
+                row.CreateCell(2).SetCellValue(item.InwardNo);
+                row.CreateCell(3).SetCellValue(item.CreatedOn.ToString("dd/MM/yyyy"));
+                row.CreateCell(4).SetCellValue(item.CreatedOn.ToString("HH:mm:ss"));
                 row.CreateCell(5).SetCellValue(item.CategoryName);
                 row.CreateCell(6).SetCellValue(item.BrandName);
                 row.CreateCell(7).SetCellValue(item.ProductName);
@@ -196,6 +196,12 @@ namespace InventoryManagement.Services.Reports.Services
 
             if (filter.CompanyId.HasValue)
                 query = query.Where(x => x.p.MakeCompanyId == filter.CompanyId);
+
+            if (!string.IsNullOrWhiteSpace(filter.ProductName))
+                query = query.Where(x => x.p.Name == filter.ProductName);
+
+            if (filter.BrandId.HasValue && filter.BrandId > 0)
+                query = query.Where(x => x.p.MakeCompanyId == filter.BrandId.Value);
 
             var totalRecords = await query.CountAsync();
 

@@ -69,7 +69,7 @@ namespace InventoryManagement.Services.Reports.Services
             string[] headers = new string[]
             {
                 "No.","Return Company","Ship To","PlatForm","SaleReturn Number", "SaleReturn Date" , "SaleReturn Time" , "Category" ,"Brand","Product", "SKU",
-                 "Barcode","Unit","Box Qty","Item Qty","Type","ToStock","Reason","Status"
+                "Outward", "Barcode","Unit","Box Qty","Item Qty","Type","ToStock","Reason","Status","UserName","Action"
             };
             for (int i = 0; i < headers.Length; i++)
             {
@@ -93,15 +93,18 @@ namespace InventoryManagement.Services.Reports.Services
                 row.CreateCell(8).SetCellValue(item.BrandName);
                 row.CreateCell(9).SetCellValue(item.ProductName);
                 row.CreateCell(10).SetCellValue(item.SKU);
-                row.CreateCell(11).SetCellValue(item.Barcode);
-                row.CreateCell(12).SetCellValue(item.Unit);
-                row.CreateCell(13).SetCellValue((double)item.BoxQuantity);
-                row.CreateCell(14).SetCellValue((double)item.Quantity);
-                row.CreateCell(15).SetCellValue(item.Type);
-                row.CreateCell(16).SetCellValue(item.ToStock ? "Yes" : "No");
-                row.CreateCell(17).SetCellValue(item.Reason);
+                row.CreateCell(11).SetCellValue(item.OutwardName);
+                row.CreateCell(12).SetCellValue(item.Barcode);
+                row.CreateCell(13).SetCellValue(item.Unit);
+                row.CreateCell(14).SetCellValue((double)item.BoxQuantity);
+                row.CreateCell(15).SetCellValue((double)item.Quantity);
+                row.CreateCell(16).SetCellValue(item.Type);
+                row.CreateCell(17).SetCellValue(item.ToStock ? "Yes" : "No");
+                row.CreateCell(18).SetCellValue(item.Reason);
                 //row.CreateCell(8).SetCellValue(item.BatchNumber);
-                row.CreateCell(18).SetCellValue(item.IsActive ? "Active" : "Inactive");
+                row.CreateCell(19).SetCellValue(item.IsActive ? "Active" : "Inactive");
+                row.CreateCell(20).SetCellValue(item.UserName);
+                row.CreateCell(21).SetCellValue(item.IsDeleted ? "Deleted" : "Saved");
             }
 
             // Autosize all columns
@@ -197,10 +200,11 @@ namespace InventoryManagement.Services.Reports.Services
                 var outwardRepo = _unitOfWork.GetRepository<Outward>();
                 var outwardDetailRepo = _unitOfWork.GetRepository<OutwardDetail>();
                 var platformRepo = _unitOfWork.GetRepository<Platform>();
+                var userRepo = _unitOfWork.GetRepository<Users>().GetQueryable().AsNoTracking();
 
                 var query =
                     from sr in baseQuery
-                    from item in sr.SaleReturnItems.Where(i => !i.IsDeleted)
+                    from item in sr.SaleReturnItems
 
                     join p in productRepo.GetQueryable()
                         on item.ProductId equals p.Id
@@ -233,6 +237,11 @@ namespace InventoryManagement.Services.Reports.Services
                            on item.ShipToCompanyId equals shipComp.Id into shipJoin
                     from shipComp in shipJoin.DefaultIfEmpty()
 
+                    join user in userRepo
+                     on item.CreatedBy equals user.Id into userJoin
+                    from user in userJoin.DefaultIfEmpty()
+
+
                     select new
                     {
                         sr,
@@ -242,7 +251,8 @@ namespace InventoryManagement.Services.Reports.Services
                         billcomp,
                         shipComp,
                         o,
-                        plat
+                        plat,
+                        user
                     };
                 // Filters
                 if (string.IsNullOrWhiteSpace(filter.ReturnNumbers))
@@ -260,6 +270,12 @@ namespace InventoryManagement.Services.Reports.Services
                                 : x.sr.BillToCompanyId) == filterId);
                     }
                 }
+ 
+                if (!string.IsNullOrWhiteSpace(filter.ProductName))
+                    query = query.Where(x => x.p.Name == filter.ProductName);
+
+                if (filter.BrandId.HasValue && filter.BrandId > 0)
+                    query = query.Where(x => x.p.MakeCompanyId == filter.BrandId.Value);
 
                 var totalRecords = await query.CountAsync();
                 // ---------------- Sorting----------------
@@ -313,7 +329,7 @@ namespace InventoryManagement.Services.Reports.Services
                     PlatformId = x.plat?.Id ?? 0,
                     PlatformName = x.plat?.Name ?? "",
 
-                    ShipToCompanyId = x.shipComp.Id,
+                    ShipToCompanyId = x.shipComp?.Id ?? 0,
                     shipToCompanyName = x.shipComp?.Name ?? "",
 
                     SaleReturnId = x.sr.Id,
@@ -338,7 +354,14 @@ namespace InventoryManagement.Services.Reports.Services
 
                     IsActive = x.sr.IsActive,
                     CreatedBy = x.sr.CreatedBy,
-                    CreatedOn = x.sr.CreatedOn
+                    CreatedOn = x.sr.CreatedOn,
+                    
+                    IsDeleted = x.item.IsDeleted,
+                    //OutwardId = x.item.OutwardId,
+                    OutwardName = (x.item.OutwardId.HasValue && x.item.OutwardId != 0)
+                        ? (x.o?.OutwardNo ?? "")
+                        : "",
+                    UserName = x.user.Name?? ""
                 })
                 .ToList();
 
