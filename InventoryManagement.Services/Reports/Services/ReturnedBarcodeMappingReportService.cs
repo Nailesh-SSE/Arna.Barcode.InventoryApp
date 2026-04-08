@@ -190,7 +190,7 @@ public class ReturnedBarcodeMappingReportService : IReturnedBarcodeMappingReport
                     BoxQuantity = isBox ? 1 : 0,
                     Unit = isBox ? UnitType.BOX.ToString() : UnitType.PCS.ToString(),
 
-
+                    BrandId = x.p.MakeCompanyId,
                     Reason = x.sri.ReasonToReturn,
                     Remarks = inward.Remarks,
                     BillToCompanyId = x.sri.BillToCompanyId, 
@@ -244,7 +244,7 @@ public class ReturnedBarcodeMappingReportService : IReturnedBarcodeMappingReport
                     Reason = x.sri.ReasonToReturn,
                     Remarks = inward.Remarks,
                     BillToCompanyId = x.sri.BillToCompanyId,
-
+                    BrandId = p.MakeCompanyId
                 };
 
             var query = boxAndpcsQuery.Concat(childQuery);
@@ -259,6 +259,12 @@ public class ReturnedBarcodeMappingReportService : IReturnedBarcodeMappingReport
                     query = query.Where(x => x.BillToCompanyId == filterId);
                 }
             }
+
+            if (!string.IsNullOrWhiteSpace(filter.ProductName))
+                query = query.Where(x => x.ProductName == filter.ProductName);
+
+            if (filter.BrandId.HasValue && filter.BrandId > 0)
+                query = query.Where(x => x.BrandId == filter.BrandId.Value);
 
             var totalRecords = await query.CountAsync();
 

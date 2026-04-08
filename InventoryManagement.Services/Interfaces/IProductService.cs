@@ -5,6 +5,7 @@ namespace InventoryManagement.Services.Interfaces;
 public interface IProductService
 {
     Task<List<ProductModel>> GetAllProductsAsync();
+    Task<List<ProductModel>> GetDistinctProductsAsync();
     Task<ProductModel?> GetProductByIdAsync(int id);
     Task<bool> CreateProductAsync(ProductModel productModel);
     Task<bool> UpdateProductAsync(ProductModel productModel);

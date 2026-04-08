@@ -176,6 +176,9 @@ public class SaleReturnFilter : BaseReportFilter
 {
     public string? ReturnNumbers { get; set; }
     public int? BillToCompanyId { get; set; }
+    public int? BrandId { get; set; }
+    public int? ProductId { get; set; }
+    public string? ProductName { get; set; }
     public decimal? MinQuantity { get; set; }
     public decimal? MaxQuantity { get; set; }
     public string? ProductSKUs { get; set; }
@@ -378,5 +381,6 @@ public class ReturnBarcodeMappingReportItem
     public string? Remarks { get; set; }
     public DateTime ReturnDate { get; set; }
     public int? BillToCompanyId { get; set; }
+    public int? BrandId { get; set; }
 }
 #endregion

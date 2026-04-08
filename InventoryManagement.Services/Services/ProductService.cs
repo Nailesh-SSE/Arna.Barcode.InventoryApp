@@ -13,7 +13,37 @@ public class ProductService : IProductService
     {
         _unitOfWork = unitOfWork;
     }
-
+    public async Task<List<ProductModel>> GetDistinctProductsAsync()
+    {
+        var productRepository = _unitOfWork.GetRepository<Product>();
+        var products = await productRepository.GetAllAsync();
+        var distinctProducts = products.Where(p => !p.IsDeleted)
+                                       .GroupBy(p => new { p.Name, p.MakeCompanyId})
+                                       .Select(g => g.First())
+                                       .ToList();
+        var productModels = distinctProducts.Select(p => new ProductModel
+        {
+            Id = p.Id,
+            Name = p.Name,
+            SKU = p.SKU,
+            Description = p.Description,
+            CategoryId = p.CategoryId,
+            CategoryName = p.CategoryName,
+            CreatedBy = p.CreatedBy,
+            CreatedOn = p.CreatedOn,
+            UpdatedBy = p.UpdatedBy,
+            UpdatedOn = p.UpdatedOn,
+            IsActive = p.IsActive,
+            IsDeleted = p.IsDeleted,
+            Unit = p.Unit,
+            UnitId = p.UnitId,
+            MakeCompanyId = p.MakeCompanyId,
+            MakeCompany = p.MakeCompany,
+            ColourId= p.ColourId,
+            ColourName= p.ColourName,
+        }).ToList();
+        return productModels;
+    }
     public async Task<List<ProductModel>> GetAllProductsAsync()
     {
         var productRepository = _unitOfWork.GetRepository<Product>();

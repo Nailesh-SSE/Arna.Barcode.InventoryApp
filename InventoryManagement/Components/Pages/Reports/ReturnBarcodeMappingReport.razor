@@ -7,6 +7,7 @@
 @inject IReturnedBarcodeMappingReportService ReturnedBarcodeMappingReportService
 @inject ICompanyService CompanyService
 @inject ICategoryService CategoryService
+@inject IProductService ProductService
 @inject IJSRuntime JS
 
 <PageTitle>New Barcode Report</PageTitle>
@@ -94,6 +95,19 @@ else
                                         }
                                     </InputSelect>
                                 </div>
+                                <div class="col-12">
+                                    <label class="form-label">Product Model</label>
+                                    <SearchableDropdown TItem="ProductModel"
+                                                        Items="@Products"
+                                                        ItemTextSelector="@(p => p.MakeCompany +" " +p.Name )"
+                                                        SelectedText="@filter.ProductName"
+                                                        Placeholder="Search Product..."
+                                                        OnItemSelected="OnProductSelected"
+                                                        IsRequired="true"
+                                                        ShowValidationMessage="true" />
+
+                                </div>
+
                                 <div class="col-12">
                                     <label class="form-label">Return Numbers</label>
                                     <InputText class="form-control" @bind-Value="filter.ReturnNumbers" placeholder="comma-separated" />
@@ -310,6 +324,7 @@ else
     private SaleReturnFilter filter = new();
     private List<CompanyModel> billCompanies = new();
     private List<CategoryModel> categories = new();
+    private List<ProductModel> Products = new();
 
     private ReturnBarcodeMappingReportResult? reportResult;
     private bool isLoading = false;
@@ -317,6 +332,9 @@ else
     private bool isRefresh = false;
     private int loadingProgress = 0;
     private string Route = "/reports/sale-return";
+
+    private ProductModel? selectedProduct;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadDefaultFilters();
@@ -327,6 +345,7 @@ else
     {
         billCompanies = await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo);
         categories = await CategoryService.GetAllCategoriesAsync();
+        Products = await ProductService.GetDistinctProductsAsync();
     }
 
     private async Task LoadDefaultFilters()
@@ -344,6 +363,7 @@ else
     private async Task ClearFilters()
     {
         filter = new();
+        selectedProduct = null;
         reportResult = null;
         ShowAlert("info", "Filters cleared.");
     }
@@ -445,5 +465,23 @@ else
         await Task.Delay(3000);
         alertMessage = null;
         await InvokeAsync(StateHasChanged);
+    }
+    private void OnProductSelected(ProductModel product)
+    {
+        selectedProduct = product;
+        if (product == null)
+        {
+            filter.ProductId = 0;
+            filter.ProductName = "";
+            filter.BrandId = 0;
+        }
+        else
+        {
+            filter.ProductId = product.Id;
+            filter.ProductName = product.Name;
+            filter.BrandId = product.MakeCompanyId;
+        }
+
+        StateHasChanged();
     }
 }
