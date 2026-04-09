@@ -15,4 +15,6 @@ public interface ICompanyService
     Task<bool> IsCompanyCodeUniqueAsync(string code, int? excludeId = null);
     Task<bool> IsCompanyNameUniqueAsync(string Name, CompanyType type, int? Id = null);
     Task GenerateCompanyCodeAndSquenceNumberAsync(CompanyModel companyModel);
+    Task<byte[]> ExportToExcelAsync(CompanyType type);
+
 }

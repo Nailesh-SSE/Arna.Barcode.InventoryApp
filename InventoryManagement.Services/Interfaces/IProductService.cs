@@ -1,4 +1,3 @@
-using InventoryManagement.Core.Entities;
 using InventoryManagement.Services.Models;
 namespace InventoryManagement.Services.Interfaces;
 
@@ -13,5 +12,7 @@ public interface IProductService
     Task<bool> IsSkuUniqueAsync(string sku, int? excludeId = null);
     Task<bool> IsProductNameUniqueAsync(string name,int companyId,int colourid ,int? excludeId = null);
     Task<List<ProductModel>> GetProductsByCategoryAsync(int categoryId);
-  
+    Task<byte[]> ExportToExcelAsync();
+
+
 }

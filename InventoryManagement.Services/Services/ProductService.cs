@@ -2,6 +2,8 @@ using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 
 namespace InventoryManagement.Services;
 
@@ -294,5 +296,56 @@ public class ProductService : IProductService
         var product = proudcts.Where(a => a.IsActive && !a.IsDeleted).OrderByDescending(a => a.Id).FirstOrDefault();
         model.SerialNumber = product != null ? product.SerialNumber + 1 : 0;
         model.SKU = model.MakeCompany + " " + model.Name + " (" + model.ColourName +")";
+    }
+
+    public async Task<byte[]> ExportToExcelAsync()
+    {
+        var productRepo = _unitOfWork.GetRepository<Product>();
+        var allproducts = await productRepo.GetAllAsync();
+        var products = allproducts.Where(a => !a.IsDeleted);
+        IWorkbook workbook = new XSSFWorkbook();
+        ISheet sheet = workbook.CreateSheet("Product Report");
+
+        // Header row
+        IRow headerRow = sheet.CreateRow(0);
+        string[] headers = new string[]
+           {
+         "No.", "Category", "Brand" , "Product", "Color", "Unit","Description", "Status"
+           };
+
+        for (int i = 0; i < headers.Length; i++)
+        {
+            headerRow.CreateCell(i).SetCellValue(headers[i]);
+        }
+        var counter = 1;
+        // Data rows
+        foreach (var product in products)
+        {
+            var i = counter;
+            IRow row = sheet.CreateRow(i);
+            row.CreateCell(0).SetCellValue(i);
+            row.CreateCell(1).SetCellValue(product.CategoryName);
+            row.CreateCell(2).SetCellValue(product.MakeCompany);
+            row.CreateCell(3).SetCellValue(product.Name);
+            row.CreateCell(4).SetCellValue(product.ColourName);
+            row.CreateCell(5).SetCellValue(product.Unit);
+            row.CreateCell(6).SetCellValue(product.Description);
+            row.CreateCell(7).SetCellValue(product.IsActive ? "Active" : "Inactive");
+            counter++;
+        }
+
+        // Autosize all columns
+        for (int i = 0; i < headers.Length; i++)
+        {
+            sheet.AutoSizeColumn(i);
+        }
+
+        // Write to memory stream and return as byte array
+        using (var exportData = new MemoryStream())
+        {
+            workbook.Write(exportData);
+            return exportData.ToArray();
+        }
+
     }
 } 

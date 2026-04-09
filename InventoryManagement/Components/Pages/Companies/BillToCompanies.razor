@@ -16,6 +16,25 @@ else
             <div class="col">
                 <h3><Icon Name="IconName.Receipt" /> Bill To Companies</h3>
             </div>
+            @if (IsAdmin() || IsFactoryAdmin())
+            {
+                <div class="col-auto">
+                    <button class="btn btn-outline-success"
+                            disabled="@isExporting"
+                            @onclick="ExportCurrentReport">
+                        @if (isExporting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Exporting...</span>
+                        }
+                        else
+                        {
+                            <Icon Name="IconName.Download" />
+                            <span>Export</span>
+                        }
+                    </button>
+                </div>
+            }
             <div class="col-auto">
                 @if (CanCreate(Route))
                 {
@@ -128,6 +147,9 @@ else
     private ValidationMessageStore validationMessage;
     private string Route = "/companies/bill-to";
     private bool isSaveBtnLoading = false;
+    private bool isExporting = false;
+    private string? alertMessage;
+    private string alertType = "info";
 
     protected override async Task OnInitializedAsync()
     {
@@ -283,5 +305,52 @@ else
         {
 
         }
+    }
+
+    private async Task ExportCurrentReport()
+    {
+        isExporting = true;
+        StateHasChanged();
+        try
+        {
+            CompanyType type = CompanyType.BillTo;
+            await Task.Delay(100);
+            var excelData = await CompanyService.ExportToExcelAsync(type);
+            var fileName = $"BillCompany_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            var filePath = Path.Combine(Environment.CurrentDirectory, "wwwroot", "exports");
+
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
+
+            var fullPath = Path.Combine(filePath, fileName);
+            await File.WriteAllBytesAsync(fullPath, excelData);
+
+            // Browser downloads static file directly
+            var downloadUrl = $"/exports/{fileName}";
+            NavigationManager.NavigateTo(downloadUrl, forceLoad: true);
+
+            ShowAlert("success", "Excel exported successfully. Check your Downloads folder.");
+        }
+        catch (Exception ex)
+        {
+            ShowAlert("danger", $"Failed to export excel: {ex.Message}");
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+    private void ShowAlert(string type, string message)
+    {
+        alertType = type;
+        alertMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+    private async Task AutoHideAlertAsync()
+    {
+        await Task.Delay(3000);
+        alertMessage = null;
+        await InvokeAsync(StateHasChanged);
     }
 }

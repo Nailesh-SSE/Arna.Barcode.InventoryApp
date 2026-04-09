@@ -21,6 +21,25 @@ else
             <div class="col">
                 <h3><Icon Name="IconName.Box" /> Products</h3>
             </div>
+            @if (IsAdmin() || IsFactoryAdmin())
+            {
+                <div class="col-auto">
+                    <button class="btn btn-outline-success"
+                            disabled="@isExporting"
+                            @onclick="ExportCurrentReport">
+                        @if (isExporting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Exporting...</span>
+                        }
+                        else
+                        {
+                            <Icon Name="IconName.Download" />
+                            <span>Export</span>
+                        }
+                    </button>
+                </div>
+            }
             @if (CanCreate(Route))
             {
                 <div class="col-auto">
@@ -30,7 +49,13 @@ else
                 </div>
             }
         </div>
-
+        @if (!string.IsNullOrEmpty(alertMessage))
+        {
+            <div class="alert alert-@alertType alert-dismissible fade show" role="alert">
+                @alertMessage
+                <button type="button" class="btn-close" @onclick="() => alertMessage = null"></button>
+            </div>
+        }
         @if (isLoading)
         {
             <div class="text-center">
@@ -204,6 +229,9 @@ else
     private List<UnitModel> Units => CommonUtils.UnitList;
     private string Route = "/products";
     private bool isSaveBtnLoading = false;
+    private bool isExporting = false;
+    private string? alertMessage;
+    private string alertType = "info";
 
 
 
@@ -495,5 +523,49 @@ else
 
         ValidateUnit();
     }
+    private async Task ExportCurrentReport()
+    {
+        isExporting = true;
+        StateHasChanged();
+        try
+        {
+            await Task.Delay(100);
+            var excelData = await ProductService.ExportToExcelAsync();
+            var fileName = $"Product_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            var filePath = Path.Combine(Environment.CurrentDirectory, "wwwroot", "exports");
 
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
+
+            var fullPath = Path.Combine(filePath, fileName);
+            await File.WriteAllBytesAsync(fullPath, excelData);
+
+            // Browser downloads static file directly
+            var downloadUrl = $"/exports/{fileName}";
+            NavigationManager.NavigateTo(downloadUrl, forceLoad: true);
+
+            ShowAlert("success", "Excel exported successfully. Check your Downloads folder.");
+        }
+        catch (Exception ex)
+        {
+            ShowAlert("danger", $"Failed to export excel: {ex.Message}");
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+    private void ShowAlert(string type, string message)
+    {
+        alertType = type;
+        alertMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+    private async Task AutoHideAlertAsync()
+    {
+        await Task.Delay(3000);
+        alertMessage = null;
+        await InvokeAsync(StateHasChanged);
+    }
 }
