@@ -268,6 +268,8 @@ public class InventoryReportFilter : BaseReportFilter
     public bool? IsDeleted { get; set; }
     public int? MInGoodMinGoodStock { get; set; }
     public int? MaxGoodStock { get; set; }
+    public string? ProductName { get; set; } = string.Empty;
+    public string? BrandName { get; set; } = string.Empty;
 
 }
 //public class InventoryReportModel 

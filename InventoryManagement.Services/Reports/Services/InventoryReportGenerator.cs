@@ -27,6 +27,18 @@ public class InventoryReportGenerator : IInventoryReportService
     {
         var stopwatch = Stopwatch.StartNew();
         var items = await Call_sp_GetInventoryReport(filter);
+        if (!string.IsNullOrWhiteSpace(filter.ProductName) &&
+            !string.IsNullOrWhiteSpace(filter.BrandName))
+        {
+            items = items
+                .Where(x =>
+                    x.ProductName != null &&
+                    x.MakeCompany != null &&
+                    x.ProductName.Trim().ToLower() == filter.ProductName.Trim().ToLower() &&
+                    x.MakeCompany.Trim().ToLower() == filter.BrandName.Trim().ToLower()
+                )
+                .ToList();
+        }
         var pagedItems = items.Skip((filter.PageNumber - 1) * filter.PageSize).Take(filter.PageSize).ToList();
 
         var result = new InventoryReportResult
