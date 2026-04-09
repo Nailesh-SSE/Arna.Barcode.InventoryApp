@@ -338,7 +338,7 @@ namespace InventoryManagement.Services.Reports.Services
 
                     CategoryName = x.c?.Name ?? "",
                     BrandId = x.p.MakeCompanyId ,
-                    BrandName= x.p.MakeCompany,
+                    BrandName= x.p.MakeCompany ?? "",
 
                     ProductId = x.p.Id,
                     ProductName = x.p.Name,
@@ -361,7 +361,7 @@ namespace InventoryManagement.Services.Reports.Services
                     OutwardName = (x.item.OutwardId.HasValue && x.item.OutwardId != 0)
                         ? (x.o?.OutwardNo ?? "")
                         : "",
-                    UserName = x.user.Name?? ""
+                    UserName = x.user?.Name ?? ""
                 })
                 .ToList();
 
