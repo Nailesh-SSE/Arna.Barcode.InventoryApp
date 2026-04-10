@@ -150,7 +150,8 @@ else
             BillToCompanyId = editSaleReturn.BillToCompanyId,
             IsActive = editSaleReturn.IsActive,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
-            UpdatedOn = DateTime.Now
+            UpdatedOn = DateTime.Now,
+            Remarks = editSaleReturn.Remarks
         };
         saleReturnFormModal?.Show();
     }

@@ -15,6 +15,7 @@ namespace InventoryManagement.Services.Models
         public DateTime SaleReturnDate { get; set; } = DateTime.Now;
         public DateOnly SaleReturnDateOnly => DateOnly.FromDateTime(SaleReturnDate);
         public string? BillToCompanyName { get; set; } = string.Empty;
+        public string? Remarks { get; set; } = string.Empty;
 
         public List<SaleReturnItemsModel> SaleReturnItemsList { get; set; } = new();
     }

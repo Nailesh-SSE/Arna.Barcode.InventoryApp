@@ -85,7 +85,8 @@ public class SaleReturnService : ISaleReturnService
             SaleReturnDate = model.SaleReturnDate,
             SaleReturnNo = model.SaleReturnNo,
             CreatedBy = model.CreatedBy,
-            CreatedOn = model.CreatedOn
+            CreatedOn = model.CreatedOn,
+            Remarks = model.Remarks
         };
         await saleReturnRepo.AddAsync(newSaleReturn);
         await _unitOfWork.SaveChangesAsync();
@@ -99,6 +100,7 @@ public class SaleReturnService : ISaleReturnService
         entity.SaleReturnDate = model.SaleReturnDate;
         entity.UpdatedBy = model.UpdatedBy;
         entity.UpdatedOn = DateTime.Now;
+        entity.Remarks = model.Remarks;
     }
     #endregion
 
@@ -561,6 +563,7 @@ public class SaleReturnService : ISaleReturnService
             CreatedOn = entity.CreatedOn,
             UpdatedBy = entity.UpdatedBy,
             UpdatedOn = entity.UpdatedOn,
+            Remarks = entity.Remarks,
         };
 
     }
