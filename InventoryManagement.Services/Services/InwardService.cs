@@ -88,7 +88,7 @@ public class InwardService : IInwardService
             if (entity == null) return false;
 
             UpdateInwardEntity(entity, model);
-            await ReplaceInwardItemsAsync(entity.Id, model.InwardItems, entity.InwardDate, entity.UpdatedBy);
+            //await ReplaceInwardItemsAsync(entity.Id, model.InwardItems, entity.InwardDate, entity.UpdatedBy);
 
             inwardRepo.Update(entity);
             await _unitOfWork.SaveChangesAsync();
