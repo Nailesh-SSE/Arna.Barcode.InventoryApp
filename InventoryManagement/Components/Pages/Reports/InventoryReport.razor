@@ -10,6 +10,7 @@
 @inject IColourService ColourService
 @inject ICategoryService CategoryService
 @inject IInventoryReportService InventoryReportService
+@inject IProductService ProductService
 @inject IJSRuntime JS
 
 <PageTitle> Inventory Return Report</PageTitle>
@@ -102,7 +103,7 @@ else
                                         }
                                     </InputSelect>
                                 </div>
-                                <div class="col-12">
+                                @* <div class="col-12">
                                     <label class="form-label">Colour</label>
                                     <InputSelect class="form-select" @bind-Value="filter.ColourId">
                                         <option value="">All Colours</option>
@@ -111,6 +112,18 @@ else
                                             <option value="@category.Id">@category.Name</option>
                                         }
                                     </InputSelect>
+                                </div> *@
+                                <div class="col-12">
+                                    <label class="form-label">Product Model</label>
+                                    <SearchableDropdown TItem="ProductModel"
+                                                        Items="@Products"
+                                                        ItemTextSelector="@(p => p.MakeCompany +" " +p.Name )"
+                                                        SelectedText="@filter.ProductName"
+                                                        Placeholder="Search Product..."
+                                                        OnItemSelected="OnProductSelected"
+                                                        IsRequired="true"
+                                                        ShowValidationMessage="true" />
+
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label">Page Size</label>
@@ -276,6 +289,9 @@ else
     private bool isRefresh = false;
     private int loadingProgress;
     private string Route = "/reports/Inventory";
+
+    private List<ProductModel> Products = new();
+    private ProductModel? selectedProduct;
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -288,6 +304,8 @@ else
         brands = await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo);
         categories = await CategoryService.GetAllCategoriesAsync();
         colours = await ColourService.GetAllColourAsync();
+        Products = await ProductService.GetDistinctProductsAsync();
+
     }
 
     private void LoadDefaultFilters()
@@ -417,5 +435,21 @@ else
         await Task.Delay(3000);
         alertMessage = null;
         await InvokeAsync(StateHasChanged);
+    }
+    private void OnProductSelected(ProductModel product)
+    {
+        selectedProduct = product;
+        if (product == null)
+        {
+            filter.ProductName = null;
+            filter.BrandName = null;
+        }
+        else
+        {
+            filter.ProductName = product.Name;
+            filter.BrandName = product.MakeCompany;
+        }
+
+        StateHasChanged();
     }
 }

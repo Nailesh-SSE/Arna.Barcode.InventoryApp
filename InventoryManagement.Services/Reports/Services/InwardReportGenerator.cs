@@ -82,9 +82,8 @@ public class InwardReportGenerator : IInwardReportService
         IRow headerRow = sheet.CreateRow(0);
         string[] headers = new string[]
            {
-         "Inward Number", "Date", "Brand" , "Product" ,"SKU", "Category",
-         "Quantity", "Unit", "Supplier",
-         "Batch", "Status"
+         "No.", "Supplier", "Inward Number", "Inward Date","Inward Time", "Category", "Brand" , "Product" ,"SKU",
+         "Unit","Quantity", "Batch", "Status","Remark","UserName","Action"
            };
 
         for (int i = 0; i < headers.Length; i++)
@@ -97,18 +96,22 @@ public class InwardReportGenerator : IInwardReportService
         {
             var item = report.Items[i];
             IRow row = sheet.CreateRow(i + 1);
-          
-            row.CreateCell(0).SetCellValue(item.InwardNumber);
-            row.CreateCell(1).SetCellValue(item.InwardDate.ToString("dd/MM/yyyy"));
-            row.CreateCell(2).SetCellValue(item.BrandName);
-            row.CreateCell(3).SetCellValue(item.ProductName);
-            row.CreateCell(4).SetCellValue(item.SKU);
+            row.CreateCell(0).SetCellValue(i + 1);
+            row.CreateCell(1).SetCellValue(item.ShipmentCompanyName);
+            row.CreateCell(2).SetCellValue(item.InwardNumber);
+            row.CreateCell(3).SetCellValue(item.InwardDate.ToString("dd/MM/yyyy"));
+            row.CreateCell(4).SetCellValue(item.InwardDate.ToString("HH:mm:ss"));
             row.CreateCell(5).SetCellValue(item.CategoryName);
-            row.CreateCell(6).SetCellValue((double)item.Quantity);
-            row.CreateCell(7).SetCellValue(item.Unit);
-            row.CreateCell(8).SetCellValue(item.ShipmentCompanyName);
-            row.CreateCell(9).SetCellValue(item.BatchNumber);
-            row.CreateCell(10).SetCellValue(item.IsActive ? "Active" : "Inactive");
+            row.CreateCell(6).SetCellValue(item.BrandName);
+            row.CreateCell(7).SetCellValue(item.ProductName);
+            row.CreateCell(8).SetCellValue(item.SKU);
+            row.CreateCell(9).SetCellValue(item.Unit);
+            row.CreateCell(10).SetCellValue((double)item.Quantity);
+            row.CreateCell(11).SetCellValue(item.BatchNumber);
+            row.CreateCell(12).SetCellValue(item.IsActive ? "Active" : "Inactive");
+            row.CreateCell(13).SetCellValue(item.Remarks);
+            row.CreateCell(14).SetCellValue(item.UserName);
+            row.CreateCell(15).SetCellValue(item.IsDeleted ? "Deleted" : "Save");
         }
 
         // Autosize all columns
@@ -231,12 +234,11 @@ public class InwardReportGenerator : IInwardReportService
     private IQueryable<Inward> BuildBaseQuery(InwardFilter filter)
     {
         var inwardRepo = _unitOfWork.GetRepository<Inward>();
-        var query = inwardRepo.GetQueryable()
+        IQueryable<Inward> query = inwardRepo.GetQueryable()
             .Include(i => i.InwardItems)
                 .ThenInclude(ii => ii.Product)
                     .ThenInclude(p => p.Category)
-            .Include(i => i.ShipMentCompany)
-            .Where(i => !i.IsDeleted);
+            .Include(i => i.ShipMentCompany);
 
         // Apply filters
         if (filter.StartDate.HasValue)
@@ -278,9 +280,13 @@ public class InwardReportGenerator : IInwardReportService
         var items = new List<InwardReportItem>();
         var companies = _unitOfWork.GetRepository<Company>();
         var brands = await companies.GetAllAsync();
+        var userRepo = _unitOfWork.GetRepository<Users>();
+        var users = (await userRepo.GetAllAsync())
+    .ToDictionary(u => u.Id, u => u.Name);
+
         foreach (var inward in inwards)
         {
-            foreach (var item in inward.InwardItems.Where(ii => !ii.IsDeleted))
+            foreach (var item in inward.InwardItems)
             {
                 // Apply additional item-level filters
                 if (filter.MinQuantity.HasValue && item.ItemQuantity < filter.MinQuantity.Value) continue;
@@ -291,6 +297,10 @@ public class InwardReportGenerator : IInwardReportService
                     !filter.ProductSKUs.Split(',', StringSplitOptions.RemoveEmptyEntries).Contains(item.Product?.SKU)) continue;
                 if (!string.IsNullOrEmpty(filter.BatchNumbers) &&
                     !filter.BatchNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries).Contains(item.BatchNo)) continue;
+                if (!string.IsNullOrEmpty(filter.ProductName) &&
+                    !filter.ProductName.Split(',', StringSplitOptions.RemoveEmptyEntries).Contains(item.Product?.Name)) continue;
+                if (filter.BrandId.HasValue && item.ItemQuantity == 0) continue;
+                if (filter.ShowDeleted == false && item.IsDeleted == true) continue;
 
                 var unitCost = item.ItemQuantity > 0 ? 0m : 0m; // You may need to get this from product cost
                 var totalCost = unitCost * item.ItemQuantity;
@@ -317,7 +327,9 @@ public class InwardReportGenerator : IInwardReportService
                     Remarks = inward.Remarks,
                     IsActive = inward.IsActive,
                     CreatedBy = inward.CreatedBy,
-                    CreatedOn = inward.CreatedOn
+                    CreatedOn = inward.CreatedOn,
+                    UserName = users.ContainsKey(inward.CreatedBy) ? users[item.CreatedBy]: "",
+                    IsDeleted = item.IsDeleted
                 });
             }
         }

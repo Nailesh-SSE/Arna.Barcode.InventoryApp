@@ -27,6 +27,18 @@ public class InventoryReportGenerator : IInventoryReportService
     {
         var stopwatch = Stopwatch.StartNew();
         var items = await Call_sp_GetInventoryReport(filter);
+        if (!string.IsNullOrWhiteSpace(filter.ProductName) &&
+            !string.IsNullOrWhiteSpace(filter.BrandName))
+        {
+            items = items
+                .Where(x =>
+                    x.ProductName != null &&
+                    x.MakeCompany != null &&
+                    x.ProductName.Trim().ToLower() == filter.ProductName.Trim().ToLower() &&
+                    x.MakeCompany.Trim().ToLower() == filter.BrandName.Trim().ToLower()
+                )
+                .ToList();
+        }
         var pagedItems = items.Skip((filter.PageNumber - 1) * filter.PageSize).Take(filter.PageSize).ToList();
 
         var result = new InventoryReportResult
@@ -57,7 +69,7 @@ public class InventoryReportGenerator : IInventoryReportService
         IRow headerRow = sheet.CreateRow(0);
         string[] headers = new string[]
         {
-           "No","Category","Brand","Item Name","Inward", "Issued", "Return", "Total Sale", "Good Stock"
+           "No","Category","Brand","Product","Item Name","Inward", "Issued", "Return", "Total Sale", "Good Stock"
         };
         for (int i = 0; i < headers.Length; i++)
         {
@@ -71,13 +83,13 @@ public class InventoryReportGenerator : IInventoryReportService
             row.CreateCell(0).SetCellValue(i + 1);
             row.CreateCell(1).SetCellValue(item.CategoryName);
             row.CreateCell(2).SetCellValue(item.MakeCompany);
-            row.CreateCell(2).SetCellValue(item.ProductName);
-            row.CreateCell(3).SetCellValue(item.Sku);
-            row.CreateCell(4).SetCellValue((double)item.Inward);
-            row.CreateCell(5).SetCellValue((double)item.Outward);
-            row.CreateCell(6).SetCellValue((double)item.Returns);
-            row.CreateCell(7).SetCellValue((double)item.TotalSale);
-            row.CreateCell(8).SetCellValue((double)item.GoodStock);
+            row.CreateCell(3).SetCellValue(item.ProductName);
+            row.CreateCell(4).SetCellValue(item.Sku);
+            row.CreateCell(5).SetCellValue((double)item.Inward);
+            row.CreateCell(6).SetCellValue((double)item.Outward);
+            row.CreateCell(7).SetCellValue((double)item.Returns);
+            row.CreateCell(8).SetCellValue((double)item.TotalSale);
+            row.CreateCell(9).SetCellValue((double)item.GoodStock);
 
         }
         for (int i = 0; i < headers.Length; i++)

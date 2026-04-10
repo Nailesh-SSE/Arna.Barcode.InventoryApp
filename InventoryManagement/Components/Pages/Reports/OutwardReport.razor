@@ -6,6 +6,7 @@
 @inject IOutwardReportService OutwardReportService
 @inject ICompanyService CompanyService
 @inject ICategoryService CategoryService
+@inject IProductService ProductService
 @inject IJSRuntime JS
 
 <PageTitle>Outward Report</PageTitle>
@@ -92,7 +93,7 @@ else
                                         }
                                     </InputSelect>
                                 </div>
-                                <div class="col-12">
+                                @* <div class="col-12">
                                     <label class="form-label">Category</label>
                                     <InputSelect class="form-select" @bind-Value="filter.CategoryId">
                                         <option value="">All Categories</option>
@@ -100,7 +101,19 @@ else
                                         {
                                             <option value="@category.Id">@category.Name</option>
                                         }
-                                    </InputSelect>
+                                    </InputSelect> 
+                                </div>*@
+                                <div class="col-12">
+                                    <label class="form-label">Product Model</label>
+                                    <SearchableDropdown TItem="ProductModel"
+                                                        Items="@Products"
+                                                        ItemTextSelector="@(p => p.MakeCompany +" " +p.Name )"
+                                                        SelectedText="@filter.ProductName"
+                                                        Placeholder="Search Product..."
+                                                        OnItemSelected="OnProductSelected"
+                                                        IsRequired="true"
+                                                        ShowValidationMessage="true" />
+
                                 </div>
                                 @*      <div class="col-6">
                                 <label class="form-label">Min Quantity</label>
@@ -149,6 +162,14 @@ else
                                         <label class="form-check-label">Descending</label>
                                     </div>
                                 </div>
+                                <div class="col-12">
+                                    <label class="form-label">Deleted Data</label>
+                                    <div class="form-check form-switch mt-2">
+                                        <InputCheckbox class="form-check-input" @bind-Value="filter.ShowDeleted" />
+                                        <label class="form-check-label">Show</label>
+                                    </div>
+                                </div>
+
                                 @* <div class="col-12">
                                 <label class="form-label">Options</label>
                                 <div class="form-check">
@@ -251,6 +272,8 @@ else
                                                     <th class="text-end">Box Quantity</th>
                                                     <th class="text-end">Item Quantity</th>
                                                     <th>Status</th>
+                                                    <th>UserName</th>
+                                                    <th>Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -279,6 +302,17 @@ else
                                                             else
                                                             {
                                                                 <Badge Color="BadgeColor.Secondary">Inactive</Badge>
+                                                            }
+                                                        </td>
+                                                        <td>@item.UserName </td>                                                        
+                                                        <td>
+                                                            @if (item.IsDeleted)
+                                                            {
+                                                                <Badge Color="BadgeColor.Danger">Deleted</Badge>
+                                                            }
+                                                            else
+                                                            {
+                                                                <Badge Color="BadgeColor.Primary">Saved</Badge>
                                                             }
                                                         </td>
                                                     </tr>
@@ -403,6 +437,9 @@ else
     private int loadingProgress = 0;
     private string Route = "/reports/outward";
 
+    private List<ProductModel> Products = new();
+    private ProductModel? selectedProduct;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadDefaultFilters();
@@ -413,6 +450,8 @@ else
     {
         billCompanies = await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo);
         categories = await CategoryService.GetAllCategoriesAsync();
+        Products = await ProductService.GetDistinctProductsAsync();
+
     }
 
     private async Task LoadDefaultFilters()
@@ -531,5 +570,24 @@ else
         await Task.Delay(3000);
         alertMessage = null;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnProductSelected(ProductModel product)
+    {
+        selectedProduct = product;
+        if (product == null)
+        {
+            filter.ProductId = 0;
+            filter.ProductName = "";
+            filter.BrandId = 0;
+        }
+        else
+        {
+            filter.ProductId = product.Id;
+            filter.ProductName = product.Name;
+            filter.BrandId = product.MakeCompanyId;
+        }
+
+        StateHasChanged();
     }
 }

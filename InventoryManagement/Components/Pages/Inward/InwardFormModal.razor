@@ -52,6 +52,8 @@
                             <InputText class="form-control" @bind-Value="Inward.Remarks" />
                         </div>
 
+                        </fieldset>
+                    <fieldset disabled="@DisableCheckBox">
                         <div class="row">
                             <div class="col-md-6 ms-1">
                                 @if (Inward.Id > 0)
@@ -69,7 +71,7 @@
 
                     <div class="modal-footer-section mt-3 text-end">
                         <button type="button" class="btn btn-secondary me-2" @onclick="HandleCancel">Cancel</button>
-                    <button type="submit" class="btn btn-primary" disabled="@DisableFields"> @(Inward.Id > 0 ? "Update" : "Next")</button>
+                    <button type="submit" class="btn btn-primary" disabled="@DisableButton"> @(Inward.Id > 0 ? "Update" : "Next")</button>
                     </div>
                 </div>
         </EditForm>
@@ -91,6 +93,8 @@
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool IsEditMode { get; set; }
     [Parameter] public bool DisableFields { get; set; }
+    [Parameter] public bool DisableButton { get; set; }
+    [Parameter] public bool DisableCheckBox { get; set; }
 
     protected override void OnParametersSet()
     {

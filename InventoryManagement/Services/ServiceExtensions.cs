@@ -55,6 +55,7 @@ public static class ServiceExtensions
         services.AddTransient<ISaleReturnReportService, SaleReturnReportGenerator>();
         services.AddTransient<IInventoryReportService, InventoryReportGenerator>();
         services.AddTransient<IBarcodeTrackingReportService, BarcodeTrackingReportGenerator>();
+        services.AddTransient<IReturnedBarcodeMappingReportService, ReturnedBarcodeMappingReportService>();
         services.AddAuthorizationCore();
         services.AddScoped<ProtectedLocalStorage>();
         services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();

@@ -44,6 +44,11 @@ public class InwardFilter : BaseReportFilter
     public bool GroupByProduct { get; set; }
     public bool GroupBySupplier { get; set; }
     public bool SummaryOnly { get; set; }
+    public int? ProductId { get; set; }
+    public string? ProductName { get; set; }
+    public bool ShowDeleted { get; set; }
+
+
 }
 
 public class InwardReportItem
@@ -69,6 +74,8 @@ public class InwardReportItem
     public bool IsActive { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedOn { get; set; }
+    public bool IsDeleted { get; set; }
+    public string UserName { get; set; } = string.Empty;
 }
 
 public class InwardReportSummary
@@ -118,6 +125,10 @@ public class OutwardFilter : BaseReportFilter
     public bool GroupByProduct { get; set; }
     public bool GroupBySupplier { get; set; }
     public bool SummaryOnly { get; set; }
+    public int? ProductId { get; set; }
+    public int? BrandId { get; set; }
+    public string? ProductName { get; set; }
+    public bool ShowDeleted { get; set; }
 }
 public class OutwardReportItem
 {
@@ -145,6 +156,8 @@ public class OutwardReportItem
     public bool IsActive { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedOn { get; set; }
+    public bool IsDeleted { get; set; }
+    public string UserName { get; set; } = string.Empty;
 }
 public class OutwardReportSummary
 {
@@ -176,6 +189,9 @@ public class SaleReturnFilter : BaseReportFilter
 {
     public string? ReturnNumbers { get; set; }
     public int? BillToCompanyId { get; set; }
+    public int? BrandId { get; set; }
+    public int? ProductId { get; set; }
+    public string? ProductName { get; set; }
     public decimal? MinQuantity { get; set; }
     public decimal? MaxQuantity { get; set; }
     public string? ProductSKUs { get; set; }
@@ -183,6 +199,7 @@ public class SaleReturnFilter : BaseReportFilter
     public bool GroupByProduct { get; set; }
     public bool GroupBySupplier { get; set; }
     public bool SummaryOnly { get; set; }
+    public bool ShowDeleted { get; set; }
 }
 public class SaleReturnReportItem
 {
@@ -216,6 +233,9 @@ public class SaleReturnReportItem
     public bool IsActive { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedOn { get; set; }
+    public bool IsDeleted { get; set; }
+    public string? OutwardName { get; set; }
+    public string UserName { get; set; } = string.Empty;
 }
 public class SaleReturnReportSummary
 {
@@ -252,6 +272,8 @@ public class InventoryReportFilter : BaseReportFilter
     public bool? IsDeleted { get; set; }
     public int? MInGoodMinGoodStock { get; set; }
     public int? MaxGoodStock { get; set; }
+    public string? ProductName { get; set; } = string.Empty;
+    public string? BrandName { get; set; } = string.Empty;
 
 }
 //public class InventoryReportModel 
@@ -319,7 +341,9 @@ public class InStockReportResult : BaseReportResult
 public class InStockFilter : BaseReportFilter
 {
     public bool IsInStock { get; set; } = true;
-    public List<int> ProductId { get;set; } = new();
+    public int? ProductId { get;set; } = new();
+    public int? BrandId { get; set; }
+    public string? ProductName { get; set; }
     public bool SummaryOnly { get; set; }
 }
 
@@ -346,5 +370,38 @@ public class InStockReportItem
     public DateTime CreatedOn { get; set; }
     public string BatchNo { get; set; } = string.Empty;
     public string InwardNo { get; set; }= string.Empty; 
+}
+#endregion
+
+#region Return Barcode Mapping Report Models
+public class ReturnBarcodeMappingReportResult : BaseReportResult
+{
+    public List<ReturnBarcodeMappingReportItem> Items { get; set; } = new();
+    public SaleReturnReportSummary Summary { get; set; } = new();
+    public int PageCount { get; set; }
+    public bool HasNextPage { get; set; }
+    public bool HasPreviousPage { get; set; }
+}
+public class ReturnBarcodeMappingReportItem
+{
+    public int SaleReturnId { get; set; }
+    public string SaleReturnNo { get; set; } = string.Empty;
+    public int SaleReturnItemId { get; set; }
+    public int InwardId { get; set; }
+    public string InwardNo { get; set; } = string.Empty;
+    public int InwardItemId { get; set; }
+    public string OldBarcode { get; set; } = string.Empty;
+    public string NewdBarcode { get; set; } = string.Empty;
+    public int ProductId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
+    public string SKU { get; set; } = string.Empty;
+    public decimal Quantity { get; set; }
+    public decimal BoxQuantity { get; set; }
+    public string Unit { get; set; } = string.Empty;
+    public string Reason { get; set; } = string.Empty;
+    public string? Remarks { get; set; }
+    public DateTime ReturnDate { get; set; }
+    public int? BillToCompanyId { get; set; }
+    public int? BrandId { get; set; }
 }
 #endregion
