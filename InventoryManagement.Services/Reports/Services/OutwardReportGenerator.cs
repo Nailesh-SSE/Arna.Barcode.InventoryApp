@@ -243,7 +243,10 @@ namespace InventoryManagement.Services.Reports.Services
        
             if (filter.CategoryId.HasValue)
                 query = query.Where(x => x.p.CategoryId == filter.CategoryId);
-
+            if (filter.ShowDeleted == false)
+            {
+                query = query.Where(x => !x.item.IsDeleted);
+            }
             // Filters
             if (string.IsNullOrWhiteSpace(filter.OutwardNumbers))
             {           

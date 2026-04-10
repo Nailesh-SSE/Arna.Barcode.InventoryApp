@@ -300,6 +300,7 @@ public class InwardReportGenerator : IInwardReportService
                 if (!string.IsNullOrEmpty(filter.ProductName) &&
                     !filter.ProductName.Split(',', StringSplitOptions.RemoveEmptyEntries).Contains(item.Product?.Name)) continue;
                 if (filter.BrandId.HasValue && item.ItemQuantity == 0) continue;
+                if (filter.ShowDeleted == false && item.IsDeleted == true) continue;
 
                 var unitCost = item.ItemQuantity > 0 ? 0m : 0m; // You may need to get this from product cost
                 var totalCost = unitCost * item.ItemQuantity;

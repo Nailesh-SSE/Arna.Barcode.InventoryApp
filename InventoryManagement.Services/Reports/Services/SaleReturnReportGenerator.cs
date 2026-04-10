@@ -270,7 +270,12 @@ namespace InventoryManagement.Services.Reports.Services
                                 : x.sr.BillToCompanyId) == filterId);
                     }
                 }
- 
+
+                if (filter.ShowDeleted == false)
+                {
+                    query = query.Where(x => !x.item.IsDeleted);
+                }
+
                 if (!string.IsNullOrWhiteSpace(filter.ProductName))
                     query = query.Where(x => x.p.Name == filter.ProductName);
 

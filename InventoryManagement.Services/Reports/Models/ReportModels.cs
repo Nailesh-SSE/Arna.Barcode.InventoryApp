@@ -46,6 +46,8 @@ public class InwardFilter : BaseReportFilter
     public bool SummaryOnly { get; set; }
     public int? ProductId { get; set; }
     public string? ProductName { get; set; }
+    public bool ShowDeleted { get; set; }
+
 
 }
 
@@ -126,6 +128,7 @@ public class OutwardFilter : BaseReportFilter
     public int? ProductId { get; set; }
     public int? BrandId { get; set; }
     public string? ProductName { get; set; }
+    public bool ShowDeleted { get; set; }
 }
 public class OutwardReportItem
 {
@@ -196,6 +199,7 @@ public class SaleReturnFilter : BaseReportFilter
     public bool GroupByProduct { get; set; }
     public bool GroupBySupplier { get; set; }
     public bool SummaryOnly { get; set; }
+    public bool ShowDeleted { get; set; }
 }
 public class SaleReturnReportItem
 {

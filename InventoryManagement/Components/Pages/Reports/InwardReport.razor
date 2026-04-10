@@ -160,6 +160,13 @@ else
                                         <label class="form-check-label">Descending</label>
                                     </div>
                                 </div>
+                                <div class="col-12">
+                                    <label class="form-label">Deleted Data</label>
+                                    <div class="form-check form-switch mt-2">
+                                        <InputCheckbox class="form-check-input" @bind-Value="filter.ShowDeleted" />
+                                        <label class="form-check-label">Show</label>
+                                    </div>
+                                </div>
                                 @*      <div class="col-12">
                                 <label class="form-label">Options</label>
                                 <div class="form-check">
