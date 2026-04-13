@@ -39,7 +39,7 @@ else
                             <span>Refresh</span>
                         }
                     </button>
-                    @* <button class="btn btn-outline-success"
+                    <button class="btn btn-outline-success"
                             disabled="@isExporting"
                             @onclick="ExportCurrentReport">
                         @if (isExporting)
@@ -52,7 +52,7 @@ else
                             <Icon Name="IconName.Download" />
                             <span>Export</span>
                         }
-                    </button> *@
+                    </button>
                 </div>
             </div>
         </div>
@@ -483,5 +483,43 @@ else
         }
 
         StateHasChanged();
+    }
+    private async Task ExportCurrentReport()
+    {
+        if (reportResult == null || isExporting)
+        {
+            ShowAlert("warning", "No report available to export.");
+            return;
+        }
+        isExporting = true;
+        StateHasChanged();
+        try
+        {
+            await Task.Delay(100);
+            var excelData = await ReturnedBarcodeMappingReportService.ExportToExcelAsync(filter);
+            var fileName = $"New_Barcode_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            var filePath = Path.Combine(Environment.CurrentDirectory, "wwwroot", "exports");
+
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
+
+            var fullPath = Path.Combine(filePath, fileName);
+            await File.WriteAllBytesAsync(fullPath, excelData);
+
+            // Browser downloads static file directly
+            var downloadUrl = $"/exports/{fileName}";
+            NavigationManager.NavigateTo(downloadUrl, forceLoad: true);
+
+            ShowAlert("success", "Report exported successfully. Check your Downloads folder.");
+        }
+        catch (Exception ex)
+        {
+            ShowAlert("danger", $"Failed to export report: {ex.Message}");
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
     }
 }
