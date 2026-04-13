@@ -268,7 +268,8 @@ public class InwardService : IInwardService
 
             var model = await ConvertDtoToItemModel(existingReturnInward.Id, saleReturnItems);
             model.UpdatedBy = saleReturnItems.UserId;
-            return await DeleteSaleReturnInwardItemAsync(model);
+            var parentBarcode = saleReturnItems.BarcodeNo;
+            return await DeleteSaleReturnInwardItemAsync(model, parentBarcode);
         }
         catch (Exception ex)
         {
@@ -757,10 +758,22 @@ public class InwardService : IInwardService
 
         try
         {
-            bool result = isDeleting
-                       ? await DeleteBarcodeOfSaleReturnInward(existingItem, model.ItemQuantity, model.UpdatedBy ?? 0)
-                       : await CreateAdditionalBarcodesAsync(existingItem, model.ItemQuantity, DateTime.Now, oldBarcode);
-
+            bool result;
+            if (isDeleting)
+            {
+                if (!string.IsNullOrEmpty(oldBarcode))
+                {
+                    result = await DeleteBarcodeOfSaleReturnInward(existingItem, model.ItemQuantity, model.UpdatedBy ?? 0, oldBarcode);
+                }
+                else
+                {
+                    result = await DeleteByQuantityAsync(existingItem, model.ItemQuantity, model.UpdatedBy ?? 0);
+                }
+            }
+            else
+            {
+                result = await CreateAdditionalBarcodesAsync(existingItem, model.ItemQuantity, DateTime.Now, oldBarcode);
+            }
             if (!result)
                 return false;
 
@@ -798,7 +811,7 @@ public class InwardService : IInwardService
         return await UpdateSaleReturnInwardItemAsync(existingItem, model, false, oldBarcode);
     }
 
-    private async Task<bool> DeleteSaleReturnInwardItemAsync(InwardItemModel model)
+    private async Task<bool> DeleteSaleReturnInwardItemAsync(InwardItemModel model, string? oldBarcode = null)
     {
         var existingItem = await GetExistingItemAsync(model);
 
@@ -810,7 +823,7 @@ public class InwardService : IInwardService
         {
             return await DeleteInwardItemAsync(existingItem.Id, model.UpdatedBy ?? 0);
         }
-        return await UpdateSaleReturnInwardItemAsync(existingItem, model, true);
+        return await UpdateSaleReturnInwardItemAsync(existingItem, model, true ,oldBarcode);
     }
 
     private async Task<InwardItem?> GetExistingItemAsync(InwardItemModel model)
@@ -1039,7 +1052,54 @@ public class InwardService : IInwardService
 
     }
 
-    private async Task<bool> DeleteBarcodeOfSaleReturnInward(InwardItem item, decimal deletingQty, int userId)
+    private async Task<bool> DeleteBarcodeOfSaleReturnInward(InwardItem item, decimal deletingQty, int userId, string? oldBarcode = null)
+    {
+        try
+        {
+            var barcodeRepo = _unitOfWork.GetRepository<InwardBarcodeItem>();
+
+            if (string.IsNullOrEmpty(oldBarcode))
+                return false;
+
+            var oldBarcodeEntity = await barcodeRepo
+                .GetQueryable()
+                .FirstOrDefaultAsync(b =>
+                    b.BarcodeNo == oldBarcode &&
+                    !b.IsDeleted);
+
+            if (oldBarcodeEntity == null)
+                return false;
+
+            var newBarcode = await barcodeRepo
+                .GetQueryable()
+                .FirstOrDefaultAsync(b =>
+                    b.OldBarcodeId == oldBarcodeEntity.Id &&
+                    b.InwardItemId == item.Id &&
+                    !b.IsDeleted &&
+                    b.IsInStock);
+
+            if (newBarcode == null)
+                return false;
+
+            newBarcode.IsActive = false;
+            newBarcode.IsInStock = false;
+            newBarcode.IsDeleted = true;
+            newBarcode.UpdatedOn = DateTime.Now;
+            newBarcode.UpdatedBy = userId;
+
+            barcodeRepo.Update(newBarcode);
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting barcodes: {ex.Message}");
+            return false;
+        }
+    }
+    private async Task<bool> DeleteByQuantityAsync(InwardItem item, decimal deletingQty, int userId)
     {
         try
         {
@@ -1049,7 +1109,8 @@ public class InwardService : IInwardService
                 .GetQueryable()
                 .Where(b => b.InwardItemId == item.Id &&
                             !b.IsDeleted &&
-                            b.IsInStock)
+                            b.IsInStock && 
+                            b.OldBarcodeId == 0)
                 .OrderByDescending(b => b.Id)
                 .Take((int)deletingQty)
                 .ToListAsync();
@@ -1076,7 +1137,6 @@ public class InwardService : IInwardService
             return false;
         }
     }
-
     private async Task<bool> CreateAdditionalBarcodesAsync(InwardItem item, decimal qty, DateTime transactionDate, string? oldBarcode = null)
     {
         try
