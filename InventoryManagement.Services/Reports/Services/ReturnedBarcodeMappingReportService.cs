@@ -4,6 +4,8 @@ using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Models.ReportModels;
 using InventoryManagement.Services.Reports.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 using System.Linq.Expressions;
 
 namespace InventoryManagement.Services.Reports.Services;
@@ -285,5 +287,62 @@ public class ReturnedBarcodeMappingReportService : IReturnedBarcodeMappingReport
         {
             throw new Exception("Error executing return barcode mapping query", ex);
         }
+    }
+
+    public async Task<byte[]> ExportToExcelAsync(SaleReturnFilter filter)
+    {
+        // Remove paging for export
+        filter.PageSize = int.MaxValue;
+        filter.PageNumber = 1;
+
+        var report = await GenerateReturnBarcodeMappingReportAsync(filter);
+
+        IWorkbook workbook = new XSSFWorkbook();
+        ISheet sheet = workbook.CreateSheet("New Barcode Report");
+
+        // Header row
+        IRow headerRow = sheet.CreateRow(0);
+        string[] headers = new string[]
+           {
+         "No.", "Return No", "Inward No", "OldBarcode","NewBarcode", "Product" ,"SKU",
+         "Unit","Box Quantity", "Item Quantity","Reason"
+           };
+
+        for (int i = 0; i < headers.Length; i++)
+        {
+            headerRow.CreateCell(i).SetCellValue(headers[i]);
+        }
+
+        // Data rows
+        for (int i = 0; i < report.Items.Count; i++)
+        {
+            var item = report.Items[i];
+            IRow row = sheet.CreateRow(i + 1);
+            row.CreateCell(0).SetCellValue(i + 1);
+            row.CreateCell(1).SetCellValue(item.SaleReturnNo);
+            row.CreateCell(2).SetCellValue(item.InwardNo);
+            row.CreateCell(3).SetCellValue(item.OldBarcode);
+            row.CreateCell(4).SetCellValue(item.NewdBarcode);
+            row.CreateCell(5).SetCellValue(item.ProductName);
+            row.CreateCell(6).SetCellValue(item.SKU);
+            row.CreateCell(7).SetCellValue(item.Unit);
+            row.CreateCell(8).SetCellValue((double)item.BoxQuantity);
+            row.CreateCell(9).SetCellValue((double)item.Quantity);
+            row.CreateCell(10).SetCellValue(item.Reason);
+        }
+
+        // Autosize all columns
+        for (int i = 0; i < headers.Length; i++)
+        {
+            sheet.AutoSizeColumn(i);
+        }
+
+        // Write to memory stream and return as byte array
+        using (var exportData = new MemoryStream())
+        {
+            workbook.Write(exportData);
+            return exportData.ToArray();
+        }
+
     }
 }
