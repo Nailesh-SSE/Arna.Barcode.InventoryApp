@@ -121,6 +121,8 @@ public class ReturnedBarcodeMappingReportService : IReturnedBarcodeMappingReport
             var inwardRepo = _unitOfWork.GetRepository<Inward>().GetQueryable().AsNoTracking();
             var inwardItemRepo = _unitOfWork.GetRepository<InwardItem>().GetQueryable().AsNoTracking();
             var productRepo = _unitOfWork.GetRepository<Product>().GetQueryable().AsNoTracking();
+            var companyRepo = _unitOfWork.GetRepository<Company>().GetQueryable().AsNoTracking();
+            var userRepo = _unitOfWork.GetRepository<Users>().GetQueryable().AsNoTracking();
 
             var baseQueryData =
                 from sr in baseQuery
@@ -144,6 +146,14 @@ public class ReturnedBarcodeMappingReportService : IReturnedBarcodeMappingReport
                     on ii.ProductId equals p.Id into pJoin
                 from p in pJoin.DefaultIfEmpty()
 
+                join comp in companyRepo
+                    on sri.BillToCompanyId equals comp.Id into compJoin
+                from comp in compJoin.DefaultIfEmpty()
+
+                join user in userRepo
+                    on sr.CreatedBy equals user.Id into userJoin
+                from user in userJoin.DefaultIfEmpty()
+
                 where ibOld != null && ibNew != null
                 where ii.IsDeleted == false
                 where ibNew.IsDeleted == false
@@ -154,7 +164,9 @@ public class ReturnedBarcodeMappingReportService : IReturnedBarcodeMappingReport
                     ibOld,
                     ibNew,
                     ii,
-                    p
+                    p,
+                    user,
+                    comp
                 };
 
             var boxAndpcsQuery =
@@ -174,8 +186,9 @@ public class ReturnedBarcodeMappingReportService : IReturnedBarcodeMappingReport
                 {
                     SaleReturnId = x.sr.Id,
                     SaleReturnNo = x.sr.SaleReturnNo,
-                    ReturnDate = x.sr.SaleReturnDate,
+                    ReturnDate = x.sri.CreatedOn,
 
+                    Type = x.sri.ReturnType,
                     SaleReturnItemId = x.sri.Id,
 
                     OldBarcode = x.ibOld.BarcodeNo,
@@ -187,16 +200,31 @@ public class ReturnedBarcodeMappingReportService : IReturnedBarcodeMappingReport
 
                     InwardId = x.ibNew.InwardId,
                     InwardNo = inward.InwardNo,
+                    InwardDate = x.ibNew.TransactionDate,
+                    IsDeleted = x.ibNew.IsDeleted,
+                    IsActive = x.sri.IsActive,
 
                     Quantity = isBox ? x.sri.ReturnQuantity : 1,
                     BoxQuantity = isBox ? 1 : 0,
                     Unit = isBox ? UnitType.BOX.ToString() : UnitType.PCS.ToString(),
 
                     BrandId = x.p.MakeCompanyId,
+                    BrandName = x.p.MakeCompany,
+
+                    CategoryId = x.p.CategoryId,
+                    CateogryName = x.p.Category.Name,
+
+                    ToStock = x.ibNew.IsInStock,
                     Reason = x.sri.ReasonToReturn,
                     Remarks = inward.Remarks,
-                    BillToCompanyId = x.sri.BillToCompanyId, 
 
+                    BillToCompanyId = x.sri.BillToCompanyId,
+                    BillToName = x.comp.Name,
+
+                    PlatFormName = x.sri.platform.Name,
+                    ShipToName = x.sri.ShipToCompany.Name,
+
+                    UserName = x.user != null ? x.user.UserName : ""
                 };
 
             var childQuery =
@@ -225,7 +253,7 @@ public class ReturnedBarcodeMappingReportService : IReturnedBarcodeMappingReport
                 {
                     SaleReturnId = x.sr.Id,
                     SaleReturnNo = x.sr.SaleReturnNo,
-                    ReturnDate = x.sr.SaleReturnDate,
+                    ReturnDate = x.sri.CreatedOn,
 
                     SaleReturnItemId = x.sri.Id,
 
@@ -245,8 +273,27 @@ public class ReturnedBarcodeMappingReportService : IReturnedBarcodeMappingReport
 
                     Reason = x.sri.ReasonToReturn,
                     Remarks = inward.Remarks,
+
+                    InwardDate = ibChild.TransactionDate,
+                    IsDeleted = ibChild.IsDeleted,
+                    IsActive = ibChild.IsActive,
+
                     BillToCompanyId = x.sri.BillToCompanyId,
-                    BrandId = p.MakeCompanyId
+                    BillToName = x.comp.Name,
+
+                    BrandId = p != null ? p.MakeCompanyId : 0,
+                    BrandName = p != null ? p.MakeCompany : "",
+
+                    CategoryId = p != null ? p.CategoryId : 0,
+                    CateogryName = p != null ? p.Category.Name : "",
+
+                    PlatFormName = x.sri.platform.Name,
+                    ShipToName = x.sri.ShipToCompany.Name,
+
+                    Type = x.sri.ReturnType,
+                    ToStock = ibChild.IsInStock,
+
+                    UserName = x.user != null ? x.user.UserName : ""
                 };
 
             var query = boxAndpcsQuery.Concat(childQuery);
@@ -304,8 +351,9 @@ public class ReturnedBarcodeMappingReportService : IReturnedBarcodeMappingReport
         IRow headerRow = sheet.CreateRow(0);
         string[] headers = new string[]
            {
-         "No.", "Return No", "Inward No", "OldBarcode","NewBarcode", "Product" ,"SKU",
-         "Unit","Box Quantity", "Item Quantity","Reason"
+         "No.", "Return Comp", "Ship To", "Platform", "Return No","Return Date","Return Time", "Inward No","Inward Date","Inward Time",
+               "OldBarcode","NewBarcode", "Category" ,"Brand", "Product" ,"SKU",
+         "Unit","Box Quantity", "Item Quantity","Return Type","To Stock","Action","Status","Reason","User Name"
            };
 
         for (int i = 0; i < headers.Length; i++)
@@ -319,16 +367,30 @@ public class ReturnedBarcodeMappingReportService : IReturnedBarcodeMappingReport
             var item = report.Items[i];
             IRow row = sheet.CreateRow(i + 1);
             row.CreateCell(0).SetCellValue(i + 1);
-            row.CreateCell(1).SetCellValue(item.SaleReturnNo);
-            row.CreateCell(2).SetCellValue(item.InwardNo);
-            row.CreateCell(3).SetCellValue(item.OldBarcode);
-            row.CreateCell(4).SetCellValue(item.NewdBarcode);
-            row.CreateCell(5).SetCellValue(item.ProductName);
-            row.CreateCell(6).SetCellValue(item.SKU);
-            row.CreateCell(7).SetCellValue(item.Unit);
-            row.CreateCell(8).SetCellValue((double)item.BoxQuantity);
-            row.CreateCell(9).SetCellValue((double)item.Quantity);
-            row.CreateCell(10).SetCellValue(item.Reason);
+            row.CreateCell(1).SetCellValue(item.BillToName);
+            row.CreateCell(2).SetCellValue(item.ShipToName);
+            row.CreateCell(3).SetCellValue(item.PlatFormName);
+            row.CreateCell(4).SetCellValue(item.SaleReturnNo);
+            row.CreateCell(5).SetCellValue(item.ReturnDate.ToString("dd/MM/yyyy"));
+            row.CreateCell(6).SetCellValue(item.ReturnDate.ToString("HH:mm:ss"));
+            row.CreateCell(7).SetCellValue(item.InwardNo);
+            row.CreateCell(8).SetCellValue(item.InwardDate.ToString("dd/MM/yyyy"));
+            row.CreateCell(9).SetCellValue(item.InwardDate.ToString("HH:mm:ss"));
+            row.CreateCell(10).SetCellValue(item.OldBarcode);
+            row.CreateCell(11).SetCellValue(item.NewdBarcode);
+            row.CreateCell(12).SetCellValue(item.CateogryName);
+            row.CreateCell(13).SetCellValue(item.BrandName);
+            row.CreateCell(14).SetCellValue(item.ProductName);
+            row.CreateCell(15).SetCellValue(item.SKU);
+            row.CreateCell(16).SetCellValue(item.Unit);
+            row.CreateCell(17).SetCellValue((double)item.BoxQuantity);
+            row.CreateCell(18).SetCellValue((double)item.Quantity);
+            row.CreateCell(19).SetCellValue(((ReturnType)item.Type).ToString());
+            row.CreateCell(20).SetCellValue(item.ToStock ? "Yes" : "No");
+            row.CreateCell(21).SetCellValue(item.IsActive ? "Active" : "Inactive");
+            row.CreateCell(22).SetCellValue(item.IsDeleted ? "Deleted" : "Saved");
+            row.CreateCell(23).SetCellValue(item.Reason);
+            row.CreateCell(24).SetCellValue(item.UserName);
         }
 
         // Autosize all columns

@@ -401,7 +401,20 @@ public class ReturnBarcodeMappingReportItem
     public string Reason { get; set; } = string.Empty;
     public string? Remarks { get; set; }
     public DateTime ReturnDate { get; set; }
+    public DateTime InwardDate { get; set; }
     public int? BillToCompanyId { get; set; }
     public int? BrandId { get; set; }
+    public int? CategoryId { get; set; }
+    public string BrandName { get; set; } = string.Empty;
+    public string ShipToName { get; set; } = string.Empty;
+    public string BillToName { get; set; } = string.Empty;
+    public string CateogryName { get; set; } = string.Empty;
+    public bool IsDeleted { get; set; } = false;
+    public bool IsActive { get; set; } = true;
+    public int Type { get; set; } 
+    public bool ToStock{ get; set; }
+    public string PlatFormName { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string UserName { get; set; } = string.Empty;
 }
 #endregion
