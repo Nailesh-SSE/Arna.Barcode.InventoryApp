@@ -85,9 +85,9 @@ else
                                     <InputDate class="form-control" @bind-Value="filter.EndDate" />
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label">Supplier</label>
+                                    <label class="form-label">Brand</label>
                                     <InputSelect class="form-select" @bind-Value="filter.CompanyId">
-                                        <option value="">All Suppliers</option>
+                                        <option value="">All Brands</option>
                                         @foreach (var company in brands)
                                         {
                                             <option value="@company.Id">@company.Name</option>
