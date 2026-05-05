@@ -188,16 +188,30 @@ else
                                             <thead class="table-light">
                                                 <tr>
                                                     <th>#</th>
+                                                    <th>Return Comp</th>
+                                                    <th>Ship To</th>
+                                                    <th>PlatForm</th>
                                                     <th>Return No</th>
+                                                    <th>Return Date</th>
+                                                    <th>Return Time</th>
                                                     <th>Inward No</th>
+                                                    <th>Inward Date</th>
+                                                    <th>Inward Time</th>
                                                     <th>Old Barcode</th>
                                                     <th>New Barcode</th>
+                                                    <th>Category</th>
+                                                    <th>Brand</th>
                                                     <th>Product</th>
                                                     <th>SKU</th>
                                                     <th>Unit</th>
                                                     <th class="text-end">Box Qty</th>
                                                     <th class="text-end">Item Qty</th>
+                                                    <th>Return Type</th>
+                                                    <th>To Stock</th>
+                                                    <th>Action</th>
+                                                    <th>Status</th>
                                                     <th>Reason</th>
+                                                    <th>User Name</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -205,16 +219,48 @@ else
                                                 {
                                                     <tr>
                                                         <td>@((reportResult.PageNumber - 1) * reportResult.PageSize + reportResult.Items.IndexOf(item) + 1)</td>
+                                                        <td>@item.BillToName</td>
+                                                        <td>@item.ShipToName</td>
+                                                        <td>@item.PlatFormName</td>
                                                         <td>@item.SaleReturnNo</td>
+                                                        <td>@item.ReturnDate.ToString("dd/MM/yyyy")</td>
+                                                        <td>@item.ReturnDate.ToString("HH:mm:ss")</td>
                                                         <td>@item.InwardNo</td>
+                                                        <td>@item.InwardDate.ToString("dd/MM/yyyy")</td>
+                                                        <td>@item.InwardDate.ToString("HH:mm:ss")</td>
                                                         <td>@item.OldBarcode</td>
                                                         <td>@item.NewdBarcode</td>
+                                                        <td>@item.CateogryName</td>
+                                                        <td>@item.BrandName</td>
                                                         <td>@item.ProductName</td>
                                                         <td><code>@item.SKU</code></td>
                                                         <td>@item.Unit</td>
                                                         <td class="text-end">@item.BoxQuantity.ToString("N2")</td>
                                                         <td class="text-end">@item.Quantity.ToString("N2")</td>
+                                                        <td>@((ReturnType)item.Type)</td>
+                                                        <td>@item.ToStock</td>
+                                                        <td>
+                                                            @if (item.IsDeleted)
+                                                            {
+                                                                <Badge Color="BadgeColor.Danger">Deleted</Badge>
+                                                            }
+                                                            else
+                                                            {
+                                                                <Badge Color="BadgeColor.Primary">Saved</Badge>
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            @if (item.IsActive)
+                                                            {
+                                                                <Badge Color="BadgeColor.Success">Active</Badge>
+                                                            }
+                                                            else
+                                                            {
+                                                                <Badge Color="BadgeColor.Secondary">Inactive</Badge>
+                                                            }
+                                                        </td>
                                                         <td>@item.Reason</td>
+                                                        <td>@item.UserName</td>
                                                     </tr>
                                                 }
                                             </tbody>

@@ -15,7 +15,7 @@ public class Product : Common
     public string Description { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(50)]
+    [StringLength(150)]
     public string SKU { get; set; } = string.Empty;
 
     [Required]
