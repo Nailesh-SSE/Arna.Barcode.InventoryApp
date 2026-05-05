@@ -1,55 +1,95 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using InventoryManagement.Core.Entities;
 using InventoryManagement.Core.Enums;
+using System.ComponentModel.DataAnnotations;
 
-namespace InventoryManagement.Services.Models;
-
-public class SaleReturnModel : CommonModel
+namespace InventoryManagement.Services.Models
 {
-    public int Id { get; set; }
+    public class SaleReturnModel : CommonModel
+    {
+        public int Id { get; set; }
 
-    public string? ReturnNo { get; set; } = string.Empty;
+        public string SaleReturnNo { get; set; }
+        public int? BillToCompanyId { get; set; }
 
-    [Required]
-    public DateTime ReturnDate { get; set; } = DateTime.UtcNow.Date;
+        [Required(ErrorMessage = "Sale Return Date is required.")]
+        public DateTime SaleReturnDate { get; set; } = DateTime.Now;
+        public DateOnly SaleReturnDateOnly => DateOnly.FromDateTime(SaleReturnDate);
+        public string? BillToCompanyName { get; set; } = string.Empty;
+        public string? Remarks { get; set; } = string.Empty;
 
-    [Required]
-    [Range(1, int.MaxValue, ErrorMessage = "Bill To Company is required.")]
-    public int BillToCompanyId { get; set; }
+        public List<SaleReturnItemsModel> SaleReturnItemsList { get; set; } = new();
+    }
 
-    [Required]
-    public ReturnType? ReturnType { get; set; }
 
-    public string? BarcodeNo { get; set; } = string.Empty;
+    public class SaleReturnItemsModel : CommonModel
+    {
+        public int Id { get; set; }
 
-    [Required]
-    public int Quantity { get; set; }
-    public int BoxQuantity { get; set; }   
+        [Required(ErrorMessage = "SaleReturnId is required.")]
+        public int SaleReturnId { get; set; }
 
-    public string? Reason { get; set; }
-    public string? Remarks { get; set; }
+        public int? OutwardId { get; set; } = null;
+        public string? OutwardNo { get; set; }
 
-    public string? CompanyName { get; set; } = string.Empty;
-    public string? ProductName { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Product is required.")]
+        public int ProductId { get; set; }
+        public string? ProductName { get; set; }
 
-    [Required]
-    public DateTime? BillingDate { get; set; }
+        public int SerialNo { get; set; }
+        public string? BarCodeNo { get; set; } = null;
 
-    [Required]
-    [Range(1, int.MaxValue, ErrorMessage = "Product is required")]
-    public int ProductId { get; set; } // new
+        [Required(ErrorMessage = "Unit is required.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Select a valid Unit.")]
+        public int UnitId { get; set; }
+        public string UnitName => ((UnitType)UnitId).ToString();
 
-    public bool IsTakeInStock { get; set; }
-    public int? ReturnInwardItemId { get; set; }
-    [Required]
-   // [Range(1, int.MaxValue, ErrorMessage = "Please select a valid unit")]
-    public int UnitId { get; set; }
-    public string? UnitName { get; set;} = string.Empty;
-    public int CompanyId { get; set; }
-}
+        [Required(ErrorMessage = "Return Quantity is required.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Return Quantity must be at least 1.")]
+        public decimal ReturnQuantity { get; set; } = 1;
+        public int CategoryId { get; set; }
 
-public class SaleReturnValidationResult
-{
-    public bool IsValid { get; set; }
-    public string ErrorMessage { get; set; } = string.Empty;
-    public string ProductName { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Ship To Company is required.")]
+        //  [Range(1, int.MaxValue, ErrorMessage = "Select a valid Shipping Company.")]
+        public int ShipToCompanyId { get; set; } = 0;
+        public string? ShipToCompanyName { get; set; }
+        [Required(ErrorMessage = "Return  Company is required.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Select a valid Return Company.")]
+        public int BillToCompanyId { get; set; } = 0;
+        public string? BillToCompanyName { get; set; }  
+        [Required(ErrorMessage = "Return Type is required.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Select a valid Return Type.")]
+        public int ReturnType { get; set; }
+        public bool IsTakeInStock { get; set; } = false;
+
+        [StringLength(200, ErrorMessage = "Reason cannot exceed 200 characters.")]
+        public string? ReasonToReturn { get; set; } = null;
+        public int? PlatformId { get; set; }
+        public string? PlatformName { get; set; }
+        public DateTime? ReturnDate { get; set; } = DateTime.Now;
+        public string? ProductSearchText { get; set; } = string.Empty;
+        public string? OutwardSearchText { get; set; } = string.Empty;
+        public List<Platform> PlatformList { get; set; } = new();
+        public List<ProductModel> ProductLIst { get; set; } = new();
+        public List<CategoryModel> CategoryList { get; set; } = new();
+        public List<CompanyModel> ShipToCompanyList { get; set; } = new();
+        public List<CompanyModel> BillToCompanyList { get; set; } = new();
+        public List<OutwardModel> OutwardList { get; set; } = new();
+    }
+
+    public class SaleReturnValidationResult
+    {
+        public bool IsValid { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
+        public string ProductName { get; set; } = string.Empty;
+        public int? ProductId { get; set; }
+        public int? ShipToId { get; set; }
+        public int? BillToId { get; set; }
+        public int? UnitId { get; set; }
+        public int? OutwardId { get; set;}
+        public string? BarcodeNo { get;set; }
+        public int PlatformId { get; set; }
+        public string? Platform { get; set; } 
+        public decimal ReturnQuantity { get; set; }
+
+    }
 }

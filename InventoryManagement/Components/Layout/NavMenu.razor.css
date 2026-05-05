@@ -10,8 +10,16 @@
 .nav-scrollable {
     height: calc(100vh - 3.5rem);
     overflow-y: auto;
-    overflow-x: hidden;
+    overflow-x: visible; /* <-- IMPORTANT */
 }
+
+/*.nav-scrollable {
+    height: calc(100vh - 3.5rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}*/
 
     /* Custom scrollbar for nav */
     .nav-scrollable::-webkit-scrollbar {
@@ -70,4 +78,11 @@
     align-items: center;
     height: 2.5rem;
     cursor: default;
+}
+.app-footer {
+    padding: 10px;
+    text-align: center;
+    color: whitesmoke;
+    font-size: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
 }

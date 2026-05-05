@@ -1,9 +1,10 @@
 ﻿@typeparam TItem
 
 <div class="mb-2">
-        <Dropdown class="w-100" disabled="@IsDisabled">
-        <DropdownToggleButton class="form-control d-flex justify-content-between align-items-center border rounded w-100 bg-white">
-                @if (!string.IsNullOrWhiteSpace(SearchText))
+    <Dropdown class="w-100" disabled="@IsDisabled">
+        <DropdownToggleButton type="button" class="form-control d-flex justify-content-between align-items-center border rounded w-100 bg-white"
+                              data-bs-toggle="dropdown">
+            @if (!string.IsNullOrWhiteSpace(SearchText))
                 {
                     @SelectedText
                 }
@@ -13,7 +14,7 @@
                 }
             </DropdownToggleButton>
 
-            <DropdownMenu class="p-2 w-100">
+            <DropdownMenu class="p-2 ">
                 <input class="form-control mb-2"
                        placeholder="Search..."
                        @bind="SearchText"

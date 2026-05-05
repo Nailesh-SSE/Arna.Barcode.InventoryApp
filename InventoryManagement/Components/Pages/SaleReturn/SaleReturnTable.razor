@@ -1,0 +1,85 @@
+﻿
+<div class="table-responsive">
+    <Grid TItem="SaleReturnModel"
+          Class="table table-hover table-bordered table-striped"
+          Data="SaleReturns"
+          AllowPaging="true"
+          PageSize="10"
+          Responsive="true" 
+          AllowFiltering="true"
+          AllowSorting="true"
+          @ref="SaleReturnGrid">
+
+        <GridColumn TItem="SaleReturnModel" HeaderText="No" Filterable=false>
+            @(SaleReturns.IndexOf(context) + 1)
+        </GridColumn>
+
+        <GridColumn TItem="SaleReturnModel" HeaderText="Sale Return No" PropertyName="SaleReturnNo" SortString="SaleReturnNo" SortKeySelector="item => item.SaleReturnNo" FilterTextboxWidth="100">
+            @context.SaleReturnNo
+        </GridColumn>
+
+        <GridColumn TItem="SaleReturnModel" HeaderText="Sale Return  Date/Time" PropertyName="SaleReturnDateOnly" SortString="SaleReturnDateOnly" SortKeySelector="item => item.SaleReturnDateOnly" FilterTextboxWidth="130">
+            @context.SaleReturnDate.ToString("dd/MM/yyyy hh:mm tt")
+        </GridColumn>
+
+        <GridColumn TItem="SaleReturnModel" HeaderText="Bill Company" PropertyName="BillToCompanyName" SortString="BillToCompanyName" SortKeySelector="item => item.BillToCompanyName" FilterTextboxWidth="100">
+            @context.BillToCompanyName.ToUpper()
+        </GridColumn>
+
+        <GridColumn TItem="SaleReturnModel" HeaderText="Status" PropertyName="IsActive" >
+            @if (context.IsActive)
+            {
+                <Badge Color="BadgeColor.Success">Active</Badge>
+            }
+            else
+            {
+                <Badge Color="BadgeColor.Danger">Inactive</Badge>
+            }
+        </GridColumn>
+
+        <GridColumn TItem="SaleReturnModel" HeaderText="Actions" Filterable=false>
+            <div class="d-flex gap-1">
+                @if (CanCreate)
+                {
+                    <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context.Id)">
+                        <Icon Name="IconName.Plus" /> Add Items
+                    </Button>
+                }
+                else
+                {
+                    <Button class="text-nowrap" Color="ButtonColor.Success" Size="ButtonSize.Small" @onclick="() => OnAddItems.InvokeAsync(context.Id)">
+                        <Icon Name="IconName.Eye" /> View Items
+                    </Button>
+                }
+                @if (CanEdit)
+                {
+                    <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => OnEditSaleReturn.InvokeAsync(context)">
+                        <Icon Name="IconName.PencilSquare" />Edit
+                    </Button>
+                }
+                @*
+                @if (CanDelete)
+                { 
+                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => OnDelete.InvokeAsync(context.Id)">
+                    <Icon Name="IconName.Trash" /> Delete
+                </Button>
+                }
+                *@
+            </div>
+        </GridColumn>
+    </Grid>
+</div>
+
+
+@code {
+    private Grid<SaleReturnModel>? SaleReturnGrid;
+    [Parameter] public List<SaleReturnModel> SaleReturns { get; set; } = new();
+    [Parameter] public List<CompanyModel> BillToCompanies { get; set; } = new();
+    [Parameter] public EventCallback<SaleReturnModel> OnEditSaleReturn { get; set; }
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+    [Parameter] public EventCallback<int> OnAddItems { get; set; }
+    [Parameter] public bool CanEdit { get; set; }
+    [Parameter] public bool CanCreate { get; set; }
+    [Parameter] public bool CanDelete { get; set; }
+
+}

@@ -12,7 +12,7 @@ public class Outward : Common
     public string OutwardNo { get; set; } = string.Empty;
 
     [Required]
-    public DateTime OutwardDate { get; set; } = DateTime.UtcNow.Date;
+    public DateTime OutwardDate { get; set; } = DateTime.UtcNow;
 
     [Required]
     public int BillToCompanyId { get; set; }
@@ -20,10 +20,14 @@ public class Outward : Common
     [Required]
     public int PlatformId { get; set; }
 
+    [Required]
+    public string LotNo { get; set; } = string.Empty;
+
     [StringLength(500)]
     public string? Remarks { get; set; }
     public bool IsFinished { get; set; }=false;
     public virtual Company BillToCompany { get; set; } = null!;
+    public virtual Platform Platform { get; set; } = null!;
     public virtual ICollection<OutwardDetail> OutwardDetails { get; set; } = new List<OutwardDetail>();
 
 }

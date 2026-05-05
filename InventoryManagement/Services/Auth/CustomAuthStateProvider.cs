@@ -1,210 +1,230 @@
-﻿
+﻿using InventoryManagement.Services.Interfaces;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.JSInterop;
 using System.Security.Claims;
+namespace InventoryManagement.Services.Auth;
 
-namespace InventoryManagement.Services.Auth
+public class CustomAuthStateProvider : AuthenticationStateProvider
 {
-    public class CustomAuthStateProvider : AuthenticationStateProvider
+    private readonly ProtectedLocalStorage _storage;
+    private readonly ILogger<CustomAuthStateProvider> _logger;
+    private const string SessionKey = "UserAuth";
+    private AuthenticationState _authenticationState;
+    private readonly TimeSpan _sessionTimeout = TimeSpan.FromHours(8);
+    private AuthData? _cachedAuthData;
+    private readonly IPermissionService PermissionService;
+    public CustomAuthStateProvider(
+        ProtectedLocalStorage storage,
+        ILogger<CustomAuthStateProvider> logger, IPermissionService permissionService)
     {
-        private readonly ProtectedLocalStorage _storage;
-        private readonly ILogger<CustomAuthStateProvider> _logger;
-        private const string SessionKey = "UserAuth";
-        private AuthenticationState _authenticationState;
-        private readonly TimeSpan _sessionTimeout = TimeSpan.FromHours(2);
-        private AuthData? _cachedAuthData;
+        _storage = storage;
+        _logger = logger;
+        PermissionService = permissionService;
+        _authenticationState = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+    }
 
-        public CustomAuthStateProvider(
-            ProtectedLocalStorage storage,
-            ILogger<CustomAuthStateProvider> logger)
+    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
+    {
+        try
         {
-            _storage = storage;
-            _logger = logger;
-            _authenticationState = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
-        }
-
-        public override async Task<AuthenticationState> GetAuthenticationStateAsync()
-        {
-            try
+            // Use cached data if available to avoid async delays
+            if (_cachedAuthData?.IsAuthenticated == true)
             {
-                // Use cached data if available to avoid async delays
-                if (_cachedAuthData?.IsAuthenticated == true)
+                if (DateTime.UtcNow - _cachedAuthData.LoginTime <= _sessionTimeout)
                 {
-                    // Check if cache is still valid
-                    if (DateTime.UtcNow - _cachedAuthData.LoginTime <= _sessionTimeout)
-                    {
-                        return CreateAuthenticationState(_cachedAuthData);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Cached session expired for user {UserId}", _cachedAuthData.UserId);
-                        _cachedAuthData = null;
-                        await MarkUserAsLoggedOut();
-                        return _authenticationState;
-                    }
+                    return CreateAuthenticationState(_cachedAuthData);
                 }
-
-                var session = await _storage.GetAsync<AuthData>(SessionKey);
-
-                if (session.Success && session.Value?.IsAuthenticated == true)
+                else
                 {
-                    var user = session.Value;
-                    _cachedAuthData = user; // Cache the data
-
-                    // Check session timeout
-                    if (DateTime.UtcNow - user.LoginTime > _sessionTimeout)
-                    {
-                        _logger.LogInformation("Session expired for user {UserId}", user.UserId);
-                        await MarkUserAsLoggedOut();
-                        return _authenticationState;
-                    }
-
-                    _authenticationState = CreateAuthenticationState(user);
+                    _logger.LogInformation("Cached session expired for user {UserId}", _cachedAuthData.UserId);
+                    await ClearPermissionCacheAndAuthData();
+                    await MarkUserAsLoggedOut();
                     return _authenticationState;
                 }
             }
-            catch (Exception ex)
+
+            // Retrieve session data from ProtectedBrowserStorage
+            var session = await _storage.GetAsync<AuthData>(SessionKey);
+
+            if (session.Success && session.Value?.IsAuthenticated == true)
             {
-                _logger.LogError(ex, "Error getting authentication state");
-            }
+                var user = session.Value;
+                _cachedAuthData = user;
 
-            _authenticationState = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
-            return _authenticationState;
-        }
-
-        private AuthenticationState CreateAuthenticationState(AuthData user)
-        {
-            var identity = new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.UserId),
-                new Claim(ClaimTypes.Name, user.UserName),
-                new Claim("FullName", user.UserFullName),
-                new Claim("LoginTime", user.LoginTime.ToString("O"))
-            }, "LocalStorageAuth");
-
-            return new AuthenticationState(new ClaimsPrincipal(identity));
-        }
-
-        public async Task MarkUserAsAuthenticated(AuthData user)
-        {
-            try
-            {
-                await _storage.SetAsync(SessionKey, user);
-                _cachedAuthData = user; // Cache the data immediately
-                _logger.LogInformation("User {UserId} authenticated successfully", user.UserId);
+                if (DateTime.UtcNow - user.LoginTime > _sessionTimeout)
+                {
+                    _logger.LogInformation("Session expired for user {UserId}", user.UserId);
+                    await ClearPermissionCacheAndAuthData();
+                    await MarkUserAsLoggedOut();
+                    return _authenticationState;
+                }
 
                 _authenticationState = CreateAuthenticationState(user);
-                NotifyAuthenticationStateChanged(Task.FromResult(_authenticationState));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error marking user as authenticated");
-                throw;
+                return _authenticationState;
             }
         }
-
-        public async Task MarkUserAsLoggedOut()
+        catch (JSDisconnectedException ex)
         {
-            try
-            {
-                await _storage.DeleteAsync(SessionKey);
-                _cachedAuthData = null; // Clear cache
-                _logger.LogInformation("User logged out successfully");
-
-                _authenticationState = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
-                NotifyAuthenticationStateChanged(Task.FromResult(_authenticationState));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error marking user as logged out");
-                throw;
-            }
+            _logger.LogWarning(ex, "JSDisconnectedException occurred while retrieving authentication state.");
         }
-
-        public async Task<bool> IsUserAuthenticatedAsync()
+        catch (Exception ex)
         {
-            try
-            {
-                // Use cached data for faster response
-                if (_cachedAuthData?.IsAuthenticated == true)
-                {
-                    return DateTime.UtcNow - _cachedAuthData.LoginTime <= _sessionTimeout;
-                }
-
-                var authState = await GetAuthenticationStateAsync();
-                return authState.User.Identity?.IsAuthenticated ?? false;
-            }
-            catch
-            {
-                return false;
-            }
+            _logger.LogError(ex, "Error getting authentication state");
         }
 
-        public async Task<string> GetCurrentUserIdAsync()
-        {
-            try
-            {
-                // Use cached data for faster response
-                if (_cachedAuthData?.IsAuthenticated == true)
-                {
-                    return _cachedAuthData.UserId;
-                }
-
-                var authState = await GetAuthenticationStateAsync();
-                return authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
-
-        public async Task<string> GetCurrentUserNameAsync()
-        {
-            try
-            {
-                // Use cached data for faster response
-                if (_cachedAuthData?.IsAuthenticated == true)
-                {
-                    return _cachedAuthData.UserName;
-                }
-
-                var authState = await GetAuthenticationStateAsync();
-                return authState.User.Identity?.Name ?? string.Empty;
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
-
-        public async Task<string> GetCurrentUserFullNameAsync()
-        {
-            try
-            {
-                // Use cached data for faster response
-                if (_cachedAuthData?.IsAuthenticated == true)
-                {
-                    return _cachedAuthData.UserFullName;
-                }
-
-                var authState = await GetAuthenticationStateAsync();
-                return authState.User.FindFirst("FullName")?.Value ?? string.Empty;
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
+        _authenticationState = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+        return _authenticationState;
     }
 
-    // AuthData class - keep this in the same file or separate as preferred
-    public class AuthData
+    private AuthenticationState CreateAuthenticationState(AuthData user)
     {
-        public bool IsAuthenticated { get; set; }
-        public string UserId { get; set; } = string.Empty;
-        public string UserName { get; set; } = string.Empty;
-        public string UserFullName { get; set; } = string.Empty;
-        public DateTime LoginTime { get; set; }
+        var identity = new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.UserId),
+            new Claim(ClaimTypes.Name, user.UserName),
+            new Claim("FullName", user.UserFullName),
+            new Claim("UserRoleId", user.UserRoleId),
+            new Claim("UserRoleLevel",user.UserRoleLevel),
+            new Claim("LoginTime", user.LoginTime.ToString("O"))
+        }, "LocalStorageAuth");
+
+        return new AuthenticationState(new ClaimsPrincipal(identity));
     }
+
+    public async Task MarkUserAsAuthenticated(AuthData user)
+    {
+        try
+        {
+            await _storage.SetAsync(SessionKey, user);
+            _cachedAuthData = user; // Cache the data immediately
+            _logger.LogInformation("User {UserId} authenticated successfully", user.UserId);
+
+            _authenticationState = CreateAuthenticationState(user);
+            NotifyAuthenticationStateChanged(Task.FromResult(_authenticationState));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error marking user as authenticated");
+            throw;
+        }
+    }
+
+    public async Task MarkUserAsLoggedOut()
+    {
+        try
+        {
+            await _storage.DeleteAsync(SessionKey);
+            _cachedAuthData = null; // Clear cache
+            _logger.LogInformation("User logged out successfully");
+
+            _authenticationState = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            NotifyAuthenticationStateChanged(Task.FromResult(_authenticationState));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error marking user as logged out");
+            throw;
+        }
+    }
+
+    public async Task<bool> IsUserAuthenticatedAsync()
+    {
+        try
+        {
+            // Use cached data for faster response
+            if (_cachedAuthData?.IsAuthenticated == true)
+            {
+                return DateTime.UtcNow - _cachedAuthData.LoginTime <= _sessionTimeout;
+            }
+
+            var authState = await GetAuthenticationStateAsync();
+            return authState.User.Identity?.IsAuthenticated ?? false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public async Task<string> GetCurrentUserIdAsync()
+    {
+        try
+        {
+            // Use cached data for faster response
+            if (_cachedAuthData?.IsAuthenticated == true)
+            {
+                return _cachedAuthData.UserId;
+            }
+
+            var authState = await GetAuthenticationStateAsync();
+            return authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    public async Task<string> GetCurrentUserNameAsync()
+    {
+        try
+        {
+            // Use cached data for faster response
+            if (_cachedAuthData?.IsAuthenticated == true)
+            {
+                return _cachedAuthData.UserName;
+            }
+
+            var authState = await GetAuthenticationStateAsync();
+            return authState.User.Identity?.Name ?? string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    public async Task<string> GetCurrentUserFullNameAsync()
+    {
+        try
+        {
+            // Use cached data for faster response
+            if (_cachedAuthData?.IsAuthenticated == true)
+            {
+                return _cachedAuthData.UserFullName;
+            }
+
+            var authState = await GetAuthenticationStateAsync();
+            return authState.User.FindFirst("FullName")?.Value ?? string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+    private async Task ClearPermissionCacheAndAuthData()
+    {
+        if (_cachedAuthData == null)
+            return;
+
+        if (int.TryParse(_cachedAuthData.UserId, out var userId))
+        {
+            PermissionService.ClearUserPermissionCache(userId);
+        }
+
+        _cachedAuthData = null;
+    }
+}
+
+// AuthData class - keep this in the same file or separate as preferred
+public class AuthData
+{
+    public bool IsAuthenticated { get; set; }
+    public string UserId { get; set; } = string.Empty;
+    public string UserName { get; set; } = string.Empty;
+    public string UserFullName { get; set; } = string.Empty;
+    public string UserRoleId { get; set; } = string.Empty;
+    public DateTime LoginTime { get; set; }
+    public string UserRoleLevel { get; set; } = string.Empty;
 }

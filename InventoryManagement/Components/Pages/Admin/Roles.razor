@@ -1,0 +1,328 @@
+﻿@page "/role"
+@using InventoryManagement.Components.Auth
+@inherits AuthComponentBase
+@inject IRoleService roleService
+@inject IJSRuntime JS
+
+<PageTitle>Role</PageTitle>
+@if (!CanView(Route))
+{
+    <div class="container-fluid mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="alert alert-danger text-center">
+                    <h4>Access Denied</h4>
+                    <p>You don't have permission to access this page.</p>
+                    <Button Color="ButtonColor.Primary" @onclick="GoHome">
+                        Go to Home
+                    </Button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <Spinner Type="SpinnerType.Border" />
+        </div>
+    }
+    else
+    {
+        <div class="container-fluid">
+            <div class="row mb-3">
+                <div class="col">
+                    <h3><Icon Name="IconName.FilePerson" />Role</h3>
+                </div>
+                <div class="col-auto">
+                    @if (CanCreate(Route))
+                    {
+                        <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                            <Icon Name="IconName.Plus" /> Add New
+                        </Button>
+                    }
+                </div>
+            </div>
+
+            <Grid TItem="RoleModel"
+                  Class="table table-hover table-bordered table-striped"
+                  Data="roleList"
+                  AllowPaging="true"
+                  PageSize="10"
+                  Responsive="true"
+                  AllowFiltering="true"
+                  AllowSorting="true"
+                  @ref=roleGrid>
+
+                <GridColumn TItem="RoleModel" HeaderText="No" Filterable=false>
+                    @(roleList.IndexOf(context) + 1)
+                </GridColumn>
+                <GridColumn TItem="RoleModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="100">
+                    @context.Name
+                </GridColumn>
+                <GridColumn TItem="RoleModel" HeaderText="Description" PropertyName="Description" Filterable=false>
+                    @context.Description
+                </GridColumn>
+                @if (isShowRoleLevel)
+                {
+                    <GridColumn TItem="RoleModel" HeaderText="Role Level" PropertyName="RoleLevel" SortString="RoleLevel" SortKeySelector="item => item.RoleLevel" FilterTextboxWidth="80">
+                        <span style="color:@(context.RoleLevel < 5 ? "red" : "")">
+                            @context.RoleLevel
+                        </span>
+                    </GridColumn>
+                }
+                <GridColumn TItem="RoleModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive" Sortable=false>
+                    @if (context.IsActive)
+                    {
+                        <Badge Color="BadgeColor.Success">Active</Badge>
+                    }
+                    else
+                    {
+                        <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                    }
+                </GridColumn>
+
+                <GridColumn TItem="RoleModel" HeaderText="Actions" Filterable=false>
+                    <div class="d-flex gap-1 justify-content-start">
+                        @if (CanEdit(Route))
+                        {
+                            <LoadingButton class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" onclick="() => ShowEditModal(context)">
+                                <Icon Name="IconName.PencilSquare" /> Edit
+                            </LoadingButton>
+                        }
+
+                        @if (CanDelete(Route))
+                        {
+                            <LoadingButton class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" onclick="() => DeleteRole(context.Id)">
+                                <Icon Name="IconName.Trash" /> Delete
+                            </LoadingButton>
+                        }
+                    </div>
+                </GridColumn>
+            </Grid>
+        </div>
+    }
+
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Regular" UseStaticBackdrop>
+        <BodyTemplate>
+            <EditForm EditContext="@editContext" OnValidSubmit="SaveRole">
+                <DataAnnotationsValidator />
+
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Name <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="roleModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
+                        <ValidationMessage For="@(() => roleModel.Name)" />
+                    </div>
+                </div>
+                @if (isShowRoleLevel)
+                {
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Role Level </label>
+                            <InputNumber class="form-control" @bind-Value="roleModel.RoleLevel" min="0" />
+                        </div>
+                    </div>
+                }
+                @if (roleModel.Id > 0)
+                {
+                    <div class="mb-3">
+                        <InputCheckbox @bind-Value="roleModel.IsActive" /> Active
+                    </div>
+                }
+                <div class="text-end">
+                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+                </div>
+            </EditForm>
+        </BodyTemplate>
+    </Modal>
+}
+@code {
+    private Modal modal { get; set; }
+    private bool isEditMode = false;
+    private bool isLoading = true;
+    private RoleModel roleModel { get; set; }
+    private string modalTitle = "Add Roles";
+    private Grid<RoleModel> roleGrid;
+    private List<RoleModel> roleList = new();
+    private string Route = "/role";
+    private EditContext editContext { get; set; }
+    private ValidationMessageStore validationMessage;
+    private bool isShowRoleLevel = false;
+    private bool isSaveBtnLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        await base.OnInitializedAsync();
+        await LoadRole();
+        StateHasChanged();
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
+        isLoading = false;
+
+    }
+
+    private async Task LoadRole()
+    {
+        try
+        {
+            var roles = await roleService.GetRoleByIdAync(CurrentUserRoleId);
+            if (roles != null && roles.RoleLevel <= 4)
+                isShowRoleLevel = true;
+            var userRoleId = Convert.ToInt32(CurrentUserRoleId);
+            roleList = await roleService.GetAllRolesAsync(userRoleId);
+
+        }
+        catch (Exception ex)
+        {
+
+            throw;
+        }
+    }
+
+    public void InitializeEditContextAsync()
+    {
+        editContext = new EditContext(roleModel);
+        validationMessage = new ValidationMessageStore(editContext);
+    }
+
+    private async Task ShowAddModal()
+    {
+        modalTitle = "Add Role";
+        isEditMode = false;
+        roleModel = new RoleModel()
+        {
+            CreatedBy = Convert.ToInt32(CurrentUserId),
+        };
+        var roles = await roleService.GetRoleByIdAync(CurrentUserRoleId);
+        if (roles != null && roles.RoleLevel <= 4)
+            isShowRoleLevel = true;
+        InitializeEditContextAsync();
+        modal.ShowAsync();
+    }
+    private async Task ShowEditModal(RoleModel editRole)
+    {
+        modalTitle = "Edit Role";
+        isEditMode = true;
+        var roles = await roleService.GetRoleByIdAync(CurrentUserRoleId);
+        if (roles != null && roles.RoleLevel <= 4)
+            isShowRoleLevel = true;
+        roleModel = new RoleModel
+        {
+            Id = editRole.Id,
+            Name = editRole.Name,
+            RoleLevel = editRole.RoleLevel,
+            IsActive = editRole.IsActive,
+            UpdatedBy = Convert.ToInt32(CurrentUserId),
+        };
+        InitializeEditContextAsync();
+        modal.ShowAsync();
+    }
+    private async Task SaveRole()
+    {
+        if (isSaveBtnLoading) return;
+        try
+        {
+            isSaveBtnLoading = true;
+            if (!editContext.Validate()) return;
+            await ValidateNameAsync();
+            if (editContext.GetValidationMessages().Any())
+                return;
+            await ValidateDuplicateRoleName();
+            if (editContext.GetValidationMessages().Any())
+                return;
+
+            if (isEditMode)
+            {
+                await roleService.UpdateRoleAsync(roleModel);
+            }
+            else
+            {
+                await roleService.CreateRoleAsync(roleModel);
+            }
+            await HideModal();
+            await LoadRole();
+            if (roleGrid != null)
+                await roleGrid.RefreshDataAsync();
+        }
+        catch(Exception){}
+        finally
+        {
+            isSaveBtnLoading = false;
+        }
+    }
+
+    private async Task DeleteRole(int id)
+    {
+        try
+        {
+            bool isConfirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
+            if (isConfirm)
+            {
+                var deletedBy = Convert.ToInt32(CurrentUserId);
+
+                await roleService.DeleteRoleAsync(id, deletedBy);
+                await LoadRole();
+                await roleGrid.RefreshDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
+
+    private async Task HideModal()
+    {
+        await modal.HideAsync();
+
+    }
+    private async Task ValidateDuplicateRoleName()
+    {
+        validationMessage.Clear(() => roleModel.Name);
+        if (!string.IsNullOrEmpty(roleModel.Name))
+        {
+            var isRoleNameUnique = await roleService.IsRoleNameUnique(roleModel.Name, roleModel.Id);
+            if (!isRoleNameUnique)
+            {
+                validationMessage.Add(() => roleModel.Name, "This Role Already Exists");
+
+            }
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+
+    private async Task ValidateNameAsync()
+    {
+        validationMessage.Clear(() => roleModel.Name);
+        if (string.IsNullOrWhiteSpace(roleModel.Name))
+        {
+            validationMessage.Add(() => roleModel.Name, "Role name is required");
+            editContext.NotifyValidationStateChanged();
+        }
+    }
+    private async Task HandleNameChangeAsync(string newValue)
+    {
+        roleModel.Name = newValue;
+        try
+        {
+            await ValidateNameAsync();
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
+    private void GoHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}
+

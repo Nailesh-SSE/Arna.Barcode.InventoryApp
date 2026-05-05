@@ -8,201 +8,7 @@
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 
-<style>
-    .login-container {
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 20px;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    .login-box {
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        width: 100%;
-        max-width: 400px;
-        overflow: hidden;
-    }
-
-    .login-header {
-        padding: 30px 20px 20px;
-        text-align: center;
-    }
-
-    .logo {
-        max-width: 160px;
-        height: auto;
-    }
-
-    .company-name {
-        color: #2c3e50;
-        font-size: 24px;
-        font-weight: 600;
-        margin: 0;
-        letter-spacing: 0.5px;
-    }
-
-    .login-body {
-        padding: 30px;
-    }
-
-    .login-message {
-        text-align: center;
-        color: #6c757d;
-        margin-bottom: 30px;
-        font-size: 14px;
-        font-weight: 500;
-    }
-
-    .form-group {
-        margin-bottom: 25px;
-        position: relative;
-    }
-
-    .input-container {
-        position: relative;
-        display: flex;
-        align-items: center;
-    }
-
-    .input-icon {
-        position: absolute;
-        left: 15px;
-        color: #6c757d;
-        z-index: 2;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 20px;
-        height: 20px;
-    }
-
-    .form-input {
-        width: 100%;
-        padding: 14px 45px 14px 45px;
-        border: 1px solid #dcdfe6;
-        border-radius: 6px;
-        font-size: 14px;
-        transition: all 0.3s ease;
-        background: #fff;
-        color: #333;
-    }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            transform: translateY(-1px);
-        }
-
-        .form-input::placeholder {
-            color: #a0a4a8;
-        }
-
-    .password-toggle {
-        position: absolute;
-        right: 15px;
-        background: none;
-        border: none;
-        color: #6c757d;
-        cursor: pointer;
-        padding: 0;
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 3;
-    }
-
-        .password-toggle:hover {
-            color: #667eea;
-        }
-
-    .login-button {
-        width: 100%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        padding: 14px;
-        border-radius: 6px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-    }
-
-        .login-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 7px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .login-button:active {
-            transform: translateY(0);
-        }
-
-    .alert {
-        padding: 12px 15px;
-        border-radius: 6px;
-        margin-bottom: 20px;
-        font-size: 14px;
-        text-align: center;
-    }
-
-    .alert-error {
-        background-color: #fee;
-        color: #c33;
-        border: 1px solid #fdd;
-        font-weight: 500;
-    }
-
-    /* Responsive adjustments */
-    @@media (max-width: 480px) {
-        .login-box {
-            margin: 10px;
-        }
-
-        .login-body {
-            padding: 25px 20px;
-        }
-
-        .login-header {
-            padding: 30px 20px 15px;
-        }
-
-        .company-name {
-            font-size: 22px;
-        }
-    }
-
-    /* Add some smooth animations */
-    .login-box {
-        animation: slideUp 0.5s ease-out;
-    }
-
-    @@keyframes slideUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-</style>
-
-
-
 <PageTitle>Arna Technosoft - Login</PageTitle>
-
 
 <div class="login-container">
     <div class="login-box">
@@ -279,6 +85,7 @@
     private bool isLoading;
     private bool showPassword;
     private string? returnUrl;
+    private CancellationTokenSource _cts = new CancellationTokenSource();
 
 
     private string passwordInputType => showPassword ? "text" : "password";
@@ -288,17 +95,16 @@
     {
         try
         {
-            // Get return URL from query parameters
-            var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
-            returnUrl = System.Web.HttpUtility.ParseQueryString(uri.Query).Get("returnUrl");
-
-            // Check if user is already authenticated and redirect if needed
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             if (authState.User.Identity?.IsAuthenticated == true)
             {
                 await NavigateToReturnUrl();
                 return;
             }
+        }
+        catch (JSDisconnectedException ex)
+        {
+            Logger.LogWarning(ex, "JSDisconnectedException occurred during login initialization.");
         }
         catch (Exception ex)
         {
@@ -308,6 +114,7 @@
 
     private async Task HandleLogin()
     {
+        if (isLoading) return;
         try
         {
             isLoading = true;
@@ -324,6 +131,7 @@
                 if (user == null)
                 {
                     errorMessage = "User account not found";
+                    Logger.LogWarning("User authenticated but account not found for username: {Username}", loginModel.Username);
                     return;
                 }
 
@@ -335,9 +143,11 @@
                     {
                         UserId = user.Id.ToString(),
                         UserName = user.UserName ?? loginModel.Username,
-                        UserFullName = user.Name ?? loginModel.Username,
+                        UserFullName = user.UserName + " " + user.LastName ?? loginModel.Username,
+                        UserRoleId = user.RoleId.ToString(),
                         IsAuthenticated = true,
-                        LoginTime = DateTime.UtcNow
+                        LoginTime = DateTime.UtcNow,
+                        UserRoleLevel = user.RoleLevel.ToString()
                     });
 
                     Logger.LogInformation("User {Username} logged in successfully", loginModel.Username);
@@ -346,6 +156,7 @@
                 else
                 {
                     errorMessage = "Authentication service not available";
+                    Logger.LogError("Could not cast AuthStateProvider to CustomAuthStateProvider");
                 }
             }
             else
@@ -353,6 +164,16 @@
                 errorMessage = "Invalid username or password";
                 Logger.LogWarning("Failed login attempt for username: {Username}", loginModel.Username);
             }
+        }
+        catch (ObjectDisposedException ex)
+        {
+            Logger.LogError(ex, "DbContext disposed during login for user {Username}", loginModel.Username);
+            errorMessage = "System error. Please try again.";
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.LogDebug("Login operation was cancelled for user {Username}", loginModel.Username);
+            errorMessage = "Login cancelled. Please try again.";
         }
         catch (Exception ex)
         {
@@ -377,6 +198,7 @@
             }
             else
             {
+                Logger.LogWarning("Invalid return URL detected: {ReturnUrl}", returnUrl);
                 NavigationManager.NavigateTo("/", false);
             }
         }
@@ -390,7 +212,6 @@
     {
         if (string.IsNullOrEmpty(url))
             return false;
-
         // Ensure the URL is relative and doesn't contain suspicious characters
         return url.StartsWith("/") &&
                !url.Contains("://") &&
@@ -402,6 +223,19 @@
     private void TogglePasswordVisibility()
     {
         showPassword = !showPassword;
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            _cts?.Cancel();
+            _cts?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error disposing Login component");
+        }
     }
 
     public class LoginModel

@@ -1,0 +1,212 @@
+@page "/sale-returns"
+@inject ISaleReturnService SaleReturnService
+@inject ICompanyService CompanyService
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+@inject IOutwardService OutwardService
+@inject IPlatformService PlatformService
+@inject NavigationManager Nav
+@using InventoryManagement.Services.DTO
+
+@inject IJSRuntime JSRuntime
+
+@inherits InventoryManagement.Components.Auth.AuthComponentBase
+<PageTitle>Sale Return Management</PageTitle>
+@if (!CanView(Route))
+{
+    <AccessDenied />
+}
+else
+{
+    <div>
+
+        <div class="row mb-3">
+            <div class="col">
+                <h3>Sale Return Management</h3>
+            </div>
+            <div class="col-auto">
+                @if (CanCreate(Route))
+                {
+                    <button class="btn btn-primary" @onclick="ShowAddModal">
+                        <Icon Name="IconName.Plus" />  Add New Sale Return
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div>
+            <div class="spinner-border text-light" role="status"></div>
+        </div>
+    }
+    else
+    {
+        <SaleReturnTable SaleReturns="saleReturnList"
+        BillToCompanies="BillToCompanyList"
+        OnEditSaleReturn="ShowEditModal"
+        OnAddItems="OpenItemPage" CanEdit="CanEdit(Route)" CanDelete="CanDelete(Route)" CanCreate="CanCreate(Route)" />
+    }
+
+    <SaleReturnFormModal @ref="saleReturnFormModal"
+    Title="@modalTitle"
+    SaleReturnModel="saleReturn"
+    BillToCompanyList="BillToCompanyList"
+    OnSave="SaveSaleReturn"
+    OnCancel="HideModal"
+    OnEditMode="isEditMode" 
+    Disablefields="disablefields"/>
+
+}
+@code
+{
+    private bool isLoading = true;
+    private bool isEditMode = false;
+    private string modalTitle = "Add Sale Return";
+
+    private SaleReturnModel saleReturn = new();
+    private List<SaleReturnModel> saleReturnList = new();
+
+    private List<CompanyModel> BillToCompanyList = new();
+
+    private SaleReturnFormModal? saleReturnFormModal;
+    private List<UnitModel> Units => CommonUtils.UnitList;
+
+    private string validationMessage = string.Empty;
+    private bool validationIsValid = false;
+    private string Route = "/sale-returns";
+    private bool disablefields;
+    private bool disableitemfields;
+    private bool isAdmin = false;
+    private bool isSrSaveBtnLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        await base.OnInitializedAsync();
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
+        await LoadData();
+        isLoading = false;
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+            isAdmin = IsAdmin() || IsFactoryAdmin();
+            saleReturnList = (await SaleReturnService.GetAllSaleReturnsAsync(isAdmin)).ToList();
+            BillToCompanyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
+        }
+        catch
+        {
+            //   ShowError("Connectivity issue happened, operation failed");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    #region FormModal
+    private void ShowAddModal()
+    {
+        modalTitle = "Add New Sale Return";
+        isEditMode = false;
+        disablefields = false;
+        saleReturn = new SaleReturnModel
+        {
+            SaleReturnDate = DateTime.Now,
+            IsActive = true,
+            CreatedBy = Convert.ToInt32(CurrentUserId),
+            CreatedOn = DateTime.Now,
+        };
+        saleReturnFormModal?.Show();
+
+    }
+
+    private void ShowEditModal(SaleReturnModel editSaleReturn)
+    {
+        if (CanEdit(Route) == true)
+        {
+            modalTitle = $"Edit Sale Return - {editSaleReturn.SaleReturnNo}";
+            isEditMode = true;
+            disablefields = false;
+        }
+        else
+        {
+            modalTitle = $"View Sale Return - {editSaleReturn.SaleReturnNo}";
+            isEditMode = true;
+            disablefields = true;
+        }
+        saleReturn = new SaleReturnModel
+        {
+            Id = editSaleReturn.Id,
+            SaleReturnDate = editSaleReturn.SaleReturnDate,
+            BillToCompanyId = editSaleReturn.BillToCompanyId,
+            IsActive = editSaleReturn.IsActive,
+            UpdatedBy = Convert.ToInt32(CurrentUserId),
+            UpdatedOn = DateTime.Now,
+            Remarks = editSaleReturn.Remarks
+        };
+        saleReturnFormModal?.Show();
+    }
+
+    private async Task SaveSaleReturn()
+    {
+        if (isSrSaveBtnLoading) return;
+        try
+        {
+            isSrSaveBtnLoading = true;
+            isLoading = true;
+
+            if (isEditMode)
+            {
+                saleReturn.UpdatedBy = Convert.ToInt32(CurrentUserId);
+                saleReturn.UpdatedOn = DateTime.Now;
+                await SaleReturnService.UpdateSaleReturnAsync(saleReturn);
+                await HideModal();
+                await LoadData();
+            }
+            else
+            {
+                saleReturn.CreatedBy = Convert.ToInt32(CurrentUserId);
+                saleReturn.CreatedOn = DateTime.Now;
+                var SaleReturnId = await SaleReturnService.CreateSaleReturnAsync(saleReturn);
+
+                await HideModal();
+                await LoadData();
+
+                if (SaleReturnId != 0)
+                {
+                    saleReturn.Id = SaleReturnId;
+                    //   await OpenAddItemModal(saleReturn);
+                }
+            }
+            isLoading = false;
+        }
+        catch (Exception)
+        {    
+        }
+        finally
+        {
+            isSrSaveBtnLoading = false;
+        }
+    }
+    private async Task HideModal()
+    {
+        await saleReturnFormModal.Hide();
+    }
+    #endregion
+    #region ItemModal
+    private async Task OpenItemPage(int saleReturnId)
+    {
+        Nav.NavigateTo($"/sale-return/items/{saleReturnId}");
+    }
+
+    #endregion
+}

@@ -6,113 +6,130 @@
 
 <PageTitle>Categories</PageTitle>
 
-
-@if (isLoading)
+@if (!CanView(Route))
 {
-    <div class="text-center">
-        <Spinner Type="SpinnerType.Border" />
-    </div>
+    <AccessDenied />
 }
 else
 {
-    <div class="container-fluid">
-        <div class="row mb-3">
-            <div class="col">
-                <h3><Icon Name="IconName.Tags" /> Categories</h3>
-            </div>
-            <div class="col-auto">
-                <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
-                    <Icon Name="IconName.Plus" /> Add New
-                </Button>
-            </div>
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <Spinner Type="SpinnerType.Border" />
         </div>
-
-        <Grid TItem="CategoryModel"
-              @ref="categoryGrid"
-              Class="table table-hover table-bordered table-striped"
-              Data="categoryList"
-              AllowPaging="true"
-              PageSize="10"
-              Responsive="true">
-
-
-            <GridColumn TItem="CategoryModel" HeaderText="No">
-                @(categoryList.IndexOf(context) + 1)
-            </GridColumn>
-
-            <GridColumn TItem="CategoryModel" HeaderText="Name" PropertyName="Name">
-                @context.Name
-            </GridColumn>
-
-            <GridColumn TItem="CategoryModel" HeaderText="Description" PropertyName="Description">
-                @context.Description
-            </GridColumn>
-
-            <GridColumn TItem="CategoryModel" HeaderText="Status" PropertyName="IsActive">
-                @if (context.IsActive)
-                {
-                    <Badge Color="BadgeColor.Success">Active</Badge>
-                }
-                else
-                {
-                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
-                }
-            </GridColumn>
-
-            <GridColumn TItem="CategoryModel" HeaderText="Actions">
-                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                    <Icon Name="IconName.PencilSquare" /> Edit
-                </Button>
-                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCategory(context.Id)">
-                    <Icon Name="IconName.Trash" /> Delete
-                </Button>
-            </GridColumn>
-        </Grid>
-    </div>
-}
-
-<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
-    <BodyTemplate>
-        <EditForm EditContext="editContext" OnValidSubmit="SaveCategory">
-            <DataAnnotationsValidator />
-
-            <div class="mb-3">
-                <label class="form-label">Name <span class="text-danger">*</span></label>
-                <InputText class="form-control" @bind-Value="categoryModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
-                <ValidationMessage For="@(() => categoryModel.Name)" />
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Description</label>
-                <InputTextArea class="form-control" rows="3" @bind-Value="categoryModel.Description" />
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Parent Category</label>
-                    <DropDown TItem="CategoryModel"
-                        Items="@parentCategoryList"
-                        SelectedId="@categoryModel.ParentCategoryId"
-                        ValueSelector="x => x.Id"
-                        TextSelector="x => x.Name"
-                          Placeholder="-- Select Parent Category --"
-                        OnValueChanged="OnCategorySelected"/>
-            </div> 
-            @if (categoryModel.Id > 0)
-            {
-                <div class="mb-3">
-                    <InputCheckbox @bind-Value="categoryModel.IsActive" /> Active
+    }
+    else
+    {
+        <div class="container-fluid">
+            <div class="row mb-3">
+                <div class="col">
+                    <h3><Icon Name="IconName.Tags" /> Categories</h3>
                 </div>
-            }
-
-            <div class="text-end">
-                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+                @if (CanCreate(Route))
+                {
+                    <div class="col-auto">
+                        <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                            <Icon Name="IconName.Plus" /> Add New
+                        </Button>
+                    </div>
+                }
             </div>
-        </EditForm>
-    </BodyTemplate>
-</Modal>
+
+            <Grid TItem="CategoryModel"
+                  @ref="categoryGrid"
+                  Class="table table-hover table-bordered table-striped"
+                  Data="categoryList"
+                  AllowPaging="true"
+                  PageSize="10"
+                  Responsive="true"
+                  AllowSorting="true"
+                  AllowFiltering="true">
 
 
+                <GridColumn TItem="CategoryModel" HeaderText="No" Filterable=false>
+                    @(categoryList.IndexOf(context) + 1)
+                </GridColumn>
+
+                <GridColumn TItem="CategoryModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="100">
+                    @context.Name
+                </GridColumn>
+
+                <GridColumn TItem="CategoryModel" HeaderText="Description" PropertyName="Description" Filterable=false>
+                    @context.Description
+                </GridColumn>
+
+                <GridColumn TItem="CategoryModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive" Sortable=false>
+                    @if (context.IsActive)
+                    {
+                        <Badge Color="BadgeColor.Success">Active</Badge>
+                    }
+                    else
+                    {
+                        <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                    }
+                </GridColumn>
+
+                <GridColumn TItem="CategoryModel" HeaderText="Actions" Filterable=false>
+                    <div class="d-flex gap-1 justify-content-start">
+                        @if (CanEdit(Route))
+                        {
+                            <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                                <Icon Name="IconName.PencilSquare" /> Edit
+                            </Button>
+                        }
+                        @if (CanDelete(Route))
+                        {
+                            <LoadingButton class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" onclick="() => DeleteCategory(context.Id)">
+                                <Icon Name="IconName.Trash" /> Delete
+                            </LoadingButton>
+                        }
+                    </div>
+                </GridColumn>
+            </Grid>
+        </div>
+    }
+
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large" UseStaticBackdrop>
+        <BodyTemplate>
+            <EditForm EditContext="editContext" OnValidSubmit="SaveCategory">
+                <DataAnnotationsValidator />
+
+                <div class="mb-3">
+                    <label class="form-label">Category Name <span class="text-danger">*</span></label>
+                    <InputText class="form-control" @bind-Value="categoryModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
+                    <ValidationMessage For="@(() => categoryModel.Name)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <InputTextArea class="form-control" rows="3" @bind-Value="categoryModel.Description" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Parent Category</label>
+                    <DropDown TItem="CategoryModel"
+                              Items="@parentCategoryList"
+                              SelectedId="@categoryModel.ParentCategoryId"
+                              ValueSelector="x => x.Id"
+                              TextSelector="x => x.Name"
+                              Placeholder="-- Select Parent Category --"
+                              OnValueChanged="OnCategorySelected" />
+                </div>
+                @if (categoryModel.Id > 0)
+                {
+                    <div class="mb-3">
+                        <InputCheckbox @bind-Value="categoryModel.IsActive" /> Active
+                    </div>
+                }
+
+                <div class="text-end">
+                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+                </div>
+            </EditForm>
+        </BodyTemplate>
+    </Modal>
+}
 @code {
     private Modal modal = default!;
     private bool isLoading = true;
@@ -125,25 +142,29 @@ else
     private EditContext editContext;
     private ValidationMessageStore messageStore;
     private CancellationTokenSource _validationCts;
+    private string Route = "/categories";
+    private bool isSaveBtnLoading = false;
+
     protected override async Task OnInitializedAsync()
     {
+        isLoading = true;
+
         await base.OnInitializedAsync();
+        await LoadCategories();
 
         if (!IsAuthenticated)
         {
             NavigationManager.NavigateTo("/logout", forceLoad: true);
             return;
         }
+        isLoading = false;
 
-        await LoadCategories();
     }
 
     private async Task LoadCategories()
     {
-        isLoading = true;
         categoryList = (await CategoryService.GetAllCategoriesAsync()).ToList();
         parentCategoryList = categoryList.Where(c => c.ParentCategoryId == null).ToList();
-        isLoading = false;
     }
     private void InitializeEditContext()
     {
@@ -155,11 +176,11 @@ else
     {
         modalTitle = "Add Category";
         isEditMode = false;
-        categoryModel = new CategoryModel 
+        categoryModel = new CategoryModel
         {
             IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
-            CreatedOn = DateTime.UtcNow
+            CreatedOn = DateTime.Now
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -177,8 +198,8 @@ else
             ParentCategoryId = editCategory.ParentCategoryId,
             IsActive = editCategory.IsActive,
             SerialNumber = editCategory.SerialNumber,
-            UpdatedBy=Convert.ToInt32(CurrentUserId),
-            UpdatedOn=DateTime.UtcNow
+            UpdatedBy = Convert.ToInt32(CurrentUserId),
+            UpdatedOn = DateTime.Now
         };
         InitializeEditContext();
         modal?.ShowAsync();
@@ -186,8 +207,11 @@ else
 
     private async Task SaveCategory()
     {
+        if (isSaveBtnLoading) return;
+
         try
         {
+            isSaveBtnLoading = true;
             if (!editContext.Validate()) return;
             await ValidateNameAsync();
             if (editContext.GetValidationMessages().Any())
@@ -212,6 +236,10 @@ else
         catch (Exception ex)
         {
         }
+        finally
+        {
+            isSaveBtnLoading = false;
+        }
     }
 
     private async Task DeleteCategory(int id)
@@ -222,7 +250,7 @@ else
             if (!confirmed)
                 return;
             var updatedbyuser = Convert.ToInt32(CurrentUserId);
-            await CategoryService.DeleteCategoryAsync(id,updatedbyuser);
+            await CategoryService.DeleteCategoryAsync(id, updatedbyuser);
             await LoadCategories();
             await categoryGrid.RefreshDataAsync();
         }
@@ -250,7 +278,7 @@ else
         messageStore.Clear();
         if (string.IsNullOrWhiteSpace(categoryModel.Name))
         {
-            messageStore.Add(() => categoryModel.Name, "Name is required.");
+            messageStore.Add(() => categoryModel.Name, "Category name is required.");
             editContext.NotifyValidationStateChanged();
         }
 

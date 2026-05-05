@@ -1,7 +1,8 @@
 @page "/"
+@using System.Security.Claims
 @layout Layout.MainLayout
-@using InventoryManagement.Components.Auth
-@inherits AuthComponentBase
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager NavigationManager
 
 <PageTitle>Dashboard - Inventory Management</PageTitle>
 
@@ -209,12 +210,29 @@ else
 @code {
     private bool hasCheckedAuth = false;
     private bool _redirectInitiated = false;
+    protected bool IsLoading { get; private set; } = true;
+    protected string CurrentUserFullName { get; private set; } = string.Empty;
+    private bool IsAuthenticated;
 
     protected override async Task OnInitializedAsync()
     {
-        await base.OnInitializedAsync();
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        IsAuthenticated = user.Identity?.IsAuthenticated == true;
         hasCheckedAuth = true;
+        if (IsAuthenticated)
+        {
+            CurrentUserFullName =
+                user.FindFirst(ClaimTypes.Name)?.Value
+                ?? user.Identity?.Name
+                ?? "User";
+        }
+
+        IsLoading = false;
     }
+
+
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -223,7 +241,7 @@ else
             _redirectInitiated = true;
             var currentRelativeUrL = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
 
-            NavigationManager.NavigateTo($"/login?returnUrl={Uri.EscapeDataString("/" + currentRelativeUrL)}", forceLoad: true);
+            NavigationManager.NavigateTo($"/login?returnUrl={Uri.EscapeDataString("/" + currentRelativeUrL)}");
         }
     }
 }

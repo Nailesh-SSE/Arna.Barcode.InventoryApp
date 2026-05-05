@@ -5,7 +5,7 @@ namespace InventoryManagement.Services.Interfaces;
 
 public interface IInwardService
 {
-    Task<List<InwardModel>> GetAllAsync();
+    Task<List<InwardModel>> GetAllAsync(bool isAdmin);
     Task<InwardModel?> GetByIdAsync(int id);
     Task<int> CreateAsync(InwardModel model);
     Task<bool> UpdateAsync(InwardModel model);
@@ -14,8 +14,11 @@ public interface IInwardService
     Task<List<InwardItemModel>> GetInwardItemsByInwardIdAsync(int inwardId);
     Task<bool> CreateInwardItemAsync(InwardItemModel model);
     Task<bool> UpdateInwardItemAsync(InwardItemModel model);
-    Task<bool> DeleteInwardItemAsync(int id);
-    Task<int> AddReturnedItemToExistingInwardAsync(ReturnItemDto parameter);
-    Task RemoveReturnedReturnedItemFromStockAsync(int inwardItemId);
-    Task<byte[]> GenerateItemBarcodePdfAsync(int inwardItemId);
+    Task<bool> DeleteInwardItemAsync(int id, int userId);
+    Task<bool> DeleteSalesReturnInwardItemAsync(SaleToInwardDto saleReturnItems);
+    Task<bool> DeleteSingleBarcode(string barcode, int userId);
+    Task<bool> AddReturnItemToSaleInwardAsync(SaleToInwardDto saleReturnItems);  
+    Task<byte[]> GenerateItemBarcodePrnAsync(int inwardItemId,int userId);
+    Task<byte[]> GenerateSingleBarcodePrnAsync(string barcodeNo,int userId);
+    Task<BarcodeValidationResult> ValidateBarcodeForReprintAsync(string barcodeNo);
 }

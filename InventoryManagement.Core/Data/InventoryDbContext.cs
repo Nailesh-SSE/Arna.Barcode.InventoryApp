@@ -1,5 +1,7 @@
-using InventoryManagement.Core.Entities;
+﻿using InventoryManagement.Core.Entities;
+using InventoryManagement.Core.Entities.SP_Entities;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InventoryManagement.Core.Data;
 
@@ -11,6 +13,9 @@ public class InventoryDbContext : DbContext
 
     public DbSet<Users> Users { get; set; }
     public DbSet<UsersInRole> UsersInRoles { get; set; }
+    public DbSet<Roles> Roles { get; set; }             
+    public DbSet<FormMaster> FormMasters { get; set; }   
+    public DbSet<RoleFormPermission> RoleFormPermissions { get; set; }
     public DbSet<Company> Companies { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<Product> Products { get; set; }
@@ -22,11 +27,20 @@ public class InventoryDbContext : DbContext
     public DbSet<SaleReturn> SaleReturns { get; set; }
     public DbSet<Colour> Colour { get; set; }
     public DbSet<Platform> Platform { get; set; }
+    public DbSet<SaleReturnItems> SaleReturnItems { get; set; }
+    public DbSet<ErrorLog> ErrorLog { get; set; }  
+
+    [NotMapped]
+    public DbSet<InventoryReportDTO> InventoryReportDTO { get; set; }
+
+    [NotMapped]
+    public DbSet<BarcodeTrackDTO> BarcodeTrackDTO { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        base.OnModelCreating(modelBuilder);
-
+        modelBuilder.Entity<InventoryReportDTO>().HasNoKey();
+        modelBuilder.Entity<BarcodeTrackDTO>()
+                       .HasNoKey().ToView(null);
         // Configure relationships
         modelBuilder.Entity<Colour>()
             .HasIndex(c => new { c.Name, c.Code })
@@ -47,7 +61,6 @@ public class InventoryDbContext : DbContext
 
         modelBuilder.Entity<Company>()
        .HasIndex(c => c.Code)
-       .IsUnique()
        .HasFilter("[IsDeleted] = 0");
 
 
@@ -107,7 +120,14 @@ public class InventoryDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<OutwardDetail>();
-         
+        modelBuilder.Entity<SaleReturn>(entity =>
+        {
+            entity.HasMany(e => e.SaleReturnItems)
+                  .WithOne(e => e.SaleReturn)
+                  .HasForeignKey(e => e.SaleReturnId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<SaleReturn>()
             .HasOne(sr => sr.BillToCompany)
             .WithMany()
@@ -130,5 +150,15 @@ public class InventoryDbContext : DbContext
 
         modelBuilder.Entity<OutwardDetail>()
             .HasIndex(od => od.BarcodeNo);
+
+        modelBuilder.Entity<Roles>()
+            .HasIndex(r => r.Name)
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0");
+
+        modelBuilder.Entity<InwardItem>()
+    .Property(x => x.BoxQuantity)
+    .HasPrecision(18, 4);
+
     }
 }

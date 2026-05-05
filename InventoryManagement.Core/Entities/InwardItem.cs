@@ -33,7 +33,7 @@ public class InwardItem : Common
     public string? SerialNo { get; set; }
 
     [Required]
-    public DateTime TransactionDate { get; set; } = DateTime.UtcNow;
+    public DateTime TransactionDate { get; set; } = DateTime.Now;
 
     public virtual Inward Inward { get; set; } = null!;
     public virtual Product Product { get; set; } = null!;

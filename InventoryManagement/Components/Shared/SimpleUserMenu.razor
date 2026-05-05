@@ -1,11 +1,17 @@
-@using InventoryManagement.Services.Auth
+﻿@using InventoryManagement.Services.Auth
+@using InventoryManagement.Services.Interfaces
+@using System.Security.Claims
 @inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IPermissionService PermissionService
+@inject PermissionState PermissionState
 @inject NavigationManager NavigationManager
 
 <AuthorizeView>
     <Authorized>
         <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button"
                     id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                 <Icon Name="IconName.PersonCircle" />
                 @context.User.Identity?.Name
@@ -21,6 +27,12 @@
                 <li>
                     <Button class="dropdown-item" Type="ButtonType.Link" To="report">
                         <Icon Name="IconName.BarChart" /> Reports
+                    </Button>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <Button class="dropdown-item" @onclick="HandleChangePassword">
+                        <Icon Name="IconName.PersonLock" /> Change Password
                     </Button>
                 </li>
                 <li><hr class="dropdown-divider"></li>
@@ -45,18 +57,41 @@
     {
         try
         {
-            var authProvider = AuthStateProvider as CustomAuthStateProvider;
-            if (authProvider != null)
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+
+            if (authState.User.Identity?.IsAuthenticated == true)
             {
-                await authProvider.MarkUserAsLoggedOut();
+                var userIdClaim =
+                    authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (int.TryParse(userIdClaim, out var userId))
+                {
+                    // 🔹 Clear server-side permission cache
+                    PermissionService.ClearUserPermissionCache(userId);
+                }
+
+                // 🔹 Clear UI permission state
+                PermissionState.Clear();
+
+                var authProvider = AuthStateProvider as CustomAuthStateProvider;
+                if (authProvider != null)
+                {
+                    await authProvider.MarkUserAsLoggedOut();
+                }
             }
-            NavigationManager.NavigateTo("/login", forceLoad: true);
         }
         catch (Exception ex)
         {
-            // Log error or show notification
             Console.WriteLine($"Logout error: {ex.Message}");
-            NavigationManager.NavigateTo("/login", forceLoad: true);
         }
+        finally
+        {
+            // Always redirect
+            NavigationManager.NavigateTo("/login");
+        }
+    }
+    private void HandleChangePassword()
+    {
+        NavigationManager.NavigateTo("/change-password");
     }
 }

@@ -3,6 +3,8 @@ using InventoryManagement.Core.Enums;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 
 namespace InventoryManagement.Services;
 
@@ -74,7 +76,7 @@ public class CompanyService : ICompanyService
                 SerialNumber = companyModel.SerialNumber,
                 Remark = companyModel.Remark,
                 CreatedBy = companyModel.CreatedBy,
-                CreatedOn = DateTime.UtcNow
+                CreatedOn = DateTime.Now
             };
 
 
@@ -106,7 +108,7 @@ public class CompanyService : ICompanyService
             entity.IsDeleted = false;
             entity.Remark = companyModel.Remark;
             entity.UpdatedBy = companyModel.UpdatedBy;
-            entity.UpdatedOn = DateTime.UtcNow;
+            entity.UpdatedOn = DateTime.Now;
 
             companyRepository.Update(entity);
             await _unitOfWork.SaveChangesAsync();
@@ -129,7 +131,7 @@ public class CompanyService : ICompanyService
             company.IsDeleted = true;
             company.IsActive = false;
             company.UpdatedBy = deletedBy;
-            company.UpdatedOn = DateTime.UtcNow;
+            company.UpdatedOn = DateTime.Now;
             companyRepository.Update(company);
             await _unitOfWork.SaveChangesAsync();
             return true;
@@ -162,8 +164,55 @@ public class CompanyService : ICompanyService
     {
         var companyRepository = _unitOfWork.GetRepository<Company>();
         var companies = await companyRepository.GetAllAsync();
-        var company = companies.Where(a => a.IsActive && !a.IsDeleted).OrderByDescending(a => a.Id).FirstOrDefault();
+        var company = companies.Where(a => !a.IsDeleted).OrderByDescending(a => a.Id).FirstOrDefault();
         model.SerialNumber = company != null ? company.SerialNumber + 1 : 0;
         model.Code = "Comp" + model.SerialNumber;
+    }
+    public async Task<byte[]> ExportToExcelAsync(CompanyType type)
+    {
+        var companies=await GetCompaniesByTypeAsync(type);
+        IWorkbook workbook = new XSSFWorkbook();
+        ISheet sheet = workbook.CreateSheet(type == CompanyType.ShipTo ? "Ship Company Report" : "Bill Company Report");
+
+        // Header row
+        IRow headerRow = sheet.CreateRow(0);
+        string[] headers = new string[]
+        {
+            "No.",
+            type == CompanyType.ShipTo ? "Ship Company Name" : "Bill Company Name",
+            "Remark",
+            "Status"
+        };
+
+        for (int i = 0; i < headers.Length; i++)
+            {
+                headerRow.CreateCell(i).SetCellValue(headers[i]);
+            }
+        var counter = 1;
+        // Data rows
+        foreach (var company in companies)
+        {
+            var i = counter;
+            IRow row = sheet.CreateRow(i);
+            row.CreateCell(0).SetCellValue(i);
+            row.CreateCell(1).SetCellValue(company.Name);
+            row.CreateCell(2).SetCellValue(company.Remark);
+            row.CreateCell(3).SetCellValue(company.IsActive ? "Active" : "Inactive");
+            counter++;
+        }
+
+        // Autosize all columns
+        for (int i = 0; i < headers.Length; i++)
+        {
+            sheet.AutoSizeColumn(i);
+        }
+
+        // Write to memory stream and return as byte array
+        using (var exportData = new MemoryStream())
+        {
+            workbook.Write(exportData);
+            return exportData.ToArray();
+        }
+
     }
 }

@@ -32,3 +32,13 @@
 /InventoryManagement.Infrastructure/bin/Release/net8.0
 /InventoryManagement.Services/bin/Release/net8.0
 /InventoryManagement/bin/Release/net8.0
+/InventoryManagement.Test/bin/Debug/net8.0
+/InventoryManagement.Test/obj/Debug/net8.0
+/InventoryManagement.Test/obj/project.nuget.cache
+/InventoryManagement.Test/obj/project.nuget.cache
+/InventoryManagement.Test/obj/project.assets.json
+/InventoryManagement.Test/obj/InventoryManagement.Test.csproj.nuget.g.props
+/InventoryManagement.Test/obj/InventoryManagement.Test.csproj.nuget.dgspec.json
+/InventoryManagement.Test/obj/Debug/net8.0/InventoryManagement.Test.csproj.AssemblyReference.cache
+/InventoryManagement.Test/obj/Debug/net8.0/InventoryManagement.Test.AssemblyInfoInputs.cache
+/InventoryManagement.Test/obj/Debug/net8.0/InventoryManagement.Test.AssemblyInfo.cs

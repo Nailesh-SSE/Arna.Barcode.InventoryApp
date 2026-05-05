@@ -10,166 +10,209 @@
 @inherits AuthComponentBase
 
 <PageTitle>Products</PageTitle>
-
-<div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col">
-            <h3><Icon Name="IconName.Box" /> Products</h3>
-        </div>
-        <div class="col-auto">
-            <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
-                <Icon Name="IconName.Plus" /> Add New
-            </Button>
-        </div>
-    </div>
-
-    @if (isLoading)
-    {
-        <div class="text-center">
-            <Spinner Type="SpinnerType.Border" />
-        </div>
-    }
-    else
-    {
-        <Grid TItem="ProductModel"
-              @ref=productGrid
-              Class="table table-hover table-bordered table-striped"
-              Data="@products"
-              AllowPaging="true"
-              PageSize="10"
-              Responsive="true">
-
-            <GridColumn TItem="ProductModel" HeaderText="No" PropertyName="Id">
-                @{
-                    var index = products.IndexOf(context) + 1;
-                }
-                @index
-            </GridColumn>
-
-            <GridColumn TItem="ProductModel" HeaderText="SKU" PropertyName="SKU">
-                @context.SKU
-            </GridColumn>
-
-            <GridColumn TItem="ProductModel" HeaderText="Name" PropertyName="Name">
-                @context.Name
-            </GridColumn>
-
-            <GridColumn TItem="ProductModel" HeaderText="Category" PropertyName="CategoryId">
-                @(categories.FirstOrDefault(c => c.Id == context.CategoryId)?.Name ?? "N/A")
-            </GridColumn>
-
-            <GridColumn TItem="ProductModel" HeaderText="Unit" PropertyName="Unit">
-                @context.Unit
-            </GridColumn>
-
-            <GridColumn TItem="ProductModel" HeaderText="Status" PropertyName="IsActive">
-                @if (context.IsActive)
-                {
-                    <Badge Color="BadgeColor.Success">Active</Badge>
-                }
-                else
-                {
-                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
-                }
-            </GridColumn>
-
-            <GridColumn TItem="ProductModel" HeaderText="Actions">
-                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                    <Icon Name="IconName.PencilSquare" /> Edit
-                </Button>
-                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteProduct(context.Id)">
-                    <Icon Name="IconName.Trash" /> Delete
-                </Button>
-            </GridColumn>
-        </Grid>
-    }
-</div>
-
-<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
-    <BodyTemplate>
-        <EditForm EditContext="@editContext" OnValidSubmit="SaveProduct">
-            <DataAnnotationsValidator />
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="productModel.Name" @oninput="HandleNameChange" />
-                    <ValidationMessage For="@(() => productModel.Name)" />
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Brand <span class="text-danger">*</span></label>
-                    <DropDown TItem="CompanyModel"
-                              Items="@companies"
-                              SelectedId="@productModel.MakeCompanyId"
-                              ValueSelector="x => x.Id"
-                              TextSelector="x => x.Name"
-                              Placeholder="-- Select Brand--"
-                              OnValueChanged="OnBrandSelected" />
-                    <ValidationMessage For="@(() => productModel.MakeCompanyId)" />
-                </div>
+@if (!CanView(Route))
+{
+    <AccessDenied />
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col">
+                <h3><Icon Name="IconName.Box" /> Products</h3>
             </div>
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                     <label class="form-label">Category <span class="text-danger">*</span></label>
-                        <DropDown TItem="CategoryModel"
-                        Items="@categories"
-                        SelectedId="@productModel.CategoryId"
-                        ValueSelector="x => x.Id"
-                        TextSelector="x => x.Name"
-                              Placeholder="-- Select Category --"
-                        OnValueChanged="OnCategorySelected"/>
-                    <ValidationMessage For="@(() => productModel.CategoryId)" /> 
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Unit <span class="text-danger">*</span></label>
-                    <DropDown TItem="UnitModel"
-                              Items="@Units"
-                              SelectedId="@productModel.UnitId"
-                              ValueSelector="x => x.Id"
-                              TextSelector="x => x.Name"
-                              Placeholder="-- Select Unit --"
-                              OnValueChanged="OnUnitSelected" />
-                    <ValidationMessage For="@(() => productModel.UnitId)" />
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6 mb-3 position-relative">
-                    <label class="form-label">Colour <span class="text-danger">*</span></label>
-
-                    <SearchableDropdown TItem="ColourModel"
-                    Items="@Colours"
-                    ItemTextSelector="@(c => c.Name)"
-                    SelectedText="@productModel.ColourSearchText"
-                    Placeholder="Search Colour..."
-                    OnItemSelected="OnColourSelected"
-                    IsRequired="true"
-                    ShowValidationMessage="true"/>
-
-                    <ValidationMessage For="@(() => productModel.ColourId)" />
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Description</label>
-                <InputTextArea class="form-control" rows="3" @bind-Value="productModel.Description" />
-            </div>
-
-            @if (productModel.Id > 0)
+            @if (IsAdmin() || IsFactoryAdmin())
             {
-                <div class="mb-3">
-                    <InputCheckbox @bind-Value="productModel.IsActive" /> Active
+                <div class="col-auto">
+                    <button class="btn btn-outline-success"
+                            disabled="@isExporting"
+                            @onclick="ExportCurrentReport">
+                        @if (isExporting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Exporting...</span>
+                        }
+                        else
+                        {
+                            <Icon Name="IconName.Download" />
+                            <span>Export</span>
+                        }
+                    </button>
                 </div>
             }
-            <div class="text-end">
-                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+            @if (CanCreate(Route))
+            {
+                <div class="col-auto">
+                    <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                        <Icon Name="IconName.Plus" /> Add New
+                    </Button>
+                </div>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(alertMessage))
+        {
+            <div class="alert alert-@alertType alert-dismissible fade show" role="alert">
+                @alertMessage
+                <button type="button" class="btn-close" @onclick="() => alertMessage = null"></button>
             </div>
-        </EditForm>
-    </BodyTemplate>
-</Modal>
+        }
+        @if (isLoading)
+        {
+            <div class="text-center">
+                <Spinner Type="SpinnerType.Border" />
+            </div>
+        }
+        else
+        {
+            <Grid TItem="ProductModel"
+                  @ref=productGrid
+                  Class="table table-hover table-bordered table-striped"
+                  Data="@products"
+                  AllowPaging="true"
+                  PageSize="10"
+                  AllowFiltering="true"
+                  AllowSorting="true"
+                  Responsive="true">
 
+                <GridColumn TItem="ProductModel" HeaderText="No" PropertyName="Id" Filterable=false>
+                    @{
+                        var index = products.IndexOf(context) + 1;
+                    }
+                    @index
+                </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="SKU" PropertyName="SKU" SortKeySelector="item => item.SKU" SortString="SKU" FilterTextboxWidth="98">
+                    @context.SKU
+                </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="Name" PropertyName="Name" SortKeySelector="item => item.Name" SortString="Name" FilterTextboxWidth="98">
+                    @context.Name
+                </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="Category" PropertyName="CategoryName" SortKeySelector="item => item.CategoryName" SortString="CategoryName" FilterTextboxWidth="98">
+                    @context.CategoryName
+                </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="Unit" PropertyName="Unit" Filterable="false">
+                    @context.Unit
+                </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="Status" PropertyName="IsActive" SortKeySelector="item => item.IsActive" SortString="IsActive" Sortable=false>
+                    @if (context.IsActive)
+                    {
+                        <Badge Color="BadgeColor.Success">Active</Badge>
+                    }
+                    else
+                    {
+                        <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                    }
+                </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="Actions" Filterable=false>
+                    <div class="d-flex gap-1 justify-content-start">
+                        @if (CanEdit(Route))
+                        {
+                            <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                                <Icon Name="IconName.PencilSquare" /> Edit
+                            </Button>
+                        }
+                        @if (CanDelete(Route))
+                        {
+                            <LoadingButton class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" onclick="() => DeleteProduct(context.Id)">
+                                <Icon Name="IconName.Trash" /> Delete
+                            </LoadingButton>
+                        }
+                    </div>
+                </GridColumn>
+            </Grid>
+        }
+    </div>
+
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large" UseStaticBackdrop>
+        <BodyTemplate>
+            <EditForm EditContext="@editContext" OnValidSubmit="SaveProduct">
+                <DataAnnotationsValidator />
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Product Name <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="productModel.Name" @oninput="HandleNameChange" />
+                        <ValidationMessage For="@(() => productModel.Name)" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Brand <span class="text-danger">*</span></label>
+                        <DropDown TItem="CompanyModel"
+                                  Items="@companies"
+                                  SelectedId="@productModel.MakeCompanyId"
+                                  ValueSelector="x => x.Id"
+                                  TextSelector="x => x.Name"
+                                  Placeholder="-- Select Brand--"
+                                  OnValueChanged="OnBrandSelected" />
+                        <ValidationMessage For="@(() => productModel.MakeCompanyId)" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Category <span class="text-danger">*</span></label>
+                        <DropDown TItem="CategoryModel"
+                                  Items="@categories"
+                                  SelectedId="@productModel.CategoryId"
+                                  ValueSelector="x => x.Id"
+                                  TextSelector="x => x.Name"
+                                  Placeholder="-- Select Category --"
+                                  OnValueChanged="OnCategorySelected" />
+                        <ValidationMessage For="@(() => productModel.CategoryId)" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Unit <span class="text-danger">*</span></label>
+                        <DropDown TItem="UnitModel"
+                                  Items="@Units"
+                                  SelectedId="@productModel.UnitId"
+                                  ValueSelector="x => x.Id"
+                                  TextSelector="x => x.Name"
+                                  Placeholder="-- Select Unit --"
+                                  OnValueChanged="OnUnitSelected" />
+                        <ValidationMessage For="@(() => productModel.UnitId)" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3 position-relative">
+                        <label class="form-label">Colour <span class="text-danger">*</span></label>
+
+                        <SearchableDropdown TItem="ColourModel"
+                                            Items="@Colours"
+                                            ItemTextSelector="@(c => c.Name)"
+                                            SelectedText="@productModel.ColourSearchText"
+                                            Placeholder="Search Colour..."
+                                            OnItemSelected="OnColourSelected"
+                                            IsRequired="true"
+                                            ShowValidationMessage="true" />
+
+                        <ValidationMessage For="@(() => productModel.ColourId)" />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <InputTextArea class="form-control" rows="3" @bind-Value="productModel.Description" />
+                </div>
+
+                @if (productModel.Id > 0)
+                {
+                    <div class="mb-3">
+                        <InputCheckbox @bind-Value="productModel.IsActive" /> Active
+                    </div>
+                }
+                <div class="text-end">
+                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+                </div>
+            </EditForm>
+        </BodyTemplate>
+    </Modal>
+}
 @code {
     private Modal modal = default!;
     private List<ProductModel> products = new();
@@ -184,6 +227,11 @@
     private EditContext editContext;
     private ValidationMessageStore messageStore;
     private List<UnitModel> Units => CommonUtils.UnitList;
+    private string Route = "/products";
+    private bool isSaveBtnLoading = false;
+    private bool isExporting = false;
+    private string? alertMessage;
+    private string alertType = "info";
 
 
 
@@ -212,7 +260,10 @@
         categories = (await CategoryService.GetAllCategoriesAsync()).Where(x => x.IsActive).ToList();
         companies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo)).Where(x => x.IsActive).ToList();
         Colours = (await ColourService.GetAllColourAsync()).Where(x => x.IsActive).ToList();
-        InitializeEditContext();
+        foreach(var product in products)
+        {
+            product.CategoryName = categories.FirstOrDefault(c => c.Id == product.CategoryId)?.Name ?? string.Empty;
+        }
         isLoading = false;
     }
 
@@ -224,7 +275,7 @@
         {
             IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
-            CreatedOn = DateTime.UtcNow,
+            CreatedOn = DateTime.Now,
             UnitId = (int)UnitType.PCS
         };
         InitializeEditContext();
@@ -253,7 +304,7 @@
             ColourName = editProduct.ColourName,
             ColourSearchText = editProduct.ColourName,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
-            UpdatedOn = DateTime.UtcNow
+            UpdatedOn = DateTime.Now
         };
         InitializeEditContext();
         modal.ShowAsync();
@@ -261,8 +312,10 @@
 
     private async Task SaveProduct()
     {
+        if(isSaveBtnLoading) return;
         try
         {
+            isSaveBtnLoading = true;
             if (!editContext.Validate()) return;
             await HandleAllFieldsAsync();
             if (editContext.GetValidationMessages().Any())
@@ -290,6 +343,10 @@
         }
         catch (Exception ex)
         {
+        }
+        finally
+        {
+            isSaveBtnLoading = false;
         }
     }
 
@@ -466,5 +523,49 @@
 
         ValidateUnit();
     }
-    
+    private async Task ExportCurrentReport()
+    {
+        isExporting = true;
+        StateHasChanged();
+        try
+        {
+            await Task.Delay(100);
+            var excelData = await ProductService.ExportToExcelAsync();
+            var fileName = $"Product_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            var filePath = Path.Combine(Environment.CurrentDirectory, "wwwroot", "exports");
+
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
+
+            var fullPath = Path.Combine(filePath, fileName);
+            await File.WriteAllBytesAsync(fullPath, excelData);
+
+            // Browser downloads static file directly
+            var downloadUrl = $"/exports/{fileName}";
+            NavigationManager.NavigateTo(downloadUrl, forceLoad: true);
+
+            ShowAlert("success", "Excel exported successfully. Check your Downloads folder.");
+        }
+        catch (Exception ex)
+        {
+            ShowAlert("danger", $"Failed to export excel: {ex.Message}");
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+    private void ShowAlert(string type, string message)
+    {
+        alertType = type;
+        alertMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+    private async Task AutoHideAlertAsync()
+    {
+        await Task.Delay(3000);
+        alertMessage = null;
+        await InvokeAsync(StateHasChanged);
+    }
 }

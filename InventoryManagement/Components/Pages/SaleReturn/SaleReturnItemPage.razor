@@ -1,0 +1,1042 @@
+﻿@page "/sale-return/items/{id:int}"
+@using InventoryManagement.Services
+@using InventoryManagement.Services.DTO
+@using InventoryManagement.Services.Services
+@inject ISaleReturnService SaleReturnService
+@inject ICompanyService CompanyService
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+@inject IOutwardService OutwardService
+@inject IPlatformService PlatformService
+@inherits InventoryManagement.Components.Auth.AuthComponentBase
+@inject IJSRuntime JS
+
+<PageTitle>Sale Return Item</PageTitle>
+@if (!CanView(Route))
+{
+    <AccessDenied />
+}
+else
+{
+<EditForm EditContext="editContext" OnvalidSubmit="SaveSaleReturnItem" OnInvalidSubmit="HandleInvalidSubmit">
+    <DataAnnotationsValidator />
+    <div class="card shadow-sm">
+        @* <div class="card-header bg-light d-flex align-items-center justify-content-between">
+            <h6 class="mb-0 fw-semibold">Add Item</h6>
+
+            <!-- Close (X) button -->
+            <button type="button"
+                    class="btn-close btn-close-danger"
+                    aria-label="Close"
+                    @onclick="GoBack">
+            </button>
+        </div> *@
+        <!-- Alerts -->
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+                <button type="button" class="btn-close" @onclick="@(() => errorMessage = "")"></button>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success alert-dismissible fade show">
+                <i class="bi bi-check-circle-fill me-2"></i>@successMessage
+                <button type="button" class="btn-close" @onclick="@(() => successMessage = "")"></button>
+            </div>  
+        }
+
+        <div class="card-body py-2 px-3">
+            <fieldset disabled="@cancreate">
+            <div class="position-relative">
+
+                @if (isScanning)
+                {
+                    <button type="button"
+                            class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2"
+                            title="Close Camera"
+                            style="z-index: 10;"
+                            @onclick="CloseCamera">
+                        <Icon Name="IconName.XCircle" />
+                    </button>
+                    <div class="scanner-wrapper">
+                        <div id="reader"></div>
+                    </div>
+                }
+            </div>
+            <!-- Barcode Section -->
+            <div class="row mb-2">
+
+                <div class="col-12">
+                    <label class="form-label fw-semibold mb-1">Barcode</label>
+                    <div class="d-flex gap-2">
+
+                        <InputText class="form-control flex-grow-1"
+                                   placeholder="Enter / Scan Barcode"
+                                   @bind-Value="formModel.BarCodeNo"
+                                   @onkeydown:preventDefault="true"
+                                   @onkeyup="HandleCameraScanned"
+                                   @ref="barcodeInput"
+                                   disabled="@isBarcodeScanned" />
+                                             <!-- Scan Button -->
+                        <button type="button"
+                                class="btn btn-secondary d-flex align-items-center gap-1"
+                                @onclick="StartCameraScan"
+                                disabled="@(isScanning || isValidating || isBarcodeScanned)">
+                            <Icon Name="IconName.Camera" /> Scan
+                        </button>
+
+                        <!-- Validate Button -->
+                        <button type="button"
+                                class="btn btn-dark d-flex align-items-center gap-2"
+                                @onclick="HandleBarcode"
+                                disabled="@(isValidating || isBarcodeScanned)">
+
+                            @if (isValidating)
+                            {
+                                <span class="spinner-border spinner-border-sm"></span>
+                                <span>Validating...</span>
+                            }
+                            else
+                            {
+                                <span>Validate</span>
+                            }
+
+                        </button>
+
+                    </div>
+                    <ValidationMessage For="@(() => formModel.BarCodeNo)" />
+
+                </div>               
+            </div>
+
+            <!-- Form Fields -->
+            <div class="row g-1">
+
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold mb-1">Product <span class="text-danger">*</span></label>
+                    <SearchableDropdown TItem="ProductModel"
+                                        Items="@productList.Where(p => p.IsActive || p.Id == formModel.ProductId)"
+                                        ItemTextSelector="@(p => p.SKU)"
+                                        SelectedText="@formModel.ProductSearchText"
+                                        Placeholder="Search product..."
+                                        OnItemSelected="@(p => OnProductDropdownSelected(formModel, p))"
+                                        ShowValidationMessage="true"
+                                        IsDisabled="@(isBarcodeScanned)"     />
+                    <ValidationMessage For="@(() => formModel.ProductId)" />
+
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold mb-1">Platform </label>
+                    <InputSelect class="form-select" @bind-Value="formModel.PlatformId" disabled="@(isBarcodeScanned)">
+                        <option value="0">Select </option>
+                        @foreach (var p in platformList.Where(c => c.IsActive || c.Id == formModel.PlatformId))
+                        {
+                            <option value="@p.Id">@p.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => formModel.PlatformId)" />
+
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold mb-1">Return Company <span class="text-danger">*</span></label>
+                    <InputSelect class="form-select" @bind-Value="formModel.BillToCompanyId" disabled="@(isBarcodeScanned)">
+                        <option value="0">Select</option>
+                        @foreach (var bill in billToCompanyList.Where(c => c.IsActive || c.Id == formModel.BillToCompanyId))
+                        {
+                            <option value="@bill.Id">@bill.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => formModel.BillToCompanyId)" />
+
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold mb-1">Ship To</label>
+                    <InputSelect class="form-select" @bind-Value="formModel.ShipToCompanyId"    >
+                        <option value="0">Select</option>
+                        @foreach (var ship in shipToCompanyList.Where(c => c.IsActive || c.Id == formModel.ShipToCompanyId))
+                        {
+                            <option value="@ship.Id">@ship.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold mb-1">Outward</label>
+                    <SearchableDropdown TItem="OutwardModel"
+                                        Items="outwardList.Where(o => (o.IsActive && o.IsFinished) || o.Id == formModel.OutwardId)"
+                                        ItemTextSelector="@(o => o.OutwardNo)"
+                                        SelectedText="@formModel.OutwardSearchText"
+                                        Placeholder="Search Outward..."
+                                        OnItemSelected="@(o => OnOutwardDropdownSelected(formModel, o))"
+                                        IsDisabled="@(isBarcodeScanned)" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold mb-1">Unit <span class="text-danger">*</span></label>
+                    <InputSelect TValue="int"
+                                 class="form-select"
+                                 Value="@formModel.UnitId"
+                                 ValueChanged="@(val => OnUnitChanged(formModel, val))"
+                                 ValueExpression="() => formModel.UnitId"
+                                 disabled="@(isBarcodeScanned)">
+                        <option value="0">Select </option>
+                        @foreach (var unit in Units)
+                        {
+                            <option value="@unit.Id">@unit.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => formModel.UnitId)" />
+
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold mb-1">Quantity</label>
+                    <InputNumber class="form-control"
+                                 min="0"
+                                 placeholder="Qty"
+                                 @bind-Value="formModel.ReturnQuantity"
+                                 disabled="@(isBarcodeScanned
+                                               && formModel.UnitId == (int)UnitType.PCS
+                                               && !string.IsNullOrEmpty(formModel.BarCodeNo))" />
+                    <ValidationMessage For="@(() => formModel.ReturnQuantity)" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold mb-1">Return Type <span class="text-danger">*</span></label>
+                    <InputSelect class="form-select" @bind-Value="formModel.ReturnType">
+                        <option value="0">Select </option>
+                        @foreach (var type in Enum.GetValues(typeof(ReturnType)))
+                        {
+                            <option value="@((int)type)">@type</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => formModel.ReturnType)" />
+
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold mb-1">Reason</label>
+                    <InputText class="form-control"
+                               placeholder="Reason for return"
+                               @bind-Value="formModel.ReasonToReturn" />
+                </div>
+
+                <div class="col-md-3 mx-3">
+                    <label class="form-label fw-semibold ">Take In Stock</label>
+
+                    <div class="form-check mt-2">
+                        <InputCheckbox class="form-check-input"
+                                       @bind-Value="formModel.IsTakeInStock"
+                                       disabled="@isDisabled" />
+                        <label class="form-check-label">
+                            Yes
+                        </label>
+                    </div>
+                </div>
+            </div>
+            </fieldset>
+
+            <!-- Actions -->
+            <div class="d-flex justify-content-between mt-4">
+                <!-- Left side -->
+                <button type="button"
+                        class="btn btn-secondary  btn-sm"
+                        @onclick="GoBack"
+                        disabled="@isValidating">
+                    <i class="bi bi-arrow-left"></i>
+                    <span>Back</span>
+                </button>
+
+                <fieldset disabled="@cancreate">
+                <!-- Right side -->
+                <div class="d-flex gap-2">
+                    <button type="reset"
+                            class="btn btn-warning btn-sm"
+                            @onclick="ResetForm"
+                            disabled="@isValidating"
+                            @ref="saveButton">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        <span>Reset</span>
+                    </button>
+
+                    <button type="submit" disabled="true" style="display:none;"></button> @* do not remove this button is for preventing the Submition by pressing Enter Key*@
+                  
+                    <button type="submit"
+                            class="btn btn-primary px-4  btn-sm"
+                            disabled="@isValidating">
+                              <i class="bi bi-save"></i>
+                        <span>Save</span>
+                    </button>
+                </div>
+                </fieldset>
+            </div>
+
+        </div>
+    </div>
+</EditForm>
+<!-- ===================== -->
+<!-- Sale Return Items Grid -->
+<!-- ===================== -->
+<div class="card shadow-sm mt-4">
+    <div class="card-header bg-light d-flex align-items-center justify-content-between">
+
+        <!-- Left: Title -->
+        <h6 class="mb-0 fw-semibold">
+            Added Items
+        </h6>
+
+        <!-- Center: Summary -->
+        <h6 class="mb-0 text-muted text-center flex-grow-1">
+            Items (@itemList.Count)
+            |
+            Total Item Qty (@TotalItemQty)
+            |
+            Total Box Qty (@TotalBoxQty)
+        </h6>
+
+        <!-- Right: Empty spacer (keeps alignment clean) -->
+        @* <span></span> *@
+
+    </div>
+
+    <div class="card-body pt-2 pb-3 px-3">
+        <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+            <Grid TItem="SaleReturnItemsModel"
+                  Class="table table-hover table-bordered table-striped mb-0"
+                  Data="itemList"
+                  AllowPaging="true"
+                  PageSize="100"
+                  Responsive="true">
+
+                <!-- Row Number -->
+                <GridColumn TItem="SaleReturnItemsModel" HeaderText="No">
+                    @{
+                        var totalCount = itemList.Count;
+                        var rowIndex = itemList.IndexOf(context);
+                        var descendingIndex = totalCount - rowIndex;
+                    }
+                    @descendingIndex
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnItemsModel"
+                            HeaderText="Barcode"
+                            PropertyName="BarCodeNo">
+                          
+                    @context.BarCodeNo
+                </GridColumn>
+                    <GridColumn TItem="SaleReturnItemsModel"
+                                HeaderText="Product"
+                                PropertyName="ProductName">
+                          
+                        @context.ProductName
+                    </GridColumn>
+                <GridColumn TItem="SaleReturnItemsModel"
+                            HeaderText="Platform"
+                            PropertyName="PlatformName">
+                           
+                    @context.PlatformName
+                </GridColumn>
+                <GridColumn TItem="SaleReturnItemsModel"
+                            HeaderText="Return Comp"
+                            PropertyName="BillToCompanyName">
+                           
+                    @context.BillToCompanyName
+                </GridColumn>
+                <GridColumn TItem="SaleReturnItemsModel"
+                            HeaderText="Ship To"
+                            PropertyName="ShipToCompanyName"
+                            SortKeySelector="item => item.ShipToCompanyName"
+                            SortString="ShipToCompanyName"
+                            FilterTextboxWidth="130">
+                    @context.ShipToCompanyName
+                </GridColumn>
+                <GridColumn TItem="SaleReturnItemsModel"
+                            HeaderText="Unit"
+                            PropertyName="UnitName">
+                           
+                    @context.UnitName
+                </GridColumn>
+                <GridColumn TItem="SaleReturnItemsModel"
+                            HeaderText="Qty"
+                            PropertyName="ReturnQuantity">
+                           
+                    @context.ReturnQuantity
+                </GridColumn>
+                <GridColumn TItem="SaleReturnItemsModel"
+                            HeaderText="Return Type"
+                            PropertyName="ReturnType">
+                         
+                    @((ReturnType)context.ReturnType)
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnItemsModel" HeaderText="To Stock" PropertyName="IsTakeInStock">
+                    @if (context.IsTakeInStock)
+                    {
+                        <Badge Color="BadgeColor.Success">Yes</Badge>
+                    }
+                    else
+                    {
+                        <Badge Color="BadgeColor.Secondary">No</Badge>
+                    }
+                </GridColumn>
+
+                <GridColumn TItem="SaleReturnItemsModel" HeaderText="Actions" Filterable="false">
+                    <div class="d-flex gap-1">
+
+                        @if (CanDelete(Route))
+                        {
+                            <LoadingButton Color="ButtonColor.Danger"
+                                    Size="ButtonSize.Small"
+                                    onclick="() => HandleDelete(context.Id)">
+                                <Icon Name="IconName.Trash" />
+                            </LoadingButton>
+                        }
+                    </div>
+                </GridColumn>
+            </Grid>
+
+        </div>
+
+        @if (itemList == null || !itemList.Any())
+        {
+            <div class="text-center text-muted py-3">
+                <i class="bi bi-info-circle me-1"></i>
+                No items added yet
+            </div>
+        }
+    </div>
+</div>
+}
+@code {
+    [Parameter] public int id { get; set; }
+    private bool isLoading = false;
+    private bool isScanning = false;
+    private bool isDisabled = false;
+    private bool isValidating = false;
+    private bool isBarcodeScanned = false;
+    private int saleReturnId { get; set; }
+
+    private ElementReference saveButton;
+    private InputText barcodeInput = default!;
+
+
+    private SaleReturnItemsModel formModel = new();
+    private List<SaleReturnItemsModel> itemList { get; set; } = new();
+    private List<ProductModel> productList { get; set; } = new();
+    private List<PlatformModel> platformList { get; set; } = new();
+    private List<OutwardModel> outwardList { get; set; } = new();
+    private List<CompanyModel> billToCompanyList = new();
+    private List<CompanyModel> shipToCompanyList = new();
+    private List<UnitModel> Units => CommonUtils.UnitList;
+
+    private string successMessage { get; set; } = string.Empty;
+    private string errorMessage { get; set; } = string.Empty;
+
+    private string validationMessage = string.Empty;
+    private bool validationIsValid = false;
+
+    private string Route = "/sale-returns";
+
+    private System.Threading.Timer? errorTimer;
+    private DotNetObjectReference<SaleReturnItemPage>? dotNetHelper;
+
+    private decimal TotalItemQty => _savedTotals.Values.Count > 0 ?
+     _savedTotals.Values.Sum(v => v.ItemQty) : 0;
+    private decimal TotalBoxQty => _savedTotals.Values.Count > 0 ?
+        _savedTotals.Values.Sum(v => v.BoxCount) : 0;
+    private Dictionary<int, (int BoxCount, decimal ItemQty)> _savedTotals = new();
+    private bool isItemSaveBtnloading = false;
+    private bool cancreate;
+    private EditContext? editContext;
+    private ValidationMessageStore? validationMessageStore;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        await base.OnInitializedAsync();
+        if (!IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/logout", forceLoad: true);
+            return;
+        }
+        NavigationManager.LocationChanged += OnLocationChanged;
+
+        isLoading = false;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        saleReturnId = id;
+
+        if (saleReturnId <= 0)
+            return;
+        formModel.SaleReturnId = saleReturnId;
+        formModel.IsTakeInStock = true;
+        formModel.ReturnType = (int)ReturnType.Excess;
+
+        editContext = new EditContext(formModel);
+        validationMessageStore = new ValidationMessageStore(editContext);
+
+        if (!CanCreate(Route))
+            cancreate = true;
+        await LoadData();
+    }
+
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
+    }
+
+
+    private async Task LoadData()
+    {
+        itemList = await SaleReturnService.GetSaleReturnItemsByReturnId(saleReturnId);
+        billToCompanyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.BillTo)).ToList();
+        shipToCompanyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo)).ToList();
+        productList = (await ProductService.GetAllProductsAsync()).ToList();
+        outwardList = (await OutwardService.GetAllOutwardsAsync(true)).ToList();
+        platformList = (await PlatformService.GetAllPlatformAsync()).ToList();
+        UpdateTotalQtys();
+    }
+
+    private async Task ResetForm()
+    {
+        isLoading = true;
+        formModel = new SaleReturnItemsModel
+        {
+            IsTakeInStock = true,
+            ReturnType = (int)ReturnType.Excess,
+            UnitId = (int)UnitType.PCS,
+            ReturnQuantity = 1,
+
+        };
+
+        isBarcodeScanned = false;
+        isValidating = false;
+        isDisabled = false;
+
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        isLoading = false;
+
+        editContext = new EditContext(formModel);
+        validationMessageStore = new ValidationMessageStore(editContext);
+        editContext?.NotifyValidationStateChanged();
+
+    }
+
+    private async Task SaveSaleReturnItem()
+    {
+        if(isItemSaveBtnloading) return;
+
+        try
+        {
+            var item = formModel;
+
+            await handleproduct();
+            if (editContext.GetValidationMessages().Any())
+                return;
+
+            if (saleReturnId <= 0)
+            {
+                ShowErrorMessage("Sale Return is not selected");
+                return;
+            }
+            bool isUpdate = item.Id > 0;
+            item.SaleReturnId = saleReturnId;
+
+            if (!isUpdate)
+            {
+                item.CreatedBy = Convert.ToInt32(CurrentUserId);
+                item.CreatedOn = DateTime.Now;
+            }
+            else
+            {
+                item.UpdatedBy = Convert.ToInt32(CurrentUserId);
+                item.UpdatedOn = DateTime.Now;
+            }
+
+            bool success = isUpdate
+                ? await SaleReturnService.UpdateSaleReturnItem(item)
+                : await SaleReturnService.CreateSaleReturnItem(item);
+
+            if (!success)
+            {
+                ShowErrorMessage("Operation failed");
+                return;
+            }
+
+            itemList = await SaleReturnService.GetSaleReturnItemsByReturnId(saleReturnId);
+            ShowSuccessMessage(isUpdate ? "Updated successfully" : "Saved successfully");
+            UpdateTotalQtys();
+
+            await ResetForm();
+        }
+        catch(Exception)
+        {
+        }
+        finally
+        {
+            isItemSaveBtnloading = false;
+        }
+    }
+
+    private void SyncSearchTextForItem(SaleReturnItemsModel item)
+    {
+        if (item == null) return;
+
+        // Product
+        if (item.ProductId > 0)
+        {
+            item.ProductSearchText = productList?
+                .FirstOrDefault(p => p.Id == item.ProductId)?.SKU ?? string.Empty;
+        }
+
+        // Outward
+        if (item.OutwardId > 0)
+        {
+            item.OutwardSearchText = outwardList?
+                .FirstOrDefault(o => o.Id == item.OutwardId)?.OutwardNo ?? string.Empty;
+        }
+    }
+
+    private void UpdateTotalQtys()
+    {
+        _savedTotals.Clear();
+
+        foreach (var item in itemList.Where(i => i.Id > 0))
+        {
+            var boxCount = item.UnitId == (int)UnitType.BOX ? 1 : 0;
+
+            _savedTotals[item.Id] = (boxCount, item.ReturnQuantity);
+        }
+    }
+
+    private async Task HandleBarcode()
+    {
+        isValidating = true;
+
+        try
+        {
+            if (!ValidateBarcodeUI(formModel.BarCodeNo))
+                return;
+
+            var isValid = await ValidateBarcodeFromServerAsync(formModel.BarCodeNo!);
+            if (isValid)
+            {
+                isBarcodeScanned = true;
+            }
+        }
+        finally
+        {
+            isValidating = false;
+        }
+    }
+
+    private async Task HandleDelete(int itemId)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Delete this item?");
+
+        if (!confirmed) return;
+        if (itemId == 0)
+        {
+            return;
+        }
+        await DeleteSaleReturnItem(itemId);
+        UpdateTotalQtys();
+        StateHasChanged();
+    }
+
+    private bool ValidateBarcodeUI(string? barcode)
+    {
+        errorMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(barcode))
+        {
+            ShowErrorMessage("Barcode is required.");
+            return false;
+        }
+
+        barcode = barcode.Trim();
+
+        if (barcode.Length != 16)
+        {
+            ShowErrorMessage("Barcode must be exactly 16 characters.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task<bool> ValidateBarcodeFromServerAsync(string barcode)
+    {
+        var validationResult =
+            await SaleReturnService.ValidateBarcodeForSaleReturnAsync(barcode);
+
+        validationIsValid = validationResult.IsValid;
+        validationMessage = validationResult.IsValid
+            ? $"Valid barcode. Product: {validationResult.ProductName}"
+            : validationResult.ErrorMessage;
+
+        if (!validationResult.IsValid)
+        {
+            ShowErrorMessage(validationResult.ErrorMessage);
+            return false; ;
+        }
+
+        formModel.BarCodeNo = barcode;
+
+        formModel.ProductId = validationResult.ProductId ?? 0;
+        formModel.BillToCompanyId = validationResult.BillToId ?? 0;
+        formModel.ShipToCompanyId = validationResult.ShipToId ?? 0;
+
+        formModel.PlatformId = validationResult.PlatformId;
+        formModel.OutwardId = validationResult.OutwardId ?? 0;
+
+        formModel.UnitId = (int)validationResult.UnitId;
+
+        formModel.ReturnQuantity = validationResult.ReturnQuantity;
+         
+        formModel.ReturnType = (int)ReturnType.Excess;
+        formModel.IsTakeInStock = true;
+        
+        SyncSearchTextForItem(formModel);
+
+        StateHasChanged();
+
+        return validationResult.IsValid;
+    }
+
+    private async Task handleproduct()
+    {
+        await ValidateProductName();
+    }
+
+    private async Task ValidateProductName()
+    {
+        validationMessageStore?.Clear(() => formModel.ProductId);
+        if (formModel.ProductId == 0)
+        {
+            validationMessageStore?.Add(() => formModel.ProductId, "Product name is required.");
+        }
+        editContext?.NotifyValidationStateChanged();
+    }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == "NumpadEnter")
+        {
+            await HandleBarcode();
+            await Task.Delay(30);
+            await saveButton.FocusAsync();
+        }
+    }
+
+    private async Task DeleteSaleReturnItem(int itemId)
+    {
+        var currentUserId = Convert.ToInt32(CurrentUserId);
+        var result = await SaleReturnService.DeleteSaleReturnItem(itemId, currentUserId);
+        itemList = await SaleReturnService.GetSaleReturnItemsByReturnId(saleReturnId);
+
+        if(result)
+        {
+            ShowSuccessMessage("Delete Successfully");
+        }
+        else
+        {
+            ShowErrorMessage("Operation Failed");
+        }
+    }
+
+    private async Task StartCameraScan()
+    {
+        if (isScanning) return;
+
+        try
+        {
+            isScanning = true;
+            await Task.Yield();
+            dotNetHelper?.Dispose();
+            dotNetHelper = DotNetObjectReference.Create(this);
+
+            await JS.InvokeVoidAsync("manageScanner.start", dotNetHelper);
+        }
+        catch (Exception)
+        {
+            isScanning = false;
+            ShowErrorMessage("Could not start camera");
+        }
+    }
+
+    public async Task CloseCamera()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
+
+        if (dotNetHelper != null)
+        {
+            dotNetHelper.Dispose();
+            dotNetHelper = null;
+        }
+
+        isScanning = false;
+
+        if (barcodeInput != null &&
+         barcodeInput.Element.HasValue)
+        {
+            await barcodeInput.Element.Value.FocusAsync();
+        }
+    }
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("manageScanner.stop");
+        }
+        catch
+        {
+        }
+
+        dotNetHelper?.Dispose();
+        dotNetHelper = null;
+
+        isScanning = false;
+    }
+
+    private async Task OnBarcodeChangedAfter()
+    {
+        // run existing validation/handling after the value is committed (onchange)
+        await HandleBarcode();
+
+        // clear and restore focus if needed
+        formModel.BarCodeNo= string.Empty;
+        await InvokeAsync(StateHasChanged);
+
+        if (barcodeInput?.Element.HasValue == true)
+            await barcodeInput.Element.Value.FocusAsync();
+    }
+
+    private async Task HandleCameraScanned(KeyboardEventArgs e)
+    {
+        if (e?.Key != "Enter" && e?.Key != "Tab")
+            return;
+
+        await Task.Yield();
+        await HandleBarcode();
+
+        // For Enter → clear + refocus (continuous scanning)
+        if (e.Key == "Enter" || e.Key == "Tab")
+        {
+
+            if (barcodeInput?.Element.HasValue == true)
+                await barcodeInput.Element.Value.FocusAsync();
+        }
+    }
+
+    private async Task OnProductDropdownSelected(SaleReturnItemsModel saleReturnItem, ProductModel product)
+    {
+        await ClearMessages();
+
+        if (product is null)
+        {
+            saleReturnItem.ProductSearchText = "";
+            saleReturnItem.ProductId = 0;
+            return;
+        }
+
+        saleReturnItem.ProductId = product.Id;
+        saleReturnItem.ProductSearchText = product.SKU;
+
+        await ValidateProductName();
+    }
+
+    private async Task OnOutwardDropdownSelected(SaleReturnItemsModel saleReturnItem, OutwardModel outward)
+    {
+        await ClearMessages();
+
+        if (outward is null)
+        {
+            saleReturnItem.OutwardSearchText = "";
+            saleReturnItem.OutwardId = 0;
+            return;
+        }
+
+        saleReturnItem.OutwardId = outward.Id;
+        saleReturnItem.OutwardSearchText = outward.OutwardNo;
+    }
+
+    private void OnUnitChanged(SaleReturnItemsModel item, int selectedUnitId)
+    {
+        item.UnitId = selectedUnitId;
+
+        // Assuming BOX enum value is something like:
+        if (selectedUnitId == (int)UnitType.BOX)
+        {
+            item.ReturnQuantity = 0;
+        }
+        else
+        {
+            item.ReturnQuantity = 1;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ClearMessages()
+    {
+        errorMessage = "";
+        successMessage = "";
+    }
+
+
+    private void ShowSuccessMessage(string message)
+    {
+        successMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+
+    private void ShowErrorMessage(string message)
+    {
+        errorMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+
+    private async Task AutoHideAlertAsync()
+    {
+        await Task.Delay(4500);
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleInvalidSubmit(EditContext context)
+    {
+        handleproduct();
+        ShowErrorMessage("Form is invalid. Please fix validation errors.");
+    }
+
+    private void GoBack()
+    {
+        try
+        {
+            JS.InvokeVoidAsync("manageScanner.forceStop");
+        }
+        catch { }
+        NavigationManager.NavigateTo("/sale-returns");
+    }
+
+}
+
+<style>
+    .scanner-wrapper {
+        width: 100%;
+        max-width: 600px; /* camera width */
+        height: 350px; /* camera height */
+        margin: 0 auto;
+        background: #000;
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    #reader {
+        width: 100%;
+        height: 100%;
+    }
+
+        /* Force video to stay inside box */
+        #reader video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover;
+        }
+
+    /* Center scan box */
+    #reader__scan_region {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<script>
+    let html5QrcodeScanner;
+
+    window.manageScanner = {
+        start: (dotNetHelper) => {
+            if (html5QrcodeScanner) { return; }
+
+            html5QrcodeScanner = new Html5Qrcode("reader");
+
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            html5QrcodeScanner.start({ facingMode: "environment" }, config,
+                (decodedText, decodedResult) => {
+                    // SUCCESS:
+                    // 1. Stop the camera immediately so it doesn't scan twice
+                    // 2. Clear the variable and DOM
+                    // 3. Send result to C#
+                    window.manageScanner.stop().then(() => {
+                        dotNetHelper.invokeMethodAsync('OnBarcodeScanned', decodedText)
+                            .catch(err => console.log("Blazor component disposed", err));
+                    });
+                },
+                (errorMessage) => {
+                    // ignore errors
+                })
+            .catch(err => {
+                console.error("Error starting scanner", err);
+                alert("Could not start camera. Permissions?");
+            });
+        },
+
+        stop: () => {
+            return new Promise((resolve, reject) => {
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.stop().then(() => {
+                        html5QrcodeScanner.clear();
+                        html5QrcodeScanner = null;
+                        document.getElementById("reader").innerHTML = "";
+                        resolve();
+                    }).catch(err => {
+                        console.log("Error stopping scanner", err);
+                        html5QrcodeScanner = null;
+                        resolve();
+                    });
+                } else {
+                    resolve();
+                }
+            });
+        },
+        forceStop: () => {
+            if (!html5QrcodeScanner) return;
+
+            try
+            {
+                html5QrcodeScanner.stop();
+                html5QrcodeScanner.clear();
+            }
+            catch (e)
+            {
+                console.warn("Scanner stop error", e);
+            }
+
+            html5QrcodeScanner = null;
+
+            const reader = document.getElementById("reader");
+            if (reader) reader.innerHTML = "";
+        }
+    };
+</script>

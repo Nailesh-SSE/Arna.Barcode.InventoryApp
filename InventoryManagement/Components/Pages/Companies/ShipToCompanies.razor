@@ -5,100 +5,144 @@
 @inject IJSRuntime JS
 
 <PageTitle>Ship To Companies</PageTitle>
-
-<div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col">
-            <h3><Icon Name="IconName.Truck" /> Ship To Companies</h3>
-        </div>
-        <div class="col-auto">
-            <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
-                <Icon Name="IconName.Plus" /> Add New
-            </Button>
-        </div>
-    </div>
-
-    @if (isLoading)
-    {
-        <div class="text-center">
-            <Spinner Type="SpinnerType.Border" />
-        </div>
-    }
-    else
-    {
-        <Grid TItem="CompanyModel"
-              Class="table table-hover table-bordered table-striped"
-              Data="companyList"
-              AllowPaging="true"
-              PageSize="10"
-              Responsive="true"
-              @ref=shipToCompanyGrid>
-
-            <GridColumn TItem="CompanyModel" HeaderText="No">
-                @(companyList?.IndexOf(context) + 1)
-            </GridColumn>
-
-            <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name">
-                @context.Name
-            </GridColumn>
-
-            <GridColumn TItem="CompanyModel" HeaderText="Remark" PropertyName="Remark">
-                @context.Remark
-            </GridColumn>
-
-            <GridColumn TItem="CompanyModel" HeaderText="Status" PropertyName="IsActive">
-                @if (context.IsActive)
-                {
-                    <Badge Color="BadgeColor.Success">Active</Badge>
-                }
-                else
-                {
-                    <Badge Color="BadgeColor.Danger">Inactive</Badge>
-                }
-            </GridColumn>
-
-            <GridColumn TItem="CompanyModel" HeaderText="Actions">
-                <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
-                    <Icon Name="IconName.PencilSquare" /> Edit
-                </Button>
-                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteCompany(context.Id)">
-                    <Icon Name="IconName.Trash" /> Delete
-                </Button>
-            </GridColumn>
-        </Grid>
-    }
-</div>
-
-<Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large">
-    <BodyTemplate>
-        <EditForm EditContext="@editContext" OnValidSubmit="SaveCompany">
-            <DataAnnotationsValidator />
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <InputText class="form-control" @bind-Value="companyModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
-                    <ValidationMessage For="@(() => companyModel.Name)" />
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Remark </label>
-                    <InputText class="form-control" @bind-Value="companyModel.Remark" />
-                </div>
+@if (!CanView(Route))
+{
+    <AccessDenied />
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col">
+                <h3><Icon Name="IconName.Truck" /> Ship To Companies</h3>
             </div>
-
-            @if (companyModel.Id > 0)
+            @if (IsAdmin() || IsFactoryAdmin())
             {
-                <div class="mb-3">
-                    <InputCheckbox @bind-Value="companyModel.IsActive" /> Active
+                <div class="col-auto">
+                    <button class="btn btn-outline-success"
+                            disabled="@isExporting"
+                            @onclick="ExportCurrentReport">
+                        @if (isExporting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Exporting...</span>
+                        }
+                        else
+                        {
+                            <Icon Name="IconName.Download" />
+                            <span>Export</span>
+                        }
+                    </button>
                 </div>
             }
-            <div class="text-end">
-                <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
-                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+            <div class="col-auto">
+                @if (CanCreate(Route))
+                {
+                    <Button Color="ButtonColor.Primary" @onclick="ShowAddModal">
+                        <Icon Name="IconName.Plus" /> Add New
+                    </Button>
+                }
             </div>
-        </EditForm>
-    </BodyTemplate>
-</Modal>
+        </div>
+        @if (!string.IsNullOrEmpty(alertMessage))
+        {
+            <div class="alert alert-@alertType alert-dismissible fade show" role="alert">
+                @alertMessage
+                <button type="button" class="btn-close" @onclick="() => alertMessage = null"></button>
+            </div>
+        }
+        @if (isLoading)
+        {
+            <div class="text-center">
+                <Spinner Type="SpinnerType.Border" />
+            </div>
+        }
+        else
+        {
+            <Grid TItem="CompanyModel"
+                  Class="table table-hover table-bordered table-striped"
+                  Data="companyList"
+                  AllowPaging="true"
+                  PageSize="10"
+                  Responsive="true"
+                  AllowFiltering="true"
+                  AllowSorting="true"
+                  @ref=shipToCompanyGrid>
+
+                <GridColumn TItem="CompanyModel" HeaderText="No" Filterable=false>
+                    @(companyList?.IndexOf(context) + 1)
+                </GridColumn>
+
+                <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="100">
+                    @context.Name
+                </GridColumn>
+
+                <GridColumn TItem="CompanyModel" HeaderText="Remark" PropertyName="Remark" Filterable=false>
+                    @context.Remark
+                </GridColumn>
+
+                <GridColumn TItem="CompanyModel" HeaderText="Status" PropertyName="IsActive" SortString="IsActive" SortKeySelector="item => item.IsActive" Sortable=false>
+                    @if (context.IsActive)
+                    {
+                        <Badge Color="BadgeColor.Success">Active</Badge>
+                    }
+                    else
+                    {
+                        <Badge Color="BadgeColor.Danger">Inactive</Badge>
+                    }
+                </GridColumn>
+
+                <GridColumn TItem="CompanyModel" HeaderText="Actions" Filterable=false>
+                    <div class="d-flex gap-1 justify-content-start">
+                        @if (CanEdit(Route))
+                        {
+                            <Button class="text-nowrap" Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ShowEditModal(context)">
+                                <Icon Name="IconName.PencilSquare" /> Edit
+                            </Button>
+                        }
+                        @if (CanDelete(Route))
+                        {
+                            <LoadingButton class="text-nowrap" Color="ButtonColor.Danger" Size="ButtonSize.Small" onclick="() => DeleteCompany(context.Id)">
+                                <Icon Name="IconName.Trash" /> Delete
+                            </LoadingButton>
+                        }
+                    </div>
+                </GridColumn>
+            </Grid>
+        }
+    </div>
+
+    <Modal @ref="modal" Title="@modalTitle" Size="ModalSize.Large" UseStaticBackdrop>
+        <BodyTemplate>
+            <EditForm EditContext="@editContext" OnValidSubmit="SaveCompany">
+                <DataAnnotationsValidator />
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Ship Company Name <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="companyModel.Name" @oninput="(e) => HandleNameChangeAsync(e.Value?.ToString())" />
+                        <ValidationMessage For="@(() => companyModel.Name)" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Remark </label>
+                        <InputText class="form-control" @bind-Value="companyModel.Remark" />
+                    </div>
+                </div>
+
+                @if (companyModel.Id > 0)
+                {
+                    <div class="mb-3">
+                        <InputCheckbox @bind-Value="companyModel.IsActive" /> Active
+                    </div>
+                }
+                <div class="text-end">
+                    <Button Color="ButtonColor.Secondary" @onclick="HideModal">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">Save</Button>
+                </div>
+            </EditForm>
+        </BodyTemplate>
+    </Modal>
+}
 
 @code {
     private Modal modal;
@@ -110,18 +154,27 @@
     private List<CompanyModel> companyList = new List<CompanyModel>();
     private EditContext editContext;
     private ValidationMessageStore validationMessage;
-
+    private string Route = "/companies/ship-to";
+    private bool isSaveBtnLoading = false;
+    private bool isExporting = false;
+    private string? alertMessage;
+    private string alertType = "info";
 
     protected override async Task OnInitializedAsync()
     {
+        isLoading = true;
+
         await base.OnInitializedAsync(); // This will call the base authentication check
+
+        await LoadCompanies();
 
         if (!IsAuthenticated)
         {
             NavigationManager.NavigateTo("/logout", forceLoad: true);
             return;
         }
-        await LoadCompanies();
+
+        isLoading = false;
     }
 
     private void InitializeEditContext()
@@ -131,7 +184,6 @@
     }
     private async Task LoadCompanies()
     {
-        isLoading = true;
         companyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.ShipTo))?.ToList() ?? new List<CompanyModel>();
         isLoading = false;
     }
@@ -140,14 +192,15 @@
     {
         modalTitle = "Add Ship To Company";
         isEditMode = false;
-        companyModel = new CompanyModel 
+        companyModel = new CompanyModel
         {
-            CompanyType = CompanyType.ShipTo, IsActive = true ,
+            CompanyType = CompanyType.ShipTo,
+            IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
 
-        };        
-            InitializeEditContext();
-            modal?.ShowAsync();
+        };
+        InitializeEditContext();
+        modal?.ShowAsync();
     }
 
     private void ShowEditModal(CompanyModel editCompany)
@@ -170,8 +223,10 @@
 
     private async Task SaveCompany()
     {
+        if (isSaveBtnLoading) return;
         try
         {
+            isSaveBtnLoading = true;
             companyModel.CompanyType = CompanyType.ShipTo;
             if (!editContext.Validate()) return;
 
@@ -196,6 +251,10 @@
         catch
         {
             // Exception handling omitted for brevity
+        }
+        finally
+        {
+            isSaveBtnLoading = false;
         }
     }
 
@@ -233,7 +292,7 @@
             var isCompanyNameUnique = await CompanyService.IsCompanyNameUniqueAsync(companyModel.Name, companyModel.CompanyType = CompanyType.ShipTo, companyModel.Id);
             if (!isCompanyNameUnique)
             {
-                validationMessage.Add(() => companyModel.Name, "Name is Already Exist");
+                validationMessage.Add(() => companyModel.Name, "Ship Company name Already Exist");
             }
             editContext.NotifyValidationStateChanged();
         }
@@ -244,7 +303,7 @@
         validationMessage.Clear();
         if (string.IsNullOrWhiteSpace(companyModel.Name))
         {
-            validationMessage.Add(() => companyModel.Name, "Company name is required");
+            validationMessage.Add(() => companyModel.Name, "Ship Company name is required");
             editContext.NotifyValidationStateChanged();
         }
     }
@@ -260,5 +319,52 @@
         {
 
         }
+    }
+
+    private async Task ExportCurrentReport()
+    {
+        isExporting = true;
+        StateHasChanged();
+        try
+        {
+            CompanyType type = CompanyType.ShipTo;
+            await Task.Delay(100);
+            var excelData = await CompanyService.ExportToExcelAsync(type);
+            var fileName = $"ShipCompany_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            var filePath = Path.Combine(Environment.CurrentDirectory, "wwwroot", "exports");
+
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
+
+            var fullPath = Path.Combine(filePath, fileName);
+            await File.WriteAllBytesAsync(fullPath, excelData);
+
+            // Browser downloads static file directly
+            var downloadUrl = $"/exports/{fileName}";
+            NavigationManager.NavigateTo(downloadUrl, forceLoad: true);
+
+            ShowAlert("success", "Excel exported successfully. Check your Downloads folder.");
+        }
+        catch (Exception ex)
+        {
+            ShowAlert("danger", $"Failed to export excel: {ex.Message}");
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+    private void ShowAlert(string type, string message)
+    {
+        alertType = type;
+        alertMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+    private async Task AutoHideAlertAsync()
+    {
+        await Task.Delay(3000);
+        alertMessage = null;
+        await InvokeAsync(StateHasChanged);
     }
 }
