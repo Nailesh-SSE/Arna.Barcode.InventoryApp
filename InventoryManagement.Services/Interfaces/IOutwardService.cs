@@ -13,4 +13,6 @@ public interface IOutwardService
     Task<BarcodeValidationResult> ValidateBarcodeForOutwardAsync(string barcodeNo, int outwardId);
     Task<OutWardItemModel?> AddOutwardItemAsync(int outwardId, string barcodeNo,int userid);
     Task<bool> DeleteOutwardItemAsync(int outwardDetailId, string barcodeNo,int userid);
+    //Task<byte[]> GenerateExcelAsync(int outwardId);
+    Task<byte[]> GeneratePdfAsync(int outwardId);
 }

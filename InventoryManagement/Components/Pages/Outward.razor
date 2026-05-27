@@ -106,6 +106,12 @@ else
                                 <Icon Name="IconName.PencilSquare" />Edit
                             </Button>
                         }
+                        @if (context.IsFinished)
+                        {
+                            <LoadingButton Class="text-nowrap" Color="ButtonColor.Primary" Size="ButtonSize.Small" onclick="() => GeneratePdf(context)">
+                                <Icon Name="IconName.FilePdf" />Pdf
+                            </LoadingButton>
+                        }
                     </div>
                 </GridColumn>
             </Grid>
@@ -362,6 +368,7 @@ else
     private bool isAdmin = false;
     private bool isItemSaveBtnLoading = false;
     private bool isOutwardSaveBtnLoading = false;
+    private bool isExporting = false;
 
     // Reference for JS Interop
     private DotNetObjectReference<Outward>? dotNetHelper;
@@ -374,7 +381,7 @@ else
 
     private TimeOnly TimePart
     {
-        get => TimeOnly.FromDateTime( outward.OutwardDate);
+        get => TimeOnly.FromDateTime(outward.OutwardDate);
         set => outward.OutwardDate = outward.OutwardDate.Date + value.ToTimeSpan();
     }
 
@@ -570,6 +577,83 @@ else
         }
         catch (Exception) { }
     }
+
+    private async Task GeneratePdf(OutwardModel model)
+    {
+        try
+        {
+            await Task.Delay(100);
+            // Get PDF bytes from service
+            var pdfBytes = await OutwardService.GeneratePdfAsync(model.Id);
+
+            var safeOutwardNo = model.OutwardNo.Replace("/", "_").Replace("\\", "_").Replace(":", "_");
+
+            var fileName = $"Outward_{safeOutwardNo}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+
+            var filePath = Path.Combine(Environment.CurrentDirectory,"wwwroot","exports");
+
+            if (!Directory.Exists(filePath))
+                Directory.CreateDirectory(filePath);
+
+            var fullPath = Path.Combine(filePath, fileName);
+
+            await File.WriteAllBytesAsync(fullPath, pdfBytes);
+
+            var downloadUrl = $"/exports/{fileName}";
+
+            NavigationManager.NavigateTo(downloadUrl, forceLoad: true);
+        }
+        catch (Exception)
+        {
+            ShowError("Connectivity issue happened, operation failed");
+        }
+    }
+
+    // private async Task GenerateExcel(OutwardModel model)
+    // {
+    //     try
+    //     {
+    //         await OutwardService.GenerateExcelAsync(model.Id);
+    //     }
+    //     catch (Exception)
+    //     {
+    //         ShowError("Connectivity issue happened, operation failed");
+    //     }
+    // }
+
+    // private async Task ExportCurrentReport(OutwardModel model)
+    // {
+    //     isExporting = true;
+    //     StateHasChanged();
+    //     try
+    //     {
+    //         await Task.Delay(100);
+    //         var excelData = await OutwardService.GenerateExcelAsync(model.Id);
+    //         var fileName = $"Product_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+    //         var filePath = Path.Combine(Environment.CurrentDirectory, "wwwroot", "exports");
+
+    //         if (!Directory.Exists(filePath))
+    //             Directory.CreateDirectory(filePath);
+
+    //         var fullPath = Path.Combine(filePath, fileName);
+    //         await File.WriteAllBytesAsync(fullPath, excelData);
+
+    //         //Browser downloads static file directly
+    //         var downloadUrl = $"/exports/{fileName}";
+    //         NavigationManager.NavigateTo(downloadUrl, forceLoad: true);
+
+    //         ShowError("Excel exported successfully. Check your Downloads folder.");
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         ShowError($"Failed to export excel: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         isExporting = false;
+    //         StateHasChanged();
+    //     }
+    // }
 
     private async Task HideModal()
     {
