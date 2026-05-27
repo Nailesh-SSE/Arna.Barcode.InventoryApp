@@ -29,6 +29,7 @@ public class OutWardItemModel
     public string BarcodeNo { get; set; } = string.Empty;
 
     public decimal Quantity { get; set; } = 1;
+    public decimal BoxQuantity { get; set; } = 0;
     public string Unit { get; set; } = "PCS";
 }
 
