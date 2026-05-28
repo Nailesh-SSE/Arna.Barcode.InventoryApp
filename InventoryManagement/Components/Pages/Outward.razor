@@ -601,7 +601,7 @@ else
 
             var downloadUrl = $"/exports/{fileName}";
 
-            NavigationManager.NavigateTo(downloadUrl, forceLoad: true);
+            await JSRuntime.InvokeVoidAsync("open", downloadUrl, "_blank");
         }
         catch (Exception)
         {
