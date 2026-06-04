@@ -327,13 +327,15 @@ public class SaleReturnService : ISaleReturnService
             var saleToInwardDto = await ConvertToDto(item);
             saleToInwardDto.UserId= userId;
             // Try deleting inward/barcodes first
-            var inwardDeleted = await _inwardService.DeleteSalesReturnInwardItemAsync(saleToInwardDto);
-
-            if (!inwardDeleted) 
+            if (item.IsTakeInStock == true)
             {
-                return false;
-            }
+                var inwardDeleted = await _inwardService.DeleteSalesReturnInwardItemAsync(saleToInwardDto);
 
+                if (!inwardDeleted)
+                {
+                    return false;
+                }
+            }
             item.IsActive = false;
             item.IsDeleted = true;
             item.UpdatedOn = DateTime.Now;
