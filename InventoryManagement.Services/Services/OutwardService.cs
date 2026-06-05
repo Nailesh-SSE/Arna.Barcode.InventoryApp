@@ -340,6 +340,40 @@ public class OutwardService : IOutwardService
         }
     }
 
+    public async Task<List<OutWardItemModel>> FindSaleReturnBarcode(int outwardId)
+    {
+        try
+        {
+            var outwardDetailRepository = _unitOfWork.GetRepository<OutwardDetail>();
+            var saleReturnItemRepository = _unitOfWork.GetRepository<SaleReturnItems>();
+            var saleReturnItems = saleReturnItemRepository
+                .GetQueryable()
+                .Where(sri => !sri.IsDeleted && sri.BarCodeNo != null);
+
+            return await (
+                from outwardDetail in outwardDetailRepository.GetQueryable()
+                join saleReturnItem in saleReturnItems
+                    on outwardDetail.BarcodeNo equals saleReturnItem.BarCodeNo into matchingSaleReturnItems
+                where outwardDetail.OutwardId == outwardId && !outwardDetail.IsDeleted
+                select new OutWardItemModel
+                {
+                    Id = outwardDetail.Id,
+                    OutwardId = outwardDetail.OutwardId,
+                    ProductId = outwardDetail.ProductId,
+                    ProductName = outwardDetail.Product != null ? outwardDetail.Product.SKU : "Unknown",
+                    BarcodeNo = outwardDetail.BarcodeNo,
+                    Quantity = outwardDetail.Quantity,
+                    Unit = outwardDetail.Unit,
+                    IsInSalereturn = matchingSaleReturnItems.Any()
+                })
+                .ToListAsync();
+        }
+        catch
+        {
+            throw;
+        }
+    }
+
     private async Task UpdateBarcodeStockStatus(string barcodeNo, bool isInStock)
     {
         var barcodeItemRepository = _unitOfWork.GetRepository<InwardBarcodeItem>();
