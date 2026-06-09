@@ -31,6 +31,7 @@ public class OutWardItemModel
     public decimal Quantity { get; set; } = 1;
     public decimal BoxQuantity { get; set; } = 0;
     public string Unit { get; set; } = "PCS";
+    public bool IsInSalereturn { get; set; } = false;
 }
 
 public class BarcodeValidationResult

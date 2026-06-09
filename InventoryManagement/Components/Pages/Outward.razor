@@ -284,21 +284,18 @@ else
                                             <td>@item.ProductName</td>
                                             <td>@item.Unit</td>
                                             <td>@item.Quantity</td>
-                                            @if (!selectedOutward.IsFinished && CanDelete(Route))
+                                            @if (CanDelete(Route))
                                             {
                                                 <td>
-                                                    <fieldset disabled="@disableitemfields">
+                                                    @if (!item.IsInSalereturn)
+                                                    {
                                                         <Button Color="ButtonColor.Danger"
                                                                 Size="ButtonSize.Small"
                                                                 @onclick="() => RemoveItem(item)">
                                                             <Icon Name="IconName.Trash" />
                                                         </Button>
-                                                    </fieldset>
+                                                    }
                                                 </td>
-                                            }
-                                            else
-                                            {
-                                                <td></td>
                                             }
                                         </tr>
                                     }
@@ -675,7 +672,7 @@ else
                 disableitemfields = true;
             }
             selectedOutward = outward;
-            itemList = (await OutwardService.GetOutwardDetailsByOutwardIdAsync(outward.Id)).OrderByDescending(x => x.Id).ToList();
+            itemList = (await OutwardService.FindSaleReturnBarcode(outward.Id)).OrderByDescending(x => x.Id).ToList();
             newItem = new OutWardItemModel();
             barcodeErrorMessage = string.Empty;
             isScanning = false;
