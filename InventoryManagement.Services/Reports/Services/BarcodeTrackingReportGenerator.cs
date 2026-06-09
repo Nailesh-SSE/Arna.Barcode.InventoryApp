@@ -45,7 +45,7 @@ namespace InventoryManagement.Services.Reports.Services
             }
             catch (Exception ex)
             {
-                throw new Exception("Error generating sale return report", ex);
+                throw new Exception("Error generating Barcode Tracking report", ex);
             }
         }
 

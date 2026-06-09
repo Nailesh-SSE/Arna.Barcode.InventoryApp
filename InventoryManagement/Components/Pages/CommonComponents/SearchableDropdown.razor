@@ -3,7 +3,7 @@
 <div class="mb-2">
     <Dropdown class="w-100" disabled="@IsDisabled">
         <DropdownToggleButton type="button" class="form-control d-flex justify-content-between align-items-center border rounded w-100 bg-white"
-                              data-bs-toggle="dropdown">
+                              data-bs-toggle="dropdown" @onclick="FocusSearchInput">
             @if (!string.IsNullOrWhiteSpace(SearchText))
                 {
                     @SelectedText
@@ -15,7 +15,8 @@
             </DropdownToggleButton>
 
             <DropdownMenu class="p-2 ">
-                <input class="form-control mb-2"
+            <input @ref="searchInput" 
+                       class="form-control mb-2"
                        placeholder="Search..."
                        @bind="SearchText"
                        @bind:event="oninput" />
@@ -91,5 +92,12 @@
         SearchText = SelectedText;
         IsDropdownOpen = false;
         await OnItemSelected.InvokeAsync(item);
+    }
+    private ElementReference searchInput;
+
+    private async Task FocusSearchInput()
+    {
+        await Task.Delay(100);
+        await searchInput.FocusAsync();
     }
 }
