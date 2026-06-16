@@ -30,7 +30,7 @@ public abstract class AuthComponentBase : ComponentBase, IDisposable
             var authState = await AuthProvider.GetAuthenticationStateAsync();
             User = authState.User;
 
-            if (IsAuthenticated && !PermissionState.IsLoaded)
+            if (IsAuthenticated && (PermissionState.Permissions.Count == 0 || !PermissionState.IsLoaded))
             {
                 var permissions = await PermissionService.GetUserPermissionsAsync(UserId, _cts.Token);
                 PermissionState.SetPermissions(permissions);
