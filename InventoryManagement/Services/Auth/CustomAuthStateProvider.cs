@@ -14,6 +14,8 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     private readonly TimeSpan _sessionTimeout = TimeSpan.FromHours(8);
     private AuthData? _cachedAuthData;
     private readonly IPermissionService PermissionService;
+    private readonly TimeSpan _cacheValidationInterval = TimeSpan.FromMinutes(2);
+
     public CustomAuthStateProvider(
         ProtectedLocalStorage storage,
         ILogger<CustomAuthStateProvider> logger, IPermissionService permissionService)
@@ -29,7 +31,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
         try
         {
             // Use cached data if available to avoid async delays
-            if (_cachedAuthData?.IsAuthenticated == true)
+            if (_cachedAuthData?.IsAuthenticated == true && _cachedAuthData.CachedLoggedTime.AddMinutes(_cacheValidationInterval.Minutes) > DateTime.UtcNow)
             {
                 if (DateTime.UtcNow - _cachedAuthData.LoginTime <= _sessionTimeout)
                 {
@@ -43,6 +45,10 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
                     return _authenticationState;
                 }
             }
+            else
+            {
+                await ClearPermissionCacheAndAuthData();
+            }
 
             // Retrieve session data from ProtectedBrowserStorage
             var session = await _storage.GetAsync<AuthData>(SessionKey);
@@ -50,6 +56,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             if (session.Success && session.Value?.IsAuthenticated == true)
             {
                 var user = session.Value;
+                user.CachedLoggedTime = DateTime.UtcNow; // Update cached time
                 _cachedAuthData = user;
 
                 if (DateTime.UtcNow - user.LoginTime > _sessionTimeout)
@@ -86,7 +93,8 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             new Claim("FullName", user.UserFullName),
             new Claim("UserRoleId", user.UserRoleId),
             new Claim("UserRoleLevel",user.UserRoleLevel),
-            new Claim("LoginTime", user.LoginTime.ToString("O"))
+            new Claim("LoginTime", user.LoginTime.ToString("O")),
+            new Claim("CachedLoggedTime", user.CachedLoggedTime.ToString("O"))
         }, "LocalStorageAuth");
 
         return new AuthenticationState(new ClaimsPrincipal(identity));
@@ -227,4 +235,5 @@ public class AuthData
     public string UserRoleId { get; set; } = string.Empty;
     public DateTime LoginTime { get; set; }
     public string UserRoleLevel { get; set; } = string.Empty;
+    public DateTime CachedLoggedTime { get; set; }
 }

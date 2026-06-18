@@ -147,6 +147,7 @@
                         UserRoleId = user.RoleId.ToString(),
                         IsAuthenticated = true,
                         LoginTime = DateTime.UtcNow,
+                        CachedLoggedTime = DateTime.UtcNow,
                         UserRoleLevel = user.RoleLevel.ToString()
                     });
 
