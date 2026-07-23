@@ -43,6 +43,7 @@ public class ProductService : IProductService
             MakeCompany = p.MakeCompany,
             ColourId= p.ColourId,
             ColourName= p.ColourName,
+            ImagePath= p.ImagePath,
         }).ToList();
         return productModels;
     }
@@ -74,7 +75,7 @@ public class ProductService : IProductService
             MakeCompany = p.MakeCompany,
             ColourId=p.ColourId,
             ColourName=p.ColourName,    
-
+            ImagePath=p.ImagePath,
         }).ToList();
 
         return getallproducts;
@@ -104,7 +105,8 @@ public class ProductService : IProductService
             MakeCompanyId = product.MakeCompanyId,
             MakeCompany = product.MakeCompany,
             ColourName= product.ColourName,
-            ColourId = product.ColourId,  
+            ColourId = product.ColourId,
+            ImagePath= product.ImagePath,
         };
         return getproductbyid;
     }
@@ -143,6 +145,7 @@ public class ProductService : IProductService
                     SerialNumber= productModel.SerialNumber,
                     ColourId= productModel.ColourId,
                     ColourName= productModel.ColourName,
+                    ImagePath = productModel.ImagePath,
             };
 
             var productRepository = _unitOfWork.GetRepository<Product>();
@@ -192,6 +195,7 @@ public class ProductService : IProductService
             existingProduct.MakeCompanyId = productModel.MakeCompanyId; 
             existingProduct.ColourId = productModel.ColourId;
             existingProduct.ColourName = productModel.ColourName;  
+            existingProduct.ImagePath = productModel.ImagePath;
             existingProduct.UpdatedBy= productModel.UpdatedBy;
             existingProduct.UpdatedOn= DateTime.Now;
 
@@ -284,6 +288,7 @@ public class ProductService : IProductService
             MakeCompanyId = p.MakeCompanyId,
             ColourId= p.ColourId,
             ColourName= p.ColourName,
+            ImagePath= p.ImagePath,
 
         }).ToList();
         return getproductsbycategory;

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace InventoryManagement.Services.Models;
 
@@ -25,8 +25,8 @@ public class ProductModel : CommonModel
     public string MakeCompany { get; set; } = string.Empty;
 
     public int SerialNumber { get; set; }
+    public string? ImagePath { get; set; }
     public int ColourId { get; set; }
     public string ColourName { get; set; }
     public string ColourSearchText { get; set; } = string.Empty;
 }
-

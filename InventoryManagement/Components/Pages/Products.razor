@@ -1,4 +1,4 @@
-﻿@page "/products"
+@page "/products"
 @using InventoryManagement.Core.Enums
 @inject IJSRuntime JS
 @inject IProductService ProductService
@@ -8,6 +8,7 @@
 @using InventoryManagement.Components.Auth
 @using InventoryManagement.Services.Models;
 @inherits AuthComponentBase
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment WebHostEnvironment
 
 <PageTitle>Products</PageTitle>
 @if (!CanView(Route))
@@ -95,6 +96,17 @@ else
 
                 <GridColumn TItem="ProductModel" HeaderText="Unit" PropertyName="Unit" Filterable="false">
                     @context.Unit
+                </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="Image" Filterable=false>
+                    @if (!string.IsNullOrEmpty(context.ImagePath))
+                    {
+                        <img src="@context.ImagePath" alt="Product Image" style="max-height: 45px; max-width: 45px; object-fit: cover; border-radius: 4px; border: 1px solid #dee2e6;" />
+                    }
+                    else
+                    {
+                        <span class="text-muted small">No Image</span>
+                    }
                 </GridColumn>
 
                 <GridColumn TItem="ProductModel" HeaderText="Status" PropertyName="IsActive" SortKeySelector="item => item.IsActive" SortString="IsActive" Sortable=false>
@@ -192,6 +204,22 @@ else
 
                         <ValidationMessage For="@(() => productModel.ColourId)" />
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Product Image</label>
+                        <InputFile class="form-control" OnChange="HandleFileSelected" accept=".jpg,.jpeg,.png,.webp" />
+                        @if (isUploadingImage)
+                        {
+                            <div class="mt-2 text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</div>
+                        }
+                        @if (!string.IsNullOrEmpty(previewImageBase64) || !string.IsNullOrEmpty(productModel.ImagePath))
+                        {
+                            <div class="mt-2 position-relative d-inline-block">
+                                <img src="@(!string.IsNullOrEmpty(previewImageBase64) ? previewImageBase64 : productModel.ImagePath)" alt="Preview" style="max-height: 100px; max-width: 100px; border: 1px solid #ccc; border-radius: 4px; object-fit: cover;" />
+                                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" @onclick="RemoveImage" style="padding: 0px 5px; font-size: 10px; line-height: 1.2; border-radius: 50%;">×</button>
+                            </div>
+                        }
+                    </div>
                 </div>
 
                 <div class="mb-3">
@@ -232,6 +260,12 @@ else
     private bool isExporting = false;
     private string? alertMessage;
     private string alertType = "info";
+    private bool isUploadingImage = false;
+    private IBrowserFile? selectedFile;
+    private string? previewImageBase64;
+    private bool imageRemoved = false;
+    private byte[]? compressedImageBytes;
+    private string? imageToDeletePath;
 
 
 
@@ -260,7 +294,7 @@ else
         categories = (await CategoryService.GetAllCategoriesAsync()).Where(x => x.IsActive).ToList();
         companies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo)).Where(x => x.IsActive).ToList();
         Colours = (await ColourService.GetAllColourAsync()).Where(x => x.IsActive).ToList();
-        foreach(var product in products)
+        foreach (var product in products)
         {
             product.CategoryName = categories.FirstOrDefault(c => c.Id == product.CategoryId)?.Name ?? string.Empty;
         }
@@ -278,6 +312,11 @@ else
             CreatedOn = DateTime.Now,
             UnitId = (int)UnitType.PCS
         };
+        selectedFile = null;
+        previewImageBase64 = null;
+        imageRemoved = false;
+        compressedImageBytes = null;
+        imageToDeletePath = null;
         InitializeEditContext();
         modal.ShowAsync();
     }
@@ -303,16 +342,22 @@ else
             ColourId = editProduct.ColourId,
             ColourName = editProduct.ColourName,
             ColourSearchText = editProduct.ColourName,
+            ImagePath = editProduct.ImagePath,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
             UpdatedOn = DateTime.Now
         };
+        selectedFile = null;
+        previewImageBase64 = null;
+        imageRemoved = false;
+        compressedImageBytes = null;
+        imageToDeletePath = null;
         InitializeEditContext();
         modal.ShowAsync();
     }
 
     private async Task SaveProduct()
     {
-        if(isSaveBtnLoading) return;
+        if (isSaveBtnLoading) return;
         try
         {
             isSaveBtnLoading = true;
@@ -330,10 +375,38 @@ else
 
             if (isEditMode)
             {
+                if (!string.IsNullOrEmpty(imageToDeletePath))
+                {
+                    DeletePhysicalImage(imageToDeletePath);
+                    imageToDeletePath = null;
+                }
+
+                if (compressedImageBytes != null)
+                {
+                    var savedPath = await SaveCompressedFileAsync(compressedImageBytes);
+                    if (savedPath != null)
+                    {
+                        if (!string.IsNullOrEmpty(productModel.ImagePath))
+                        {
+                            DeletePhysicalImage(productModel.ImagePath);
+                        }
+                        productModel.ImagePath = savedPath;
+                    }
+                }
+
                 await ProductService.UpdateProductAsync(productModel);
             }
             else
             {
+                if (compressedImageBytes != null)
+                {
+                    var savedPath = await SaveCompressedFileAsync(compressedImageBytes);
+                    if (savedPath != null)
+                    {
+                        productModel.ImagePath = savedPath;
+                    }
+                }
+
                 await ProductService.CreateProductAsync(productModel);
             }
 
@@ -358,12 +431,123 @@ else
             if (!confirmed) return;
 
             var userid = Convert.ToInt32(CurrentUserId);
+            var product = products.FirstOrDefault(p => p.Id == id);
+            if (product != null && !string.IsNullOrEmpty(product.ImagePath))
+            {
+                DeletePhysicalImage(product.ImagePath);
+            }
+
             await ProductService.DeleteProductAsync(id, userid);
             await LoadData();
             await productGrid.RefreshDataAsync();
         }
         catch (Exception ex)
         {
+        }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            try
+            {
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                var extension = Path.GetExtension(file.Name).ToLower();
+                if (!allowedExtensions.Contains(extension))
+                {
+                    ShowAlert("danger", "Only JPG, JPEG, PNG, and WEBP files are allowed.");
+                    return;
+                }
+
+                if (file.Size > 10 * 1024 * 1024) // 10MB limit for original upload before compression
+                {
+                    ShowAlert("danger", "Original image size must be less than 10MB.");
+                    return;
+                }
+
+                isUploadingImage = true;
+                StateHasChanged();
+
+                using (var stream = file.OpenReadStream(10 * 1024 * 1024))
+                using (var streamRef = new Microsoft.JSInterop.DotNetStreamReference(stream))
+                {
+                    // Call JS to compress image to max 1024x1024 and 75% quality (JPEG output)
+                    var compressedBase64 = await JS.InvokeAsync<string>("compressImage", streamRef, file.ContentType, 1024, 1024, 0.75);
+
+                    previewImageBase64 = compressedBase64;
+                    var base64Data = compressedBase64.Substring(compressedBase64.IndexOf(",") + 1);
+                    compressedImageBytes = Convert.FromBase64String(base64Data);
+                    selectedFile = null;
+                    imageRemoved = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowAlert("danger", $"Failed to process and compress image: {ex.Message}");
+            }
+            finally
+            {
+                isUploadingImage = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void RemoveImage()
+    {
+        if (!string.IsNullOrEmpty(productModel.ImagePath))
+        {
+            imageToDeletePath = productModel.ImagePath;
+        }
+        previewImageBase64 = null;
+        selectedFile = null;
+        compressedImageBytes = null;
+        productModel.ImagePath = null;
+        imageRemoved = true;
+        StateHasChanged();
+    }
+
+    private async Task<string?> SaveCompressedFileAsync(byte[] bytes)
+    {
+        try
+        {
+            var uploadsDir = Path.Combine(WebHostEnvironment.WebRootPath, "images", "products");
+            if (!Directory.Exists(uploadsDir))
+            {
+                Directory.CreateDirectory(uploadsDir);
+            }
+
+            //var uniqueFileName = $"{Guid.NewGuid()}.jpg";
+            var uniqueFileName = $"{DateTime.Now:ddMMyyyy_HHmmss}.jpg";
+
+            var filePath = Path.Combine(uploadsDir, uniqueFileName);
+
+            await File.WriteAllBytesAsync(filePath, bytes);
+
+            return $"/images/products/{uniqueFileName}";
+        }
+        catch (Exception ex)
+        {
+            ShowAlert("danger", $"Failed to save image file: {ex.Message}");
+            return null;
+        }
+    }
+
+    private void DeletePhysicalImage(string relativePath)
+    {
+        try
+        {
+            var absolutePath = Path.Combine(WebHostEnvironment.WebRootPath, relativePath.TrimStart('/'));
+            if (File.Exists(absolutePath))
+            {
+                File.Delete(absolutePath);
+            }
+        }
+        catch (Exception)
+        {
+            // Ignore deletion errors
         }
     }
 

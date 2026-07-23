@@ -38,6 +38,7 @@ public class Product : Common
 
     public int ColourId { get; set; }
     public string ColourName { get; set; }
+    public string? ImagePath { get; set; }
     public virtual Category Category { get; set; } = null!;
     public virtual ICollection<InwardItem> InwardItems { get; set; } = new List<InwardItem>();
 }
