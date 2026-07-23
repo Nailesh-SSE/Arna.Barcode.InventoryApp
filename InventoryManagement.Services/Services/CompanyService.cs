@@ -28,7 +28,8 @@ public class CompanyService : ICompanyService
             Code = c.Code,
             CompanyType = c.CompanyType,
             IsActive = c.IsActive,
-            Remark = c.Remark
+            Remark = c.Remark,
+            ImagePath = c.ImagePath
 
         }).ToList();
         return model;
@@ -48,7 +49,8 @@ public class CompanyService : ICompanyService
             Code = c.Code,
             CompanyType = c.CompanyType,
             Remark = c.Remark,
-            IsActive = c.IsActive
+            IsActive = c.IsActive,
+            ImagePath = c.ImagePath
         }).ToList();
         return model;
     }
@@ -75,6 +77,7 @@ public class CompanyService : ICompanyService
                 CompanyType = companyModel.CompanyType,
                 SerialNumber = companyModel.SerialNumber,
                 Remark = companyModel.Remark,
+                ImagePath = companyModel.ImagePath,
                 CreatedBy = companyModel.CreatedBy,
                 CreatedOn = DateTime.Now
             };
@@ -107,6 +110,7 @@ public class CompanyService : ICompanyService
             entity.IsActive = companyModel.IsActive;
             entity.IsDeleted = false;
             entity.Remark = companyModel.Remark;
+            entity.ImagePath = companyModel.ImagePath;
             entity.UpdatedBy = companyModel.UpdatedBy;
             entity.UpdatedOn = DateTime.Now;
 

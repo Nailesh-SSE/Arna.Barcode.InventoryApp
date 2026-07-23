@@ -1,6 +1,7 @@
-﻿@page "/platforms"
+@page "/platforms"
 @inject IJSRuntime JS
 @inject IPlatformService PlatformService
+@inject IWebHostEnvironment WebHostEnvironment
 @using InventoryManagement.Components.Auth
 @inherits AuthComponentBase
 <PageTitle>Platform</PageTitle>
@@ -11,6 +12,14 @@
 }
 else
 {
+    @if (!string.IsNullOrEmpty(alertMessage))
+    {
+        <div class="alert alert-@alertType alert-dismissible fade show mb-3" role="alert">
+            @alertMessage
+            <button type="button" class="btn-close" @onclick="() => alertMessage = null"></button>
+        </div>
+    }
+
     @if (isLoading)
     {
         <div class="text-center">
@@ -47,6 +56,17 @@ else
 
                 <GridColumn TItem="PlatformModel" HeaderText="No" Filterable=false>
                     @(platformList.IndexOf(context) + 1)
+                </GridColumn>
+
+                <GridColumn TItem="PlatformModel" HeaderText="Image" Filterable=false>
+                    @if (!string.IsNullOrEmpty(context.ImagePath))
+                    {
+                        <img src="@context.ImagePath" alt="Platform Image" style="max-height: 45px; max-width: 45px; object-fit: cover; border-radius: 4px; border: 1px solid #dee2e6;" />
+                    }
+                    else
+                    {
+                        <span class="text-muted small">No Image</span>
+                    }
                 </GridColumn>
 
                 <GridColumn TItem="PlatformModel" HeaderText="Name" PropertyName="Name" SortKeySelector="item => item.Name" SortString="Name" FilterTextboxWidth="100">
@@ -100,6 +120,22 @@ else
                 </div>
 
                 <div class="mb-3">
+                    <label class="form-label">Platform Image</label>
+                    <InputFile class="form-control" OnChange="HandleFileSelected" accept=".jpg,.jpeg,.png,.webp" />
+                    @if (isUploadingImage)
+                    {
+                        <div class="mt-2 text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</div>
+                    }
+                    @if (!string.IsNullOrEmpty(previewImageBase64) || !string.IsNullOrEmpty(platformModel.ImagePath))
+                    {
+                        <div class="mt-2 position-relative d-inline-block">
+                            <img src="@(!string.IsNullOrEmpty(previewImageBase64) ? previewImageBase64 : platformModel.ImagePath)" alt="Preview" style="max-height: 100px; max-width: 100px; border: 1px solid #ccc; border-radius: 4px; object-fit: cover;" />
+                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" @onclick="RemoveImage" style="padding: 0px 5px; font-size: 10px; line-height: 1.2; border-radius: 50%;">×</button>
+                        </div>
+                    }
+                </div>
+
+                <div class="mb-3">
                     <label class="form-label">Remark</label>
                     <InputTextArea class="form-control" rows="3" @bind-Value="platformModel.Remark" />
                 </div>
@@ -133,6 +169,13 @@ else
     private string Route = "/platforms";
     private bool isSaveBtnLoading = false;
 
+    private bool isUploadingImage = false;
+    private string? previewImageBase64;
+    private byte[]? compressedImageBytes;
+    private string? imageToDeletePath;
+    private string? alertMessage;
+    private string alertType = "success";
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -150,6 +193,7 @@ else
         platformList = (await PlatformService.GetAllPlatformAsync()).ToList();
         isLoading = false;
     }
+
     private void InitializeEditContext()
     {
         editContext = new EditContext(platformModel);
@@ -166,6 +210,9 @@ else
             CreatedBy = Convert.ToInt32(CurrentUserId),
             CreatedOn = DateTime.Now
         };
+        previewImageBase64 = null;
+        compressedImageBytes = null;
+        imageToDeletePath = null;
         InitializeEditContext();
         modal.ShowAsync();
     }
@@ -179,10 +226,14 @@ else
             Id = editPlatform.Id,
             Name = editPlatform.Name,
             Remark = editPlatform.Remark,
+            ImagePath = editPlatform.ImagePath,
             IsActive = editPlatform.IsActive,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
             UpdatedOn = DateTime.Now
         };
+        previewImageBase64 = null;
+        compressedImageBytes = null;
+        imageToDeletePath = null;
         InitializeEditContext();
         modal?.ShowAsync();
     }
@@ -201,12 +252,41 @@ else
             await ValidateDuplicateNameAsync();
             if (editContext.GetValidationMessages().Any())
                 return;
+
             if (isEditMode)
             {
+                if (!string.IsNullOrEmpty(imageToDeletePath))
+                {
+                    DeletePhysicalImage(imageToDeletePath);
+                    imageToDeletePath = null;
+                }
+
+                if (compressedImageBytes != null)
+                {
+                    var savedPath = await SaveCompressedFileAsync(compressedImageBytes);
+                    if (savedPath != null)
+                    {
+                        if (!string.IsNullOrEmpty(platformModel.ImagePath))
+                        {
+                            DeletePhysicalImage(platformModel.ImagePath);
+                        }
+                        platformModel.ImagePath = savedPath;
+                    }
+                }
+
                 await PlatformService.UpdatePlatformAsync(platformModel);
             }
             else
             {
+                if (compressedImageBytes != null)
+                {
+                    var savedPath = await SaveCompressedFileAsync(compressedImageBytes);
+                    if (savedPath != null)
+                    {
+                        platformModel.ImagePath = savedPath;
+                    }
+                }
+
                 await PlatformService.CreatePlatformAsync(platformModel);
             }
 
@@ -216,6 +296,7 @@ else
         }
         catch (Exception ex)
         {
+            ShowAlert("danger", $"Failed to save platform: {ex.Message}");
         }
         finally
         {
@@ -230,6 +311,13 @@ else
             bool confirmed = await JS.InvokeAsync<bool>("confirm", "Do you want to delete this platform?");
             if (!confirmed)
                 return;
+
+            var platform = platformList.FirstOrDefault(p => p.Id == id);
+            if (platform != null && !string.IsNullOrEmpty(platform.ImagePath))
+            {
+                DeletePhysicalImage(platform.ImagePath);
+            }
+
             var updatedbyuser = Convert.ToInt32(CurrentUserId);
             await PlatformService.DeletePlatformAsync(id, updatedbyuser);
             await LoadPlatforms();
@@ -237,13 +325,125 @@ else
         }
         catch (Exception ex)
         {
+            ShowAlert("danger", $"Failed to delete platform: {ex.Message}");
         }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            try
+            {
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                var extension = Path.GetExtension(file.Name).ToLower();
+                if (!allowedExtensions.Contains(extension))
+                {
+                    ShowAlert("danger", "Only JPG, JPEG, PNG, and WEBP files are allowed.");
+                    return;
+                }
+
+                if (file.Size > 5 * 1024 * 1024)
+                {
+                    ShowAlert("danger", "Original image size must be less than 5MB.");
+                    return;
+                }
+
+                isUploadingImage = true;
+                StateHasChanged();
+
+                using (var stream = file.OpenReadStream(5 * 1024 * 1024))
+                using (var streamRef = new Microsoft.JSInterop.DotNetStreamReference(stream))
+                {
+                    var compressedBase64 = await JS.InvokeAsync<string>("compressImage", streamRef, file.ContentType, 1024, 1024, 0.75);
+
+                    previewImageBase64 = compressedBase64;
+                    var base64Data = compressedBase64.Substring(compressedBase64.IndexOf(",") + 1);
+                    compressedImageBytes = Convert.FromBase64String(base64Data);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowAlert("danger", $"Failed to process and compress image: {ex.Message}");
+            }
+            finally
+            {
+                isUploadingImage = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void RemoveImage()
+    {
+        if (!string.IsNullOrEmpty(platformModel.ImagePath))
+        {
+            imageToDeletePath = platformModel.ImagePath;
+        }
+        previewImageBase64 = null;
+        compressedImageBytes = null;
+        platformModel.ImagePath = null;
+        StateHasChanged();
+    }
+
+    private async Task<string?> SaveCompressedFileAsync(byte[] bytes)
+    {
+        try
+        {
+            var uploadsDir = Path.Combine(WebHostEnvironment.WebRootPath, "images", "platforms");
+            if (!Directory.Exists(uploadsDir))
+            {
+                Directory.CreateDirectory(uploadsDir);
+            }
+
+            var uniqueFileName = $"{DateTime.Now:ddMMyyyy_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}.jpg";
+            var filePath = Path.Combine(uploadsDir, uniqueFileName);
+
+            await File.WriteAllBytesAsync(filePath, bytes);
+            return $"/images/platforms/{uniqueFileName}";
+        }
+        catch (Exception ex)
+        {
+            ShowAlert("danger", $"Failed to save image file: {ex.Message}");
+            return null;
+        }
+    }
+
+    private void DeletePhysicalImage(string relativePath)
+    {
+        try
+        {
+            var absolutePath = Path.Combine(WebHostEnvironment.WebRootPath, relativePath.TrimStart('/'));
+            if (File.Exists(absolutePath))
+            {
+                File.Delete(absolutePath);
+            }
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    private void ShowAlert(string type, string message)
+    {
+        alertType = type;
+        alertMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+
+    private async Task AutoHideAlertAsync()
+    {
+        await Task.Delay(3000);
+        alertMessage = null;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HideModal()
     {
         await modal.HideAsync();
     }
+
     private async Task ValidateDuplicateNameAsync()
     {
         messageStore.Clear();
@@ -254,6 +454,7 @@ else
             editContext.NotifyValidationStateChanged();
         }
     }
+
     private async Task ValidateNameAsync()
     {
         messageStore.Clear();
@@ -262,8 +463,8 @@ else
             messageStore.Add(() => platformModel.Name, "Platform name is required.");
             editContext.NotifyValidationStateChanged();
         }
-
     }
+
     private async Task HandleNameChangeAsync(string newValue)
     {
         platformModel.Name = newValue;

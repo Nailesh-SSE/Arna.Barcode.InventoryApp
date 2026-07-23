@@ -1,4 +1,4 @@
-﻿using InventoryManagement.Core.Enums;
+using InventoryManagement.Core.Enums;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -27,5 +27,6 @@ namespace InventoryManagement.Services.Models
         public int SerialNumber { get; set; }
         [StringLength(1000)]
         public string? Remark { get; set; }
+        public string? ImagePath { get; set; }
     }
 }

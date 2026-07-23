@@ -416,6 +416,7 @@ else
         }
         catch (Exception ex)
         {
+            ShowAlert("danger", $"Failed to save product: {ex.Message}");
         }
         finally
         {
@@ -443,6 +444,7 @@ else
         }
         catch (Exception ex)
         {
+            ShowAlert("danger", $"Failed to delete product: {ex.Message}");
         }
     }
 
@@ -461,16 +463,16 @@ else
                     return;
                 }
 
-                if (file.Size > 10 * 1024 * 1024) // 10MB limit for original upload before compression
+                if (file.Size > 5 * 1024 * 1024) // 5MB limit for original upload before compression
                 {
-                    ShowAlert("danger", "Original image size must be less than 10MB.");
+                    ShowAlert("danger", "Original image size must be less than 5MB.");
                     return;
                 }
 
                 isUploadingImage = true;
                 StateHasChanged();
 
-                using (var stream = file.OpenReadStream(10 * 1024 * 1024))
+                using (var stream = file.OpenReadStream(5 * 1024 * 1024))
                 using (var streamRef = new Microsoft.JSInterop.DotNetStreamReference(stream))
                 {
                     // Call JS to compress image to max 1024x1024 and 75% quality (JPEG output)
@@ -519,8 +521,7 @@ else
                 Directory.CreateDirectory(uploadsDir);
             }
 
-            //var uniqueFileName = $"{Guid.NewGuid()}.jpg";
-            var uniqueFileName = $"{DateTime.Now:ddMMyyyy_HHmmss}.jpg";
+            var uniqueFileName = $"{DateTime.Now:ddMMyyyy_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}.jpg";
 
             var filePath = Path.Combine(uploadsDir, uniqueFileName);
 

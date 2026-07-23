@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 namespace InventoryManagement.Core.Entities;
 
 public class Platform : Common
@@ -12,4 +12,6 @@ public class Platform : Common
 
     [StringLength(500)]
     public string Remark { get; set; } = string.Empty;
+
+    public string? ImagePath { get; set; }
 }

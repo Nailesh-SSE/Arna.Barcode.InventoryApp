@@ -26,4 +26,5 @@ public class Company : Common
     public int SerialNumber { get; set; }
     [StringLength(1000)]
     public string? Remark { get; set; }
+    public string? ImagePath { get; set; }
 }

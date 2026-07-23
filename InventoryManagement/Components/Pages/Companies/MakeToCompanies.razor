@@ -3,7 +3,9 @@
 @inherits AuthComponentBase
 @inject ICompanyService CompanyService
 @inject IJSRuntime JS
+@inject IWebHostEnvironment WebHostEnvironment
 <PageTitle>Make Companies</PageTitle>
+
 @if (!CanView(Route))
 {
     <AccessDenied />
@@ -11,6 +13,14 @@
 else
 {
     <div class="container-fluid">
+        @if (!string.IsNullOrEmpty(alertMessage))
+        {
+            <div class="alert alert-@alertType alert-dismissible fade show mb-3" role="alert">
+                @alertMessage
+                <button type="button" class="btn-close" @onclick="() => alertMessage = null"></button>
+            </div>
+        }
+
         <div class="row mb-3">
             <div class="col">
                 <h3><Icon Name="IconName.Tags" /> Brands</h3>
@@ -45,6 +55,17 @@ else
 
                 <GridColumn TItem="CompanyModel" HeaderText="No" PropertyName="Id" Filterable=false>
                     @(companyList.IndexOf(context) + 1)
+                </GridColumn>
+
+                <GridColumn TItem="CompanyModel" HeaderText="Image" Filterable=false>
+                    @if (!string.IsNullOrEmpty(context.ImagePath))
+                    {
+                        <img src="@context.ImagePath" alt="Brand Image" style="max-height: 45px; max-width: 45px; object-fit: cover; border-radius: 4px; border: 1px solid #dee2e6;" />
+                    }
+                    else
+                    {
+                        <span class="text-muted small">No Image</span>
+                    }
                 </GridColumn>
 
                 <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="100">
@@ -102,6 +123,23 @@ else
                         <InputText class="form-control" @bind-Value="companyModel.Remark" />
                     </div>
                 </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Brand Image</label>
+                    <InputFile class="form-control" OnChange="HandleFileSelected" accept=".jpg,.jpeg,.png,.webp" />
+                    @if (isUploadingImage)
+                    {
+                        <div class="mt-2 text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</div>
+                    }
+                    @if (!string.IsNullOrEmpty(previewImageBase64) || !string.IsNullOrEmpty(companyModel.ImagePath))
+                    {
+                        <div class="mt-2 position-relative d-inline-block">
+                            <img src="@(!string.IsNullOrEmpty(previewImageBase64) ? previewImageBase64 : companyModel.ImagePath)" alt="Preview" style="max-height: 100px; max-width: 100px; border: 1px solid #ccc; border-radius: 4px; object-fit: cover;" />
+                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" @onclick="RemoveImage" style="padding: 0px 5px; font-size: 10px; line-height: 1.2; border-radius: 50%;">×</button>
+                        </div>
+                    }
+                </div>
+
                 @if (companyModel.Id > 0)
                 {
                     <div class="mb-3">
@@ -131,6 +169,13 @@ else
     private string Route = "/companies/make-to";
     private bool isSaveBtnLoading = false;
 
+    private bool isUploadingImage = false;
+    private string? previewImageBase64;
+    private byte[]? compressedImageBytes;
+    private string? imageToDeletePath;
+    private string? alertMessage;
+    private string alertType = "success";
+
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
@@ -149,8 +194,8 @@ else
     {
         editContext = new EditContext(companyModel);
         validationMessage = new ValidationMessageStore(editContext);
-
     }
+
     private async Task LoadCompanies()
     {
         companyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo)).ToList();
@@ -166,6 +211,9 @@ else
             IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
         };
+        previewImageBase64 = null;
+        compressedImageBytes = null;
+        imageToDeletePath = null;
         InitializeEditContextAsync();
         modal.ShowAsync();
     }
@@ -180,10 +228,14 @@ else
             Code = editCompany.Code,
             Name = editCompany.Name,
             CompanyType = CompanyType.MakeTo,
+            ImagePath = editCompany.ImagePath,
             IsActive = editCompany.IsActive,
             Remark = editCompany.Remark,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
         };
+        previewImageBase64 = null;
+        compressedImageBytes = null;
+        imageToDeletePath = null;
         InitializeEditContextAsync();
         modal.ShowAsync();
     }
@@ -206,13 +258,39 @@ else
 
             if (isEditMode)
             {
-                await CompanyService.UpdateCompanyAsync(companyModel);
+                if (!string.IsNullOrEmpty(imageToDeletePath))
+                {
+                    DeletePhysicalImage(imageToDeletePath);
+                    imageToDeletePath = null;
+                }
 
+                if (compressedImageBytes != null)
+                {
+                    var savedPath = await SaveCompressedFileAsync(compressedImageBytes);
+                    if (savedPath != null)
+                    {
+                        if (!string.IsNullOrEmpty(companyModel.ImagePath))
+                        {
+                            DeletePhysicalImage(companyModel.ImagePath);
+                        }
+                        companyModel.ImagePath = savedPath;
+                    }
+                }
+
+                await CompanyService.UpdateCompanyAsync(companyModel);
             }
             else
             {
-                await CompanyService.CreateCompanyAsync(companyModel);
+                if (compressedImageBytes != null)
+                {
+                    var savedPath = await SaveCompressedFileAsync(compressedImageBytes);
+                    if (savedPath != null)
+                    {
+                        companyModel.ImagePath = savedPath;
+                    }
+                }
 
+                await CompanyService.CreateCompanyAsync(companyModel);
             }
             await HideModal();
             await LoadCompanies();
@@ -220,7 +298,7 @@ else
         }
         catch (Exception ex)
         {
-
+            ShowAlert("danger", $"Failed to save brand: {ex.Message}");
         }
         finally
         {
@@ -235,6 +313,12 @@ else
             bool isConfirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
             if (isConfirm)
             {
+                var company = companyList.FirstOrDefault(c => c.Id == id);
+                if (company != null && !string.IsNullOrEmpty(company.ImagePath))
+                {
+                    DeletePhysicalImage(company.ImagePath);
+                }
+
                 var deletedBy = Convert.ToInt32(CurrentUserId);
                 await CompanyService.DeleteCompanyAsync(id, deletedBy);
                 await LoadCompanies();
@@ -243,14 +327,125 @@ else
         }
         catch (Exception ex)
         {
-
+            ShowAlert("danger", $"Failed to delete brand: {ex.Message}");
         }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            try
+            {
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                var extension = Path.GetExtension(file.Name).ToLower();
+                if (!allowedExtensions.Contains(extension))
+                {
+                    ShowAlert("danger", "Only JPG, JPEG, PNG, and WEBP files are allowed.");
+                    return;
+                }
+
+                if (file.Size > 5 * 1024 * 1024)
+                {
+                    ShowAlert("danger", "Original image size must be less than 5MB.");
+                    return;
+                }
+
+                isUploadingImage = true;
+                StateHasChanged();
+
+                using (var stream = file.OpenReadStream(5 * 1024 * 1024))
+                using (var streamRef = new Microsoft.JSInterop.DotNetStreamReference(stream))
+                {
+                    var compressedBase64 = await JS.InvokeAsync<string>("compressImage", streamRef, file.ContentType, 1024, 1024, 0.75);
+
+                    previewImageBase64 = compressedBase64;
+                    var base64Data = compressedBase64.Substring(compressedBase64.IndexOf(",") + 1);
+                    compressedImageBytes = Convert.FromBase64String(base64Data);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowAlert("danger", $"Failed to process and compress image: {ex.Message}");
+            }
+            finally
+            {
+                isUploadingImage = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void RemoveImage()
+    {
+        if (!string.IsNullOrEmpty(companyModel.ImagePath))
+        {
+            imageToDeletePath = companyModel.ImagePath;
+        }
+        previewImageBase64 = null;
+        compressedImageBytes = null;
+        companyModel.ImagePath = null;
+        StateHasChanged();
+    }
+
+    private async Task<string?> SaveCompressedFileAsync(byte[] bytes)
+    {
+        try
+        {
+            var uploadsDir = Path.Combine(WebHostEnvironment.WebRootPath, "images", "companies");
+            if (!Directory.Exists(uploadsDir))
+            {
+                Directory.CreateDirectory(uploadsDir);
+            }
+
+            var uniqueFileName = $"{DateTime.Now:ddMMyyyy_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}.jpg";
+            var filePath = Path.Combine(uploadsDir, uniqueFileName);
+
+            await File.WriteAllBytesAsync(filePath, bytes);
+            return $"/images/companies/{uniqueFileName}";
+        }
+        catch (Exception ex)
+        {
+            ShowAlert("danger", $"Failed to save image file: {ex.Message}");
+            return null;
+        }
+    }
+
+    private void DeletePhysicalImage(string relativePath)
+    {
+        try
+        {
+            var absolutePath = Path.Combine(WebHostEnvironment.WebRootPath, relativePath.TrimStart('/'));
+            if (File.Exists(absolutePath))
+            {
+                File.Delete(absolutePath);
+            }
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    private void ShowAlert(string type, string message)
+    {
+        alertType = type;
+        alertMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+
+    private async Task AutoHideAlertAsync()
+    {
+        await Task.Delay(3000);
+        alertMessage = null;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HideModal()
     {
         await modal.HideAsync();
     }
+
     private async Task ValidateDuplicateNameAsync()
     {
         validationMessage.Clear();
@@ -265,6 +460,7 @@ else
             editContext.NotifyValidationStateChanged();
         }
     }
+
     private async Task ValidateNameAsync()
     {
         validationMessage.Clear();
@@ -284,7 +480,6 @@ else
         }
         catch (Exception ex)
         {
-
         }
     }
 }

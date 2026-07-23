@@ -1,4 +1,4 @@
-﻿using InventoryManagement.Core.Entities;
+using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
@@ -22,6 +22,7 @@ public class PlatformService : IPlatformService
             Id = p.Id,
             Name = p.Name,
             Remark = p.Remark,
+            ImagePath = p.ImagePath,
             CreatedBy = p.CreatedBy,
             CreatedOn = p.CreatedOn,
             UpdatedBy = p.UpdatedBy,
@@ -42,6 +43,7 @@ public class PlatformService : IPlatformService
             {
                 Name = platformModel.Name,
                 Remark = platformModel.Remark,
+                ImagePath = platformModel.ImagePath,
                 CreatedBy = platformModel.CreatedBy,
                 CreatedOn = platformModel.CreatedOn,
                 IsActive = platformModel.IsActive,
@@ -65,6 +67,7 @@ public class PlatformService : IPlatformService
 
         existingPlatform.Name = platformModel.Name;
         existingPlatform.Remark = platformModel.Remark;
+        existingPlatform.ImagePath = platformModel.ImagePath;
         existingPlatform.UpdatedBy = platformModel.UpdatedBy;
         existingPlatform.UpdatedOn = DateTime.Now;
         existingPlatform.IsActive = platformModel.IsActive;
