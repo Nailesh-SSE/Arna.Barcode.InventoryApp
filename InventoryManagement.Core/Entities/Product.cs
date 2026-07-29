@@ -11,8 +11,12 @@ public class Product : Common
     [StringLength(100)]
     public string Name { get; set; } = string.Empty;
 
-    [StringLength(500)]
+    [StringLength(1000)]
     public string Description { get; set; } = string.Empty;
+
+    public decimal Price { get; set; }
+
+    public decimal MRP { get; set; }
 
     [Required]
     [StringLength(150)]
@@ -38,7 +42,6 @@ public class Product : Common
 
     public int ColourId { get; set; }
     public string ColourName { get; set; }
-    public string? ImagePath { get; set; }
     public virtual Category Category { get; set; } = null!;
     public virtual ICollection<InwardItem> InwardItems { get; set; } = new List<InwardItem>();
 }

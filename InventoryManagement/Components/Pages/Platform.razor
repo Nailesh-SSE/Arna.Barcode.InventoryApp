@@ -344,16 +344,16 @@ else
                     return;
                 }
 
-                if (file.Size > 5 * 1024 * 1024)
+                if (file.Size > 2 * 1024 * 1024)
                 {
-                    ShowAlert("danger", "Original image size must be less than 5MB.");
+                    ShowAlert("danger", "Original image size must be less than 2MB.");
                     return;
                 }
 
                 isUploadingImage = true;
                 StateHasChanged();
 
-                using (var stream = file.OpenReadStream(5 * 1024 * 1024))
+                using (var stream = file.OpenReadStream(2 * 1024 * 1024))
                 using (var streamRef = new Microsoft.JSInterop.DotNetStreamReference(stream))
                 {
                     var compressedBase64 = await JS.InvokeAsync<string>("compressImage", streamRef, file.ContentType, 1024, 1024, 0.75);

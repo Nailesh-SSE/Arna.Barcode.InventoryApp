@@ -12,6 +12,4 @@ public class Platform : Common
 
     [StringLength(500)]
     public string Remark { get; set; } = string.Empty;
-
-    public string? ImagePath { get; set; }
 }

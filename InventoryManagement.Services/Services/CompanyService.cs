@@ -21,6 +21,11 @@ public class CompanyService : ICompanyService
     {
         var companyRepository = _unitOfWork.GetRepository<Company>();
         var company = await companyRepository.FindAsync(c => !c.IsDeleted);
+
+        var imageRepo = _unitOfWork.GetRepository<ImageMapper>();
+        var images = await imageRepo.FindAsync(i => i.Type == "Company" && !i.IsDeleted);
+        var imageDict = images.GroupBy(i => i.ItemId).ToDictionary(g => g.Key, g => g.FirstOrDefault()?.ImagePath);
+
         var model = company.Select(c => new CompanyModel
         {
             Id = c.Id,
@@ -29,7 +34,7 @@ public class CompanyService : ICompanyService
             CompanyType = c.CompanyType,
             IsActive = c.IsActive,
             Remark = c.Remark,
-            ImagePath = c.ImagePath
+            ImagePath = imageDict.TryGetValue(c.Id, out var imgPath) ? imgPath : null
 
         }).ToList();
         return model;
@@ -42,6 +47,10 @@ public class CompanyService : ICompanyService
         if (company == null)
             return new List<CompanyModel>();
 
+        var imageRepo = _unitOfWork.GetRepository<ImageMapper>();
+        var images = await imageRepo.FindAsync(i => i.Type == "Company" && !i.IsDeleted);
+        var imageDict = images.GroupBy(i => i.ItemId).ToDictionary(g => g.Key, g => g.FirstOrDefault()?.ImagePath);
+
         var model = company.Select(c => new CompanyModel
         {
             Id = c.Id,
@@ -50,7 +59,7 @@ public class CompanyService : ICompanyService
             CompanyType = c.CompanyType,
             Remark = c.Remark,
             IsActive = c.IsActive,
-            ImagePath = c.ImagePath
+            ImagePath = imageDict.TryGetValue(c.Id, out var imgPath) ? imgPath : null
         }).ToList();
         return model;
     }
@@ -77,14 +86,31 @@ public class CompanyService : ICompanyService
                 CompanyType = companyModel.CompanyType,
                 SerialNumber = companyModel.SerialNumber,
                 Remark = companyModel.Remark,
-                ImagePath = companyModel.ImagePath,
                 CreatedBy = companyModel.CreatedBy,
                 CreatedOn = DateTime.Now
             };
 
-
             await companyRepository.AddAsync(entity);
             await _unitOfWork.SaveChangesAsync();
+
+            if (!string.IsNullOrEmpty(companyModel.ImagePath))
+            {
+                var imageRepo = _unitOfWork.GetRepository<ImageMapper>();
+                var imageEntity = new ImageMapper
+                {
+                    ItemId = entity.Id,
+                    Type = "Company",
+                    ImagePath = companyModel.ImagePath,
+                    DisplayOrder = 1,
+                    CreatedBy = companyModel.CreatedBy,
+                    CreatedOn = DateTime.Now,
+                    IsActive = true,
+                    IsDeleted = false
+                };
+                await imageRepo.AddAsync(imageEntity);
+                await _unitOfWork.SaveChangesAsync();
+            }
+
             return true;
         }
         catch (Exception ex)
@@ -110,11 +136,62 @@ public class CompanyService : ICompanyService
             entity.IsActive = companyModel.IsActive;
             entity.IsDeleted = false;
             entity.Remark = companyModel.Remark;
-            entity.ImagePath = companyModel.ImagePath;
             entity.UpdatedBy = companyModel.UpdatedBy;
             entity.UpdatedOn = DateTime.Now;
 
             companyRepository.Update(entity);
+            await _unitOfWork.SaveChangesAsync();
+
+            var imageRepo = _unitOfWork.GetRepository<ImageMapper>();
+            var existingImages = (await imageRepo.FindAsync(i => i.ItemId == companyModel.Id && i.Type == "Company" && !i.IsDeleted)).ToList();
+
+            if (string.IsNullOrEmpty(companyModel.ImagePath))
+            {
+                foreach (var img in existingImages)
+                {
+                    img.IsDeleted = true;
+                    img.IsActive = false;
+                    img.UpdatedBy = companyModel.UpdatedBy;
+                    img.UpdatedOn = DateTime.Now;
+                    imageRepo.Update(img);
+                }
+            }
+            else
+            {
+                var firstImg = existingImages.FirstOrDefault();
+                if (firstImg != null)
+                {
+                    firstImg.ImagePath = companyModel.ImagePath;
+                    firstImg.UpdatedBy = companyModel.UpdatedBy;
+                    firstImg.UpdatedOn = DateTime.Now;
+                    imageRepo.Update(firstImg);
+
+                    foreach (var extraImg in existingImages.Skip(1))
+                    {
+                        extraImg.IsDeleted = true;
+                        extraImg.IsActive = false;
+                        extraImg.UpdatedBy = companyModel.UpdatedBy;
+                        extraImg.UpdatedOn = DateTime.Now;
+                        imageRepo.Update(extraImg);
+                    }
+                }
+                else
+                {
+                    var imageEntity = new ImageMapper
+                    {
+                        ItemId = companyModel.Id,
+                        Type = "Company",
+                        ImagePath = companyModel.ImagePath,
+                        DisplayOrder = 1,
+                        CreatedBy = companyModel.UpdatedBy,
+                        CreatedOn = DateTime.Now,
+                        IsActive = true,
+                        IsDeleted = false
+                    };
+                    await imageRepo.AddAsync(imageEntity);
+                }
+            }
+
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -137,6 +214,18 @@ public class CompanyService : ICompanyService
             company.UpdatedBy = deletedBy;
             company.UpdatedOn = DateTime.Now;
             companyRepository.Update(company);
+
+            var imageRepo = _unitOfWork.GetRepository<ImageMapper>();
+            var images = await imageRepo.FindAsync(i => i.ItemId == id && i.Type == "Company" && !i.IsDeleted);
+            foreach (var img in images)
+            {
+                img.IsDeleted = true;
+                img.IsActive = false;
+                img.UpdatedBy = deletedBy;
+                img.UpdatedOn = DateTime.Now;
+                imageRepo.Update(img);
+            }
+
             await _unitOfWork.SaveChangesAsync();
             return true;
         }

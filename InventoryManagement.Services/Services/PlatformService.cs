@@ -17,12 +17,17 @@ public class PlatformService : IPlatformService
     {
         var platformRepository = _unitOfWork.GetRepository<Platform>();
         var entities = await platformRepository.FindAsync(p => !p.IsDeleted);
+
+        var imageRepo = _unitOfWork.GetRepository<ImageMapper>();
+        var images = await imageRepo.FindAsync(i => i.Type == "Platform" && !i.IsDeleted);
+        var imageDict = images.GroupBy(i => i.ItemId).ToDictionary(g => g.Key, g => g.FirstOrDefault()?.ImagePath);
+
         var platformModels = entities.Select(p => new PlatformModel
         {
             Id = p.Id,
             Name = p.Name,
             Remark = p.Remark,
-            ImagePath = p.ImagePath,
+            ImagePath = imageDict.TryGetValue(p.Id, out var imgPath) ? imgPath : null,
             CreatedBy = p.CreatedBy,
             CreatedOn = p.CreatedOn,
             UpdatedBy = p.UpdatedBy,
@@ -43,7 +48,6 @@ public class PlatformService : IPlatformService
             {
                 Name = platformModel.Name,
                 Remark = platformModel.Remark,
-                ImagePath = platformModel.ImagePath,
                 CreatedBy = platformModel.CreatedBy,
                 CreatedOn = platformModel.CreatedOn,
                 IsActive = platformModel.IsActive,
@@ -51,6 +55,25 @@ public class PlatformService : IPlatformService
             };
             await categoryRepository.AddAsync(newPlatform);
             await _unitOfWork.SaveChangesAsync();
+
+            if (!string.IsNullOrEmpty(platformModel.ImagePath))
+            {
+                var imageRepo = _unitOfWork.GetRepository<ImageMapper>();
+                var imageEntity = new ImageMapper
+                {
+                    ItemId = newPlatform.Id,
+                    Type = "Platform",
+                    ImagePath = platformModel.ImagePath,
+                    DisplayOrder = 1,
+                    CreatedBy = platformModel.CreatedBy,
+                    CreatedOn = platformModel.CreatedOn,
+                    IsActive = true,
+                    IsDeleted = false
+                };
+                await imageRepo.AddAsync(imageEntity);
+                await _unitOfWork.SaveChangesAsync();
+            }
+
             return true;
         }
         catch
@@ -67,13 +90,64 @@ public class PlatformService : IPlatformService
 
         existingPlatform.Name = platformModel.Name;
         existingPlatform.Remark = platformModel.Remark;
-        existingPlatform.ImagePath = platformModel.ImagePath;
         existingPlatform.UpdatedBy = platformModel.UpdatedBy;
         existingPlatform.UpdatedOn = DateTime.Now;
         existingPlatform.IsActive = platformModel.IsActive;
         existingPlatform.IsDeleted = platformModel.IsDeleted;
 
         platformRepository.Update(existingPlatform);
+        await _unitOfWork.SaveChangesAsync();
+
+        var imageRepo = _unitOfWork.GetRepository<ImageMapper>();
+        var existingImages = (await imageRepo.FindAsync(i => i.ItemId == platformModel.Id && i.Type == "Platform" && !i.IsDeleted)).ToList();
+
+        if (string.IsNullOrEmpty(platformModel.ImagePath))
+        {
+            foreach (var img in existingImages)
+            {
+                img.IsDeleted = true;
+                img.IsActive = false;
+                img.UpdatedBy = platformModel.UpdatedBy;
+                img.UpdatedOn = DateTime.Now;
+                imageRepo.Update(img);
+            }
+        }
+        else
+        {
+            var firstImg = existingImages.FirstOrDefault();
+            if (firstImg != null)
+            {
+                firstImg.ImagePath = platformModel.ImagePath;
+                firstImg.UpdatedBy = platformModel.UpdatedBy;
+                firstImg.UpdatedOn = DateTime.Now;
+                imageRepo.Update(firstImg);
+
+                foreach (var extraImg in existingImages.Skip(1))
+                {
+                    extraImg.IsDeleted = true;
+                    extraImg.IsActive = false;
+                    extraImg.UpdatedBy = platformModel.UpdatedBy;
+                    extraImg.UpdatedOn = DateTime.Now;
+                    imageRepo.Update(extraImg);
+                }
+            }
+            else
+            {
+                var imageEntity = new ImageMapper
+                {
+                    ItemId = platformModel.Id,
+                    Type = "Platform",
+                    ImagePath = platformModel.ImagePath,
+                    DisplayOrder = 1,
+                    CreatedBy = platformModel.UpdatedBy,
+                    CreatedOn = DateTime.Now,
+                    IsActive = true,
+                    IsDeleted = false
+                };
+                await imageRepo.AddAsync(imageEntity);
+            }
+        }
+
         await _unitOfWork.SaveChangesAsync();
         return true;
     }
@@ -88,6 +162,18 @@ public class PlatformService : IPlatformService
         existingPlatform.UpdatedBy = userid;
         existingPlatform.UpdatedOn = DateTime.Now;
         platformRepository.Update(existingPlatform);
+
+        var imageRepo = _unitOfWork.GetRepository<ImageMapper>();
+        var images = await imageRepo.FindAsync(i => i.ItemId == id && i.Type == "Platform" && !i.IsDeleted);
+        foreach (var img in images)
+        {
+            img.IsDeleted = true;
+            img.IsActive = false;
+            img.UpdatedBy = userid;
+            img.UpdatedOn = DateTime.Now;
+            imageRepo.Update(img);
+        }
+
         await _unitOfWork.SaveChangesAsync();
         return true;
     }

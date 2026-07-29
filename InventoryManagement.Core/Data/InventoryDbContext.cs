@@ -1,4 +1,4 @@
-﻿using InventoryManagement.Core.Entities;
+using InventoryManagement.Core.Entities;
 using InventoryManagement.Core.Entities.SP_Entities;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -29,6 +29,7 @@ public class InventoryDbContext : DbContext
     public DbSet<Platform> Platform { get; set; }
     public DbSet<SaleReturnItems> SaleReturnItems { get; set; }
     public DbSet<ErrorLog> ErrorLog { get; set; }  
+    public DbSet<ImageMapper> ImageMappers { get; set; }
 
     [NotMapped]
     public DbSet<InventoryReportDTO> InventoryReportDTO { get; set; }
@@ -137,6 +138,14 @@ public class InventoryDbContext : DbContext
         // Configure decimal precision
         modelBuilder.Entity<InwardItem>()
             .Property(ii => ii.ItemQuantity)
+            .HasPrecision(18, 2);
+
+        modelBuilder.Entity<Product>()
+            .Property(p => p.Price)
+            .HasPrecision(18, 2);
+
+        modelBuilder.Entity<Product>()
+            .Property(p => p.MRP)
             .HasPrecision(18, 2);
 
         // Configure indexes

@@ -2,6 +2,7 @@ using InventoryManagement.Core.Entities;
 using InventoryManagement.Infrastructure.Repositories;
 using InventoryManagement.Services.Interfaces;
 using InventoryManagement.Services.Models;
+using Microsoft.EntityFrameworkCore;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 
@@ -15,6 +16,44 @@ public class ProductService : IProductService
     {
         _unitOfWork = unitOfWork;
     }
+
+    private async Task PopulateProductImagesAsync(IEnumerable<ProductModel> productModels)
+    {
+        try
+        {
+            var imageRepo = _unitOfWork.GetRepository<ImageMapper>();
+            var productIds = productModels.Select(p => p.Id).ToList();
+            if (!productIds.Any()) return;
+
+            var allImages = await imageRepo.FindAsync(i => i.Type == "Product"  && i.IsDeleted == false);
+
+            var imageList = allImages.ToList();
+            var imagesByProductId = imageList.GroupBy(i => i.ItemId).ToDictionary(g => g.Key, g => g.OrderBy(x => x.DisplayOrder).ToList());
+
+            foreach (var product in productModels)
+            {
+                if (imagesByProductId.TryGetValue(product.Id, out var productImages))
+                {
+                    product.Images = productImages.Select(img => new ImageMapperModel
+                    {
+                        Id = img.Id,
+                        ItemId = img.ItemId,
+                        Type = img.Type,
+                        ImagePath = img.ImagePath,
+                        DisplayOrder = img.DisplayOrder,
+                        IsActive = img.IsActive,
+                        IsDeleted = img.IsDeleted,
+                        CreatedBy = img.CreatedBy,
+                        CreatedOn = img.CreatedOn,
+                        UpdatedBy = img.UpdatedBy,
+                        UpdatedOn = img.UpdatedOn
+                    }).ToList();
+                }
+            }
+        }
+        catch (Exception) { }
+    }
+
     public async Task<List<ProductModel>> GetDistinctProductsAsync()
     {
         var productRepository = _unitOfWork.GetRepository<Product>();
@@ -29,6 +68,8 @@ public class ProductService : IProductService
             Name = p.Name,
             SKU = p.SKU,
             Description = p.Description,
+            Price = p.Price,
+            MRP = p.MRP,
             CategoryId = p.CategoryId,
             CategoryName = p.CategoryName,
             CreatedBy = p.CreatedBy,
@@ -43,10 +84,12 @@ public class ProductService : IProductService
             MakeCompany = p.MakeCompany,
             ColourId= p.ColourId,
             ColourName= p.ColourName,
-            ImagePath= p.ImagePath,
         }).ToList();
+
+        await PopulateProductImagesAsync(productModels);
         return productModels;
     }
+
     public async Task<List<ProductModel>> GetAllProductsAsync()
     {
         var productRepository = _unitOfWork.GetRepository<Product>();
@@ -61,6 +104,8 @@ public class ProductService : IProductService
             Name = p.Name,
             SKU = p.SKU,
             Description = p.Description,
+            Price = p.Price,
+            MRP = p.MRP,
             CategoryId = p.CategoryId,
             CategoryName = p.CategoryName,
             CreatedBy = p.CreatedBy,
@@ -75,9 +120,9 @@ public class ProductService : IProductService
             MakeCompany = p.MakeCompany,
             ColourId=p.ColourId,
             ColourName=p.ColourName,    
-            ImagePath=p.ImagePath,
         }).ToList();
 
+        await PopulateProductImagesAsync(getallproducts);
         return getallproducts;
     }
 
@@ -85,13 +130,16 @@ public class ProductService : IProductService
     {
         var productRepository = _unitOfWork.GetRepository<Product>();
         var product = await productRepository.GetByIdAsync(id);
+        if (product == null) return null;
 
-        var getproductbyid=new ProductModel
+        var getproductbyid = new ProductModel
         {
             Id = product.Id,
             Name = product.Name,
             SKU = product.SKU,
             Description = product.Description,
+            Price = product.Price,
+            MRP = product.MRP,
             CategoryId = product.CategoryId,
             CategoryName = product.CategoryName,
             CreatedBy = product.CreatedBy,
@@ -106,8 +154,9 @@ public class ProductService : IProductService
             MakeCompany = product.MakeCompany,
             ColourName= product.ColourName,
             ColourId = product.ColourId,
-            ImagePath= product.ImagePath,
         };
+
+        await PopulateProductImagesAsync(new[] { getproductbyid });
         return getproductbyid;
     }
 
@@ -115,42 +164,68 @@ public class ProductService : IProductService
     {
         try
         {
-            
             if (!await IsSkuUniqueAsync(productModel.SKU))
                 return false;
 
-            if (!await IsProductNameUniqueAsync(productModel.Name,productModel.MakeCompanyId ,productModel.Id))
+            if (!await IsProductNameUniqueAsync(productModel.Name, productModel.MakeCompanyId, productModel.Id))
                 return false;
 
             var categoryRepository = _unitOfWork.GetRepository<Category>();
             var category = await categoryRepository.GetByIdAsync(productModel.CategoryId);
             if (category == null)
                 return false;
+
             await GenerateProudctSkuAndSquenceNumberAsync(productModel);
             var createdProduct = new Product
-                {
-                    Name = productModel.Name,
-                    SKU = productModel.SKU,
-                    Description = productModel.Description,
-                    CategoryId = productModel.CategoryId,
-                    CategoryName = productModel.CategoryName,
-                    CreatedBy = productModel.CreatedBy,
-                    CreatedOn = productModel.CreatedOn,
-                    IsActive = true,
-                    IsDeleted = productModel.IsDeleted,
-                    Unit = productModel.Unit,
-                    UnitId = productModel.UnitId,
-                    MakeCompany = productModel.MakeCompany,
-                    MakeCompanyId = productModel.MakeCompanyId,
-                    SerialNumber= productModel.SerialNumber,
-                    ColourId= productModel.ColourId,
-                    ColourName= productModel.ColourName,
-                    ImagePath = productModel.ImagePath,
+            {
+                Name = productModel.Name,
+                SKU = productModel.SKU,
+                Description = productModel.Description,
+                Price = productModel.Price,
+                MRP = productModel.MRP,
+                CategoryId = productModel.CategoryId,
+                CategoryName = productModel.CategoryName,
+                CreatedBy = productModel.CreatedBy,
+                CreatedOn = productModel.CreatedOn,
+                IsActive = true,
+                IsDeleted = productModel.IsDeleted,
+                Unit = productModel.Unit,
+                UnitId = productModel.UnitId,
+                MakeCompany = productModel.MakeCompany,
+                MakeCompanyId = productModel.MakeCompanyId,
+                SerialNumber = productModel.SerialNumber,
+                ColourId = productModel.ColourId,
+                ColourName = productModel.ColourName,
             };
 
             var productRepository = _unitOfWork.GetRepository<Product>();
             await productRepository.AddAsync(createdProduct);
             await _unitOfWork.SaveChangesAsync();
+
+            // Save multi-images into ImageMapper table
+            if (productModel.Images != null && productModel.Images.Any(x => !x.IsMarkedForDeletion))
+            {
+                var imageRepo = _unitOfWork.GetRepository<ImageMapper>();
+                int order = 1;
+                foreach (var img in productModel.Images.Where(x => !x.IsMarkedForDeletion))
+                {
+                    var imageEntity = new ImageMapper
+                    {
+                        ItemId = createdProduct.Id,
+                        Type = "Product",
+                        ImagePath = img.ImagePath,
+                        DisplayOrder = img.DisplayOrder > 0 ? img.DisplayOrder : order,
+                        CreatedBy = productModel.CreatedBy,
+                        CreatedOn = DateTime.Now,
+                        IsActive = true,
+                        IsDeleted = false
+                    };
+                    await imageRepo.AddAsync(imageEntity);
+                    order++;
+                }
+                await _unitOfWork.SaveChangesAsync();
+            }
+
             return true;
         }
         catch
@@ -166,41 +241,89 @@ public class ProductService : IProductService
             if (!await IsSkuUniqueAsync(productModel.SKU, productModel.Id))
                 return false;
 
-            if (!await IsProductNameUniqueAsync(productModel.Name, productModel.MakeCompanyId,productModel.ColourId,productModel.Id))
+            if (!await IsProductNameUniqueAsync(productModel.Name, productModel.MakeCompanyId, productModel.ColourId, productModel.Id))
                 return false;
 
             var categoryRepository = _unitOfWork.GetRepository<Category>();
             var category = await categoryRepository.GetByIdAsync(productModel.CategoryId);
             if (category == null)
                 return false;
-           
-            await GenerateProudctSkuAndSquenceNumberAsync(productModel);
-            
-            var ProductRepository = _unitOfWork.GetRepository<Product>();
-            var existingProduct = await ProductRepository.GetByIdAsync(productModel.Id);
 
+            await GenerateProudctSkuAndSquenceNumberAsync(productModel);
+
+            var productRepository = _unitOfWork.GetRepository<Product>();
+            var existingProduct = await productRepository.GetByIdAsync(productModel.Id);
+            if (existingProduct == null) return false;
 
             existingProduct.Name = productModel.Name;
             existingProduct.SKU = productModel.SKU;
             existingProduct.Description = productModel.Description;
+            existingProduct.Price = productModel.Price;
+            existingProduct.MRP = productModel.MRP;
             existingProduct.CategoryId = productModel.CategoryId;
             existingProduct.CategoryName = productModel.CategoryName;
             existingProduct.UpdatedBy = productModel.UpdatedBy;
-            existingProduct.UpdatedOn = productModel.UpdatedOn;
+            existingProduct.UpdatedOn = DateTime.Now;
             existingProduct.IsActive = productModel.IsActive;
             existingProduct.IsDeleted = productModel.IsDeleted;
             existingProduct.Unit = productModel.Unit;
             existingProduct.UnitId = productModel.UnitId;
             existingProduct.MakeCompany = productModel.MakeCompany;
-            existingProduct.MakeCompanyId = productModel.MakeCompanyId; 
+            existingProduct.MakeCompanyId = productModel.MakeCompanyId;
             existingProduct.ColourId = productModel.ColourId;
-            existingProduct.ColourName = productModel.ColourName;  
-            existingProduct.ImagePath = productModel.ImagePath;
-            existingProduct.UpdatedBy= productModel.UpdatedBy;
-            existingProduct.UpdatedOn= DateTime.Now;
+            existingProduct.ColourName = productModel.ColourName;
 
-            var productRepository = _unitOfWork.GetRepository<Product>();
             productRepository.Update(existingProduct);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Sync images in ImageMapper table
+            var imageRepo = _unitOfWork.GetRepository<ImageMapper>();
+            var existingImages = (await imageRepo.FindAsync(i => i.ItemId == productModel.Id && i.Type == "Product")).ToList();
+
+            // 1. Update/Delete existing DB images
+            foreach (var dbImg in existingImages)
+            {
+                var modelImg = productModel.Images.FirstOrDefault(i => i.Id == dbImg.Id);
+                if (modelImg == null || modelImg.IsMarkedForDeletion)
+                {
+                    dbImg.IsDeleted = true;
+                    dbImg.IsActive = false;
+                    dbImg.UpdatedBy = productModel.UpdatedBy;
+                    dbImg.UpdatedOn = DateTime.Now;
+                    imageRepo.Update(dbImg);
+                }
+                else
+                {
+                    dbImg.DisplayOrder = modelImg.DisplayOrder;
+                    dbImg.ImagePath = modelImg.ImagePath;
+                    dbImg.IsActive = true;
+                    dbImg.IsDeleted = false;
+                    dbImg.UpdatedBy = productModel.UpdatedBy;
+                    dbImg.UpdatedOn = DateTime.Now;
+                    imageRepo.Update(dbImg);
+                }
+            }
+
+            // 2. Add new images
+            if (productModel.Images != null)
+            {
+                foreach (var newImg in productModel.Images.Where(i => i.Id == 0 && !i.IsMarkedForDeletion))
+                {
+                    var imageEntity = new ImageMapper
+                    {
+                        ItemId = productModel.Id,
+                        Type = "Product",
+                        ImagePath = newImg.ImagePath,
+                        DisplayOrder = newImg.DisplayOrder,
+                        CreatedBy = productModel.UpdatedBy,
+                        CreatedOn = DateTime.Now,
+                        IsActive = true,
+                        IsDeleted = false
+                    };
+                    await imageRepo.AddAsync(imageEntity);
+                }
+            }
+
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -222,7 +345,7 @@ public class ProductService : IProductService
             var hasInwardItems = await inwardItemRepository.FindAsync(ii => ii.ProductId == id && !ii.IsDeleted);
             if (hasInwardItems.Any())
             {
-                return false; 
+                return false;
             }
 
             product.IsDeleted = true;
@@ -230,6 +353,19 @@ public class ProductService : IProductService
             product.UpdatedBy = userid;
             product.UpdatedOn = DateTime.Now;
             productRepository.Update(product);
+
+            // Soft delete associated images
+            var imageRepo = _unitOfWork.GetRepository<ImageMapper>();
+            var images = await imageRepo.FindAsync(i => i.ItemId == id && i.Type == "Product" && !i.IsDeleted);
+            foreach (var img in images)
+            {
+                img.IsDeleted = true;
+                img.IsActive = false;
+                img.UpdatedBy = userid;
+                img.UpdatedOn = DateTime.Now;
+                imageRepo.Update(img);
+            }
+
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
@@ -243,16 +379,17 @@ public class ProductService : IProductService
     {
         var productRepository = _unitOfWork.GetRepository<Product>();
         var products = await productRepository.FindAsync(p => p.SKU == sku && !p.IsDeleted);
-        
+
         if (excludeId.HasValue)
             products = products.Where(p => p.Id != excludeId.Value);
 
         return !products.Any();
     }
-    public async Task<bool> IsProductNameUniqueAsync(string name,int companyId,int colorid ,int? excludeId = null)
+
+    public async Task<bool> IsProductNameUniqueAsync(string name, int companyId, int colorid, int? excludeId = null)
     {
         var productRepository = _unitOfWork.GetRepository<Product>();
-        var products = await productRepository.FindAsync(p => p.Name.ToLower() == name.ToLower() && p.MakeCompanyId==companyId && p.ColourId==colorid &&!p.IsDeleted );
+        var products = await productRepository.FindAsync(p => p.Name.ToLower() == name.ToLower() && p.MakeCompanyId == companyId && p.ColourId == colorid && !p.IsDeleted);
 
         if (excludeId.HasValue)
             products = products.Where(p => p.Id != excludeId.Value);
@@ -264,7 +401,7 @@ public class ProductService : IProductService
     {
         var productRepository = _unitOfWork.GetRepository<Product>();
         var products = await productRepository.FindAsync(p => p.CategoryId == categoryId && !p.IsDeleted);
-        if(products==null)
+        if (products == null || !products.Any())
         {
             return new List<ProductModel>();
         }
@@ -274,6 +411,8 @@ public class ProductService : IProductService
             Name = p.Name,
             SKU = p.SKU,
             Description = p.Description,
+            Price = p.Price,
+            MRP = p.MRP,
             CategoryId = p.CategoryId,
             CategoryName = p.CategoryName,
             CreatedBy = p.CreatedBy,
@@ -286,11 +425,11 @@ public class ProductService : IProductService
             UnitId = p.UnitId,
             MakeCompany = p.MakeCompany,
             MakeCompanyId = p.MakeCompanyId,
-            ColourId= p.ColourId,
-            ColourName= p.ColourName,
-            ImagePath= p.ImagePath,
-
+            ColourId = p.ColourId,
+            ColourName = p.ColourName,
         }).ToList();
+
+        await PopulateProductImagesAsync(getproductsbycategory);
         return getproductsbycategory;
     }
 
@@ -300,7 +439,7 @@ public class ProductService : IProductService
         var proudcts = await proudctRepository.GetAllAsync();
         var product = proudcts.Where(a => a.IsActive && !a.IsDeleted).OrderByDescending(a => a.Id).FirstOrDefault();
         model.SerialNumber = product != null ? product.SerialNumber + 1 : 0;
-        model.SKU = model.MakeCompany + " " + model.Name + " (" + model.ColourName +")";
+        model.SKU = model.MakeCompany + " " + model.Name + " (" + model.ColourName + ")";
     }
 
     public async Task<byte[]> ExportToExcelAsync()
@@ -314,9 +453,9 @@ public class ProductService : IProductService
         // Header row
         IRow headerRow = sheet.CreateRow(0);
         string[] headers = new string[]
-           {
-         "No.", "Category", "Brand" , "Product", "Color", "Unit","Description", "Status"
-           };
+        {
+            "No.", "Category", "Brand" , "Product", "Color", "Unit", "Price", "MRP", "Description", "Status"
+        };
 
         for (int i = 0; i < headers.Length; i++)
         {
@@ -334,8 +473,10 @@ public class ProductService : IProductService
             row.CreateCell(3).SetCellValue(product.Name);
             row.CreateCell(4).SetCellValue(product.ColourName);
             row.CreateCell(5).SetCellValue(product.Unit);
-            row.CreateCell(6).SetCellValue(product.Description);
-            row.CreateCell(7).SetCellValue(product.IsActive ? "Active" : "Inactive");
+            row.CreateCell(6).SetCellValue((double)product.Price);
+            row.CreateCell(7).SetCellValue((double)product.MRP);
+            row.CreateCell(8).SetCellValue(product.Description);
+            row.CreateCell(9).SetCellValue(product.IsActive ? "Active" : "Inactive");
             counter++;
         }
 
@@ -351,6 +492,5 @@ public class ProductService : IProductService
             workbook.Write(exportData);
             return exportData.ToArray();
         }
-
     }
-} 
+}
