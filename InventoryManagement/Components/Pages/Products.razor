@@ -82,6 +82,22 @@ else
                     @index
                 </GridColumn>
 
+                <GridColumn TItem="ProductModel" HeaderText="Image" Filterable=false>
+                    @if (!string.IsNullOrEmpty(context.ImagePath))
+                    {
+                        <div class="position-relative d-inline-block">
+                            <img src="@context.ImagePath" alt="Product Image" style="max-height: 45px; max-width: 45px; object-fit: cover; border-radius: 4px; border: 1px solid #dee2e6;" />
+                            @if (context.Images != null && context.Images.Count(i => !i.IsMarkedForDeletion) > 1)
+                            {
+                                <span class="badge bg-secondary position-absolute bottom-0 end-0 m-0" style="font-size: 8px; padding: 2px 4px;">+@(context.Images.Count(i => !i.IsMarkedForDeletion) - 1)</span>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <span class="text-muted small">No Image</span>
+                    }
+                </GridColumn>
                 <GridColumn TItem="ProductModel" HeaderText="SKU" PropertyName="SKU" SortKeySelector="item => item.SKU" SortString="SKU" FilterTextboxWidth="98">
                     @context.SKU
                 </GridColumn>
@@ -106,22 +122,7 @@ else
                     @context.MRP.ToString("N2")
                 </GridColumn>
 
-                <GridColumn TItem="ProductModel" HeaderText="Image" Filterable=false>
-                    @if (!string.IsNullOrEmpty(context.ImagePath))
-                    {
-                        <div class="position-relative d-inline-block">
-                            <img src="@context.ImagePath" alt="Product Image" style="max-height: 45px; max-width: 45px; object-fit: cover; border-radius: 4px; border: 1px solid #dee2e6;" />
-                            @if (context.Images != null && context.Images.Count(i => !i.IsMarkedForDeletion) > 1)
-                            {
-                                <span class="badge bg-secondary position-absolute bottom-0 end-0 m-0" style="font-size: 8px; padding: 2px 4px;">+@(context.Images.Count(i => !i.IsMarkedForDeletion) - 1)</span>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <span class="text-muted small">No Image</span>
-                    }
-                </GridColumn>
+               
 
                 <GridColumn TItem="ProductModel" HeaderText="Status" PropertyName="IsActive" SortKeySelector="item => item.IsActive" SortString="IsActive" Sortable=false>
                     @if (context.IsActive)

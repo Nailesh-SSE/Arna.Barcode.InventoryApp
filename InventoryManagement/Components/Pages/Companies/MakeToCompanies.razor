@@ -60,7 +60,7 @@ else
                 <GridColumn TItem="CompanyModel" HeaderText="Image" Filterable=false>
                     @if (!string.IsNullOrEmpty(context.ImagePath))
                     {
-                        <img src="@context.ImagePath" alt="Brand Image" style="max-height: 45px; max-width: 45px; object-fit: cover; border-radius: 4px; border: 1px solid #dee2e6;" />
+                        <img src="@context.ImagePath" alt="Brand Image" style="max-height: 45px; max-width: 45px; object-fit: cover; border-radius: 4px; border: 1px solid #dee2e6; cursor: pointer;" title="Click to view image" @onclick="() => OpenImagePreviewModalForUrl(context.ImagePath)" />
                     }
                     else
                     {
@@ -133,9 +133,19 @@ else
                     }
                     @if (!string.IsNullOrEmpty(previewImageBase64) || !string.IsNullOrEmpty(companyModel.ImagePath))
                     {
-                        <div class="mt-2 position-relative d-inline-block">
-                            <img src="@(!string.IsNullOrEmpty(previewImageBase64) ? previewImageBase64 : companyModel.ImagePath)" alt="Preview" style="max-height: 100px; max-width: 100px; border: 1px solid #ccc; border-radius: 4px; object-fit: cover;" />
-                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" @onclick="RemoveImage" style="padding: 0px 5px; font-size: 10px; line-height: 1.2; border-radius: 50%;">×</button>
+                        var previewSrc = !string.IsNullOrEmpty(previewImageBase64) ? previewImageBase64 : companyModel.ImagePath;
+                        <div class="card overflow-hidden shadow-sm position-relative border-0 rounded-3 bg-dark text-white mt-2" style="min-height: 180px;">
+                            <div class="d-flex justify-content-center align-items-center position-relative p-2" style="height: 170px; background-color: #1e1e1e; cursor: pointer;" @onclick="OpenImagePreviewModal" title="Click to view full image">
+                                <img src="@previewSrc" alt="Brand Image" style="max-height: 155px; max-width: 100%; object-fit: contain; transition: transform 0.2s ease;" />
+                                <span class="badge bg-dark bg-opacity-75 position-absolute top-0 end-0 m-2" style="font-size: 10px;">
+                                    <Icon Name="IconName.ArrowsAngleExpand" /> Click to enlarge
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-end align-items-center px-3 py-1 bg-dark border-top border-secondary">
+                                <button type="button" class="btn btn-sm btn-danger d-flex align-items-center gap-1" @onclick="RemoveImage" @onclick:stopPropagation="true">
+                                    <Icon Name="IconName.Trash" /> Remove Image
+                                </button>
+                            </div>
                         </div>
                     }
                 </div>
@@ -153,10 +163,30 @@ else
             </EditForm>
         </BodyTemplate>
     </Modal>
+
+    <Modal @ref="imagePreviewModal" Title="Brand Image Viewer" Size="ModalSize.Large">
+        <BodyTemplate>
+            @{
+                var brandImgSrc = !string.IsNullOrEmpty(previewModalImageUrl) ? previewModalImageUrl : (!string.IsNullOrEmpty(previewImageBase64) ? previewImageBase64 : companyModel.ImagePath);
+            }
+            @if (!string.IsNullOrEmpty(brandImgSrc))
+            {
+                <div class="text-center position-relative bg-dark p-3 rounded-3" style="min-height: 380px;">
+                    <img src="@brandImgSrc" alt="Brand Image Full" style="max-height: 480px; max-width: 100%; object-fit: contain;" />
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4 text-muted">No image to display</div>
+            }
+        </BodyTemplate>
+    </Modal>
 }
 
 @code {
     private Modal modal = default!;
+    private Modal imagePreviewModal = default!;
+    private string? previewModalImageUrl;
     private bool isLoading = true;
     private string modalTitle = "Add Brand";
     private bool isEditMode = false;
@@ -480,6 +510,29 @@ else
         }
         catch (Exception ex)
         {
+        }
+    }
+
+    private async Task OpenImagePreviewModal()
+    {
+        previewModalImageUrl = !string.IsNullOrEmpty(previewImageBase64) ? previewImageBase64 : companyModel.ImagePath;
+        StateHasChanged();
+        if (imagePreviewModal != null)
+        {
+            await imagePreviewModal.ShowAsync();
+        }
+    }
+
+    private async Task OpenImagePreviewModalForUrl(string? url)
+    {
+        if (!string.IsNullOrEmpty(url))
+        {
+            previewModalImageUrl = url;
+            StateHasChanged();
+            if (imagePreviewModal != null)
+            {
+                await imagePreviewModal.ShowAsync();
+            }
         }
     }
 }
