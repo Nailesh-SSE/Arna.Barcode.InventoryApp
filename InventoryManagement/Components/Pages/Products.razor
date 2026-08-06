@@ -9,6 +9,7 @@
 @using InventoryManagement.Services.Models;
 @inherits AuthComponentBase
 @inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment WebHostEnvironment
+@inject IConfiguration Configuration
 
 <PageTitle>Products</PageTitle>
 @if (!CanView(Route))
@@ -82,7 +83,7 @@ else
                     @index
                 </GridColumn>
 
-                <GridColumn TItem="ProductModel" HeaderText="Image" Filterable=false>
+                @* <GridColumn TItem="ProductModel" HeaderText="Image" Filterable=false>
                     @if (!string.IsNullOrEmpty(context.ImagePath))
                     {
                         <div class="position-relative d-inline-block">
@@ -97,7 +98,7 @@ else
                     {
                         <span class="text-muted small">No Image</span>
                     }
-                </GridColumn>
+                </GridColumn> *@
                 <GridColumn TItem="ProductModel" HeaderText="SKU" PropertyName="SKU" SortKeySelector="item => item.SKU" SortString="SKU" FilterTextboxWidth="98">
                     @context.SKU
                 </GridColumn>
@@ -233,8 +234,8 @@ else
                     </div>
 
                     <div class="col-md-12 mb-3">
-                        <label class="form-label font-weight-bold">Product Images</label>
-                        <InputFile class="form-control mb-2" OnChange="HandleFilesSelected" accept=".jpg,.jpeg,.png,.webp" multiple />
+                        <label class="form-label font-weight-bold">Product Images </label><span class="text-muted fw-normal small">(Max size per image: @(maxImageSizeMB) MB)</span>
+                        <InputFile @key="inputFileKey" class="@($"form-control mb-2 {GetFileFieldCssClass(() => productModel.Images)}")" OnChange="HandleFilesSelected" @onclick="ClearImageValidation" accept=".jpg,.jpeg,.png,.webp" multiple />
                         @if (isUploadingImage)
                         {
                             <div class="mb-2 text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Uploading image(s)...</div>
@@ -448,6 +449,17 @@ else
     private bool isEditMode = false;
     private EditContext editContext;
     private ValidationMessageStore messageStore;
+
+    private int maxImageSizeMB => Configuration.GetValue<int?>("ImageSettings:MaxImageSizeMB") ?? Configuration.GetValue<int>("MaxImageSizeMB", 3);
+    private long maxImageSizeBytes => maxImageSizeMB * 1024L * 1024L;
+    private Guid inputFileKey = Guid.NewGuid();
+
+    private string GetFileFieldCssClass<T>(System.Linq.Expressions.Expression<Func<T>> accessor)
+    {
+        if (editContext == null) return "";
+        var fieldIdentifier = FieldIdentifier.Create(accessor);
+        return editContext.GetValidationMessages(fieldIdentifier).Any() ? "invalid is-invalid" : "";
+    }
     private List<UnitModel> Units => CommonUtils.UnitList;
     private string Route = "/products";
     private bool isSaveBtnLoading = false;
@@ -501,6 +513,7 @@ else
             UnitId = (int)UnitType.PCS,
             Images = new List<ImageMapperModel>()
         };
+        inputFileKey = Guid.NewGuid();
         InitializeEditContext();
         modal.ShowAsync();
     }
@@ -545,6 +558,7 @@ else
             UpdatedBy = Convert.ToInt32(CurrentUserId),
             UpdatedOn = DateTime.Now
         };
+        inputFileKey = Guid.NewGuid();
         InitializeEditContext();
         modal.ShowAsync();
     }
@@ -638,10 +652,16 @@ else
 
     private async Task HandleFilesSelected(InputFileChangeEventArgs e)
     {
+        messageStore.Clear(FieldIdentifier.Create(() => productModel.Images));
+        editContext.NotifyValidationStateChanged();
+
         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
         var files = e.GetMultipleFiles(10);
         if (files != null && files.Count > 0)
         {
+            var invalidExtensionFiles = new List<string>();
+            var oversizedFiles = new List<string>();
+
             try
             {
                 isUploadingImage = true;
@@ -652,28 +672,19 @@ else
                     var extension = Path.GetExtension(file.Name).ToLower();
                     if (!allowedExtensions.Contains(extension))
                     {
-                        ShowAlert("danger", $"File '{file.Name}' is not allowed. Only JPG, JPEG, PNG, and WEBP files are allowed.");
+                        invalidExtensionFiles.Add(file.Name);
                         continue;
                     }
 
-                    if (file.Size > 5 * 1024 * 1024)
+                    if (file.Size > maxImageSizeBytes)
                     {
-                        ShowAlert("danger", $"File '{file.Name}' exceeds 5MB limit.");
+                        oversizedFiles.Add(file.Name);
                         continue;
                     }
 
                     using var ms = new MemoryStream();
-                    await file.OpenReadStream(5 * 1024 * 1024).CopyToAsync(ms);
+                    await file.OpenReadStream(maxImageSizeBytes).CopyToAsync(ms);
                     var bytes = ms.ToArray();
-
-                    // Commented out image compression code as requested by user:
-                    // using (var stream = file.OpenReadStream(5 * 1024 * 1024))
-                    // using (var streamRef = new Microsoft.JSInterop.DotNetStreamReference(stream))
-                    // {
-                    //     var compressedBase64 = await JS.InvokeAsync<string>("compressImage", streamRef, file.ContentType, 1024, 1024, 0.75);
-                    //     var base64Data = compressedBase64.Substring(compressedBase64.IndexOf(",") + 1);
-                    //     var bytes = Convert.FromBase64String(base64Data);
-                    // }
 
                     var previewBase64 = $"data:{file.ContentType};base64,{Convert.ToBase64String(bytes)}";
 
@@ -697,10 +708,27 @@ else
                 {
                     currentSlideIndex = activeImages.Count - 1;
                 }
+
+                if (invalidExtensionFiles.Any() || oversizedFiles.Any())
+                {
+                    inputFileKey = Guid.NewGuid();
+                    var errorMessages = new List<string>();
+                    if (invalidExtensionFiles.Any())
+                    {
+                        errorMessages.Add($"File(s) with invalid extension: {string.Join(", ", invalidExtensionFiles)}. Only JPG, JPEG, PNG, and WEBP are allowed.");
+                    }
+                    if (oversizedFiles.Any())
+                    {
+                        errorMessages.Add($"File(s) exceeding {maxImageSizeMB}MB limit: {string.Join(", ", oversizedFiles)}.");
+                    }
+
+                    await JS.InvokeVoidAsync("alert", string.Join("\n\n", errorMessages) + "\n\nPlease change or compress file(s) and upload again.");
+                }
             }
             catch (Exception ex)
             {
-                ShowAlert("danger", $"Failed to process uploaded images: {ex.Message}");
+                inputFileKey = Guid.NewGuid();
+                await JS.InvokeVoidAsync("alert", $"Failed to process image(s): {ex.Message}");
             }
             finally
             {
@@ -1060,5 +1088,15 @@ else
         await Task.Delay(3000);
         alertMessage = null;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private void ClearImageValidation()
+    {
+        if (editContext == null || messageStore == null)
+            return;
+
+        var imageField = FieldIdentifier.Create(() => productModel.Images);
+        messageStore.Clear(imageField);
+        editContext.NotifyValidationStateChanged();
     }
 }

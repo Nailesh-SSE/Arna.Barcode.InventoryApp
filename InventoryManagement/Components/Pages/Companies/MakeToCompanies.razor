@@ -4,6 +4,7 @@
 @inject ICompanyService CompanyService
 @inject IJSRuntime JS
 @inject IWebHostEnvironment WebHostEnvironment
+@inject IConfiguration Configuration
 <PageTitle>Make Companies</PageTitle>
 
 @if (!CanView(Route))
@@ -57,7 +58,7 @@ else
                     @(companyList.IndexOf(context) + 1)
                 </GridColumn>
 
-                <GridColumn TItem="CompanyModel" HeaderText="Image" Filterable=false>
+               @*  <GridColumn TItem="CompanyModel" HeaderText="Image" Filterable=false>
                     @if (!string.IsNullOrEmpty(context.ImagePath))
                     {
                         <img src="@context.ImagePath" alt="Brand Image" style="max-height: 45px; max-width: 45px; object-fit: cover; border-radius: 4px; border: 1px solid #dee2e6; cursor: pointer;" title="Click to view image" @onclick="() => OpenImagePreviewModalForUrl(context.ImagePath)" />
@@ -66,7 +67,7 @@ else
                     {
                         <span class="text-muted small">No Image</span>
                     }
-                </GridColumn>
+                </GridColumn> *@
 
                 <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="100">
                     @context.Name
@@ -125,8 +126,8 @@ else
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Brand Image</label>
-                    <InputFile class="form-control" OnChange="HandleFileSelected" accept=".jpg,.jpeg,.png,.webp" />
+                    <label class="form-label">Brand Image </label> <span class="text-muted fw-normal small">(Max size per image: @(maxImageSizeMB) MB)</span>
+                    <InputFile @key="inputFileKey" class="@($"form-control {GetFileFieldCssClass(() => companyModel.ImagePath)}")" OnChange="HandleFileSelected" @onclick="ClearImageValidation" accept=".jpg,.jpeg,.png,.webp" />
                     @if (isUploadingImage)
                     {
                         <div class="mt-2 text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</div>
@@ -203,8 +204,13 @@ else
     private string? previewImageBase64;
     private byte[]? compressedImageBytes;
     private string? imageToDeletePath;
+    private string? originalImagePath;
+    private Guid inputFileKey = Guid.NewGuid();
     private string? alertMessage;
     private string alertType = "success";
+
+    private int maxImageSizeMB => Configuration.GetValue<int?>("ImageSettings:MaxImageSizeMB") ?? Configuration.GetValue<int>("MaxImageSizeMB", 3);
+    private long maxImageSizeBytes => maxImageSizeMB * 1024L * 1024L;
 
     protected override async Task OnInitializedAsync()
     {
@@ -244,6 +250,8 @@ else
         previewImageBase64 = null;
         compressedImageBytes = null;
         imageToDeletePath = null;
+        originalImagePath = null;
+        inputFileKey = Guid.NewGuid();
         InitializeEditContextAsync();
         modal.ShowAsync();
     }
@@ -266,6 +274,8 @@ else
         previewImageBase64 = null;
         compressedImageBytes = null;
         imageToDeletePath = null;
+        originalImagePath = editCompany.ImagePath;
+        inputFileKey = Guid.NewGuid();
         InitializeEditContextAsync();
         modal.ShowAsync();
     }
@@ -368,36 +378,75 @@ else
         {
             try
             {
+                validationMessage.Clear(FieldIdentifier.Create(() => companyModel.ImagePath));
+                editContext.NotifyValidationStateChanged();
+
                 var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
                 var extension = Path.GetExtension(file.Name).ToLower();
                 if (!allowedExtensions.Contains(extension))
                 {
-                    ShowAlert("danger", "Only JPG, JPEG, PNG, and WEBP files are allowed.");
+                    companyModel.ImagePath = originalImagePath;
+                    imageToDeletePath = null;
+                    previewImageBase64 = null;
+                    compressedImageBytes = null;
+                    inputFileKey = Guid.NewGuid();
+
+                    validationMessage.Clear(FieldIdentifier.Create(() => companyModel.ImagePath));
+                    editContext.NotifyValidationStateChanged();
+                    StateHasChanged();
+
+                    await JS.InvokeVoidAsync("alert", "Only JPG, JPEG, PNG, and WEBP files are allowed.");
                     return;
                 }
 
-                if (file.Size > 2 * 1024 * 1024)
+                if (file.Size > maxImageSizeBytes)
                 {
-                    ShowAlert("danger", "Original image size must be less than 2MB.");
+                    companyModel.ImagePath = originalImagePath;
+                    imageToDeletePath = null;
+                    previewImageBase64 = null;
+                    compressedImageBytes = null;
+                    inputFileKey = Guid.NewGuid();
+
+                    validationMessage.Clear(FieldIdentifier.Create(() => companyModel.ImagePath));
+                    editContext.NotifyValidationStateChanged();
+                    StateHasChanged();
+
+                    await JS.InvokeVoidAsync("alert", $"Image size exceeds {maxImageSizeMB}MB. Please change image or compress it and upload again.");
                     return;
                 }
 
                 isUploadingImage = true;
                 StateHasChanged();
 
-                using (var stream = file.OpenReadStream(2 * 1024 * 1024))
-                using (var streamRef = new Microsoft.JSInterop.DotNetStreamReference(stream))
-                {
-                    var compressedBase64 = await JS.InvokeAsync<string>("compressImage", streamRef, file.ContentType, 1024, 1024, 0.75);
+                // using (var stream = file.OpenReadStream(maxImageSizeBytes))
+                // using (var streamRef = new Microsoft.JSInterop.DotNetStreamReference(stream))
+                // {
+                //     var compressedBase64 = await JS.InvokeAsync<string>("compressImage", streamRef, file.ContentType, 1024, 1024, 0.75);
+                //     previewImageBase64 = compressedBase64;
+                //     var base64Data = compressedBase64.Substring(compressedBase64.IndexOf(",") + 1);
+                //     compressedImageBytes = Convert.FromBase64String(base64Data);
+                // }
 
-                    previewImageBase64 = compressedBase64;
-                    var base64Data = compressedBase64.Substring(compressedBase64.IndexOf(",") + 1);
-                    compressedImageBytes = Convert.FromBase64String(base64Data);
+                using (var ms = new MemoryStream())
+                {
+                    await file.OpenReadStream(maxImageSizeBytes).CopyToAsync(ms);
+                    compressedImageBytes = ms.ToArray();
+                    previewImageBase64 = $"data:{file.ContentType};base64,{Convert.ToBase64String(compressedImageBytes)}";
                 }
             }
             catch (Exception ex)
             {
-                ShowAlert("danger", $"Failed to process and compress image: {ex.Message}");
+                companyModel.ImagePath = originalImagePath;
+                imageToDeletePath = null;
+                previewImageBase64 = null;
+                compressedImageBytes = null;
+                inputFileKey = Guid.NewGuid();
+
+                validationMessage.Clear(FieldIdentifier.Create(() => companyModel.ImagePath));
+                editContext.NotifyValidationStateChanged();
+                StateHasChanged();
+
+                await JS.InvokeVoidAsync("alert", $"Failed to process image: {ex.Message}");
             }
             finally
             {
@@ -416,6 +465,9 @@ else
         previewImageBase64 = null;
         compressedImageBytes = null;
         companyModel.ImagePath = null;
+        inputFileKey = Guid.NewGuid();
+        validationMessage.Clear(FieldIdentifier.Create(() => companyModel.ImagePath));
+        editContext?.NotifyValidationStateChanged();
         StateHasChanged();
     }
 
@@ -478,7 +530,7 @@ else
 
     private async Task ValidateDuplicateNameAsync()
     {
-        validationMessage.Clear();
+        validationMessage.Clear(FieldIdentifier.Create(() => companyModel.Name));
         if (!string.IsNullOrEmpty(companyModel.Name))
         {
             bool isCompanyNameUnique = await CompanyService.IsCompanyNameUniqueAsync(companyModel.Name, companyModel.CompanyType = CompanyType.MakeTo, companyModel.Id);
@@ -493,7 +545,7 @@ else
 
     private async Task ValidateNameAsync()
     {
-        validationMessage.Clear();
+        validationMessage.Clear(FieldIdentifier.Create(() => companyModel.Name));
         if (string.IsNullOrWhiteSpace(companyModel.Name))
         {
             validationMessage.Add(() => companyModel.Name, "Brand name is required");
@@ -534,5 +586,23 @@ else
                 await imagePreviewModal.ShowAsync();
             }
         }
+    }
+
+    private string GetFileFieldCssClass<T>(System.Linq.Expressions.Expression<Func<T>> accessor)
+    {
+        if (editContext == null) return "";
+        var fieldIdentifier = FieldIdentifier.Create(accessor);
+        return editContext.GetValidationMessages(fieldIdentifier).Any() ? "invalid is-invalid" : "";
+    }
+
+    private void ClearImageValidation()
+    {
+        if (editContext == null || validationMessage == null)
+            return;
+
+        var imageField = FieldIdentifier.Create(() => companyModel.ImagePath);
+
+        validationMessage.Clear(imageField);
+        editContext.NotifyValidationStateChanged();
     }
 }
