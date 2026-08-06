@@ -234,7 +234,7 @@ else
                     </div>
 
                     <div class="col-md-12 mb-3">
-                        <label class="form-label font-weight-bold">Product Images </label><span class="text-muted fw-normal small">(Max size per image: @(maxImageSizeMB) MB)</span>
+                        <label class="form-label font-weight-bold">Product Images </label><span class="text-muted fw-normal small">(Max 5 images, @(maxImageSizeMB) MB per image)</span>
                         <InputFile @key="inputFileKey" class="@($"form-control mb-2 {GetFileFieldCssClass(() => productModel.Images)}")" OnChange="HandleFilesSelected" @onclick="ClearImageValidation" accept=".jpg,.jpeg,.png,.webp" multiple />
                         @if (isUploadingImage)
                         {
@@ -655,12 +655,21 @@ else
         messageStore.Clear(FieldIdentifier.Create(() => productModel.Images));
         editContext.NotifyValidationStateChanged();
 
+        var currentActiveCount = productModel.Images?.Count(i => !i.IsMarkedForDeletion) ?? 0;
+        if (currentActiveCount >= 5)
+        {
+            inputFileKey = Guid.NewGuid();
+            await JS.InvokeVoidAsync("alert", "Maximum 5 images allowed per product.");
+            return;
+        }
+
         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
         var files = e.GetMultipleFiles(10);
         if (files != null && files.Count > 0)
         {
             var invalidExtensionFiles = new List<string>();
             var oversizedFiles = new List<string>();
+            var maxLimitExceededFiles = new List<string>();
 
             try
             {
@@ -682,13 +691,19 @@ else
                         continue;
                     }
 
+                    var activeCount = productModel.Images.Count(i => !i.IsMarkedForDeletion);
+                    if (activeCount >= 5)
+                    {
+                        maxLimitExceededFiles.Add(file.Name);
+                        continue;
+                    }
+
                     using var ms = new MemoryStream();
                     await file.OpenReadStream(maxImageSizeBytes).CopyToAsync(ms);
                     var bytes = ms.ToArray();
 
                     var previewBase64 = $"data:{file.ContentType};base64,{Convert.ToBase64String(bytes)}";
 
-                    var activeCount = productModel.Images.Count(i => !i.IsMarkedForDeletion);
                     var imageItem = new ImageMapperModel
                     {
                         Id = 0,
@@ -709,7 +724,7 @@ else
                     currentSlideIndex = activeImages.Count - 1;
                 }
 
-                if (invalidExtensionFiles.Any() || oversizedFiles.Any())
+                if (invalidExtensionFiles.Any() || oversizedFiles.Any() || maxLimitExceededFiles.Any())
                 {
                     inputFileKey = Guid.NewGuid();
                     var errorMessages = new List<string>();
@@ -720,6 +735,10 @@ else
                     if (oversizedFiles.Any())
                     {
                         errorMessages.Add($"File(s) exceeding {maxImageSizeMB}MB limit: {string.Join(", ", oversizedFiles)}.");
+                    }
+                    if (maxLimitExceededFiles.Any())
+                    {
+                        errorMessages.Add($"Maximum 5 images allowed per product. Could not add: {string.Join(", ", maxLimitExceededFiles)}.");
                     }
 
                     await JS.InvokeVoidAsync("alert", string.Join("\n\n", errorMessages) + "\n\nPlease change or compress file(s) and upload again.");
