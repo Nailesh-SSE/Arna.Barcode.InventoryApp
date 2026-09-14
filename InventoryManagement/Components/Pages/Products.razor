@@ -1,4 +1,4 @@
-﻿@page "/products"
+@page "/products"
 @using InventoryManagement.Core.Enums
 @inject IJSRuntime JS
 @inject IProductService ProductService
@@ -8,6 +8,8 @@
 @using InventoryManagement.Components.Auth
 @using InventoryManagement.Services.Models;
 @inherits AuthComponentBase
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment WebHostEnvironment
+@inject IConfiguration Configuration
 
 <PageTitle>Products</PageTitle>
 @if (!CanView(Route))
@@ -81,6 +83,22 @@ else
                     @index
                 </GridColumn>
 
+                @* <GridColumn TItem="ProductModel" HeaderText="Image" Filterable=false>
+                    @if (!string.IsNullOrEmpty(context.ImagePath))
+                    {
+                        <div class="position-relative d-inline-block">
+                            <img src="@context.ImagePath" alt="Product Image" style="max-height: 45px; max-width: 45px; object-fit: cover; border-radius: 4px; border: 1px solid #dee2e6;" />
+                            @if (context.Images != null && context.Images.Count(i => !i.IsMarkedForDeletion) > 1)
+                            {
+                                <span class="badge bg-secondary position-absolute bottom-0 end-0 m-0" style="font-size: 8px; padding: 2px 4px;">+@(context.Images.Count(i => !i.IsMarkedForDeletion) - 1)</span>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <span class="text-muted small">No Image</span>
+                    }
+                </GridColumn> *@
                 <GridColumn TItem="ProductModel" HeaderText="SKU" PropertyName="SKU" SortKeySelector="item => item.SKU" SortString="SKU" FilterTextboxWidth="98">
                     @context.SKU
                 </GridColumn>
@@ -96,6 +114,16 @@ else
                 <GridColumn TItem="ProductModel" HeaderText="Unit" PropertyName="Unit" Filterable="false">
                     @context.Unit
                 </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="Price" PropertyName="Price" Filterable="false">
+                    @context.Price.ToString("N2")
+                </GridColumn>
+
+                <GridColumn TItem="ProductModel" HeaderText="MRP" PropertyName="MRP" Filterable="false">
+                    @context.MRP.ToString("N2")
+                </GridColumn>
+
+               
 
                 <GridColumn TItem="ProductModel" HeaderText="Status" PropertyName="IsActive" SortKeySelector="item => item.IsActive" SortString="IsActive" Sortable=false>
                     @if (context.IsActive)
@@ -192,11 +220,136 @@ else
 
                         <ValidationMessage For="@(() => productModel.ColourId)" />
                     </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Price</label>
+                        <InputNumber class="form-control" @bind-Value="productModel.Price" />
+                        <ValidationMessage For="@(() => productModel.Price)" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">MRP</label>
+                        <InputNumber class="form-control" @bind-Value="productModel.MRP" />
+                        <ValidationMessage For="@(() => productModel.MRP)" />
+                    </div>
+
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label font-weight-bold">Product Images </label><span class="text-muted fw-normal small">(Max 5 images, @(maxImageSizeMB) MB per image)</span>
+                        <InputFile @key="inputFileKey" class="@($"form-control mb-2 {GetFileFieldCssClass(() => productModel.Images)}")" OnChange="HandleFilesSelected" @onclick="ClearImageValidation" accept=".jpg,.jpeg,.png,.webp" multiple />
+                        @if (isUploadingImage)
+                        {
+                            <div class="mb-2 text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Uploading image(s)...</div>
+                        }
+
+                        @{
+                            var activeImages = productModel.Images?.Where(i => !i.IsMarkedForDeletion).OrderBy(i => i.DisplayOrder).ToList() ?? new List<ImageMapperModel>();
+                        }
+
+                        @if (activeImages.Any())
+                        {
+                            if (currentSlideIndex >= activeImages.Count)
+                            {
+                                currentSlideIndex = Math.Max(0, activeImages.Count - 1);
+                            }
+
+                            var currentImg = activeImages[currentSlideIndex];
+                            var imgSrc = !string.IsNullOrEmpty(currentImg.PreviewBase64) ? currentImg.PreviewBase64 : currentImg.ImagePath;
+
+                            <!-- Image Slider Component -->
+                            <div class="card overflow-hidden shadow-sm position-relative border-0 rounded-3 bg-dark text-white mt-2" style="min-height: 260px;">
+                                <!-- Main Image Box -->
+                                <div class="d-flex justify-content-center align-items-center position-relative p-2" style="height: 230px; background-color: #1e1e1e; cursor: pointer;" @onclick="() => OpenImagePreviewModal(currentSlideIndex)">
+                                    <img src="@imgSrc" alt="Product Image" style="max-height: 215px; max-width: 100%; object-fit: contain; transition: transform 0.2s ease;" />
+                                    
+                                    @if (currentSlideIndex == 0)
+                                    {
+                                        <span class="badge bg-primary position-absolute top-0 start-0 m-2 shadow" style="font-size: 11px;">Primary Image (#1)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary position-absolute top-0 start-0 m-2 shadow" style="font-size: 11px;">Image #@(currentSlideIndex + 1)</span>
+                                    }
+
+                                    <span class="badge bg-dark bg-opacity-75 position-absolute top-0 end-0 m-2" style="font-size: 10px;">
+                                        <Icon Name="IconName.ArrowsAngleExpand" /> Click to enlarge
+                                    </span>
+                                </div>
+
+                                <!-- Navigation Arrows -->
+                                @if (activeImages.Count > 1)
+                                {
+                                    <button type="button" class="btn btn-dark btn-sm position-absolute top-50 start-0 translate-middle-y ms-2 opacity-75 rounded-circle shadow"
+                                            style="width: 36px; height: 36px; z-index: 10;"
+                                            disabled="@(currentSlideIndex == 0)"
+                                            @onclick="PrevSlide" @onclick:stopPropagation="true">
+                                        ◀
+                                    </button>
+                                    <button type="button" class="btn btn-dark btn-sm position-absolute top-50 end-0 translate-middle-y me-2 opacity-75 rounded-circle shadow"
+                                            style="width: 36px; height: 36px; z-index: 10;"
+                                            disabled="@(currentSlideIndex == activeImages.Count - 1)"
+                                            @onclick="NextSlide" @onclick:stopPropagation="true">
+                                        ▶
+                                    </button>
+                                }
+
+                                <!-- Control Bar (Reorder buttons + Dots + Delete) -->
+                                <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-dark border-top border-secondary text-white">
+                                    <!-- Index Change / Reorder Buttons -->
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-outline-light btn-sm" disabled="@(currentSlideIndex == 0)" @onclick="() => MoveImageUp(currentImg)" title="Move Left / Decrease Index">
+                                            ◀ Move Left
+                                        </button>
+                                        <button type="button" class="btn btn-outline-light btn-sm" disabled="@(currentSlideIndex == activeImages.Count - 1)" @onclick="() => MoveImageDown(currentImg)" title="Move Right / Increase Index">
+                                            Move Right ▶
+                                        </button>
+                                    </div>
+
+                                    <!-- Slider Dot Indicators -->
+                                    <div class="d-flex align-items-center gap-1 bg-black bg-opacity-50 px-3 py-1 rounded-pill">
+                                        @for (int i = 0; i < activeImages.Count; i++)
+                                        {
+                                            var dotIndex = i;
+                                            <button type="button" class="btn p-0 border-0 @(dotIndex == currentSlideIndex ? "bg-light" : "bg-secondary") opacity-75 rounded-pill"
+                                                    style="width: @(dotIndex == currentSlideIndex ? "18px" : "8px"); height: 8px; transition: all 0.3s ease;"
+                                                    @onclick="() => GoToSlide(dotIndex)">
+                                            </button>
+                                        }
+                                    </div>
+
+                                    <!-- Delete Button -->
+                                    <button type="button" class="btn btn-sm btn-danger d-flex align-items-center gap-1" @onclick="() => RemoveImageItem(currentImg)">
+                                        <Icon Name="IconName.Trash" /> Delete
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Thumbnail Gallery Row -->
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                @for (int i = 0; i < activeImages.Count; i++)
+                                {
+                                    var idx = i;
+                                    var thumbImg = activeImages[idx];
+                                    var thumbSrc = !string.IsNullOrEmpty(thumbImg.PreviewBase64) ? thumbImg.PreviewBase64 : thumbImg.ImagePath;
+
+                                    <div class="position-relative cursor-pointer rounded overflow-hidden @(idx == currentSlideIndex ? "border border-2 border-primary shadow" : "border border-secondary opacity-75")"
+                                         style="width: 55px; height: 55px; background: #f8f9fa;"
+                                         @onclick="() => GoToSlide(idx)">
+                                        <img src="@thumbSrc" alt="Thumb" style="width: 100%; height: 100%; object-fit: cover;" />
+                                        @if (idx == 0)
+                                        {
+                                            <span class="badge bg-primary position-absolute top-0 start-0 m-0" style="font-size: 7px; padding: 1px 3px;">1st</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">Description</label>
-                    <InputTextArea class="form-control" rows="3" @bind-Value="productModel.Description" />
+                    <InputTextArea class="form-control" rows="3" maxlength="1000" @bind-Value="productModel.Description" />
+                    <ValidationMessage For="@(() => productModel.Description)" />
                 </div>
 
                 @if (productModel.Id > 0)
@@ -212,9 +365,79 @@ else
             </EditForm>
         </BodyTemplate>
     </Modal>
+
+    <Modal @ref="imagePreviewModal" Title="Product Image Viewer" Size="ModalSize.Large">
+        <BodyTemplate>
+            @{
+                var activeImagesModal = productModel.Images?.Where(i => !i.IsMarkedForDeletion).OrderBy(i => i.DisplayOrder).ToList() ?? new List<ImageMapperModel>();
+            }
+            @if (activeImagesModal.Any())
+            {
+                if (currentSlideIndex >= activeImagesModal.Count)
+                {
+                    currentSlideIndex = Math.Max(0, activeImagesModal.Count - 1);
+                }
+                var currentImg = activeImagesModal[currentSlideIndex];
+                var imgSrc = !string.IsNullOrEmpty(currentImg.PreviewBase64) ? currentImg.PreviewBase64 : currentImg.ImagePath;
+
+                <div class="text-center position-relative bg-dark p-3 rounded-3" style="min-height: 380px;">
+                    <img src="@imgSrc" alt="Product Image Full" style="max-height: 480px; max-width: 100%; object-fit: contain;" />
+
+                    @if (activeImagesModal.Count > 1)
+                    {
+                        <button type="button" class="btn btn-dark btn-sm position-absolute top-50 start-0 translate-middle-y ms-3 opacity-75 rounded-circle shadow"
+                                style="width: 42px; height: 42px; font-size: 18px;"
+                                disabled="@(currentSlideIndex == 0)"
+                                @onclick="PrevSlide">
+                            ◀
+                        </button>
+                        <button type="button" class="btn btn-dark btn-sm position-absolute top-50 end-0 translate-middle-y me-3 opacity-75 rounded-circle shadow"
+                                style="width: 42px; height: 42px; font-size: 18px;"
+                                disabled="@(currentSlideIndex == activeImagesModal.Count - 1)"
+                                @onclick="NextSlide">
+                            ▶
+                        </button>
+                    }
+
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary text-white">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-light" disabled="@(currentSlideIndex == 0)" @onclick="() => MoveImageUp(currentImg)">
+                                ◀ Move Left
+                            </button>
+                            <button type="button" class="btn btn-outline-light" disabled="@(currentSlideIndex == activeImagesModal.Count - 1)" @onclick="() => MoveImageDown(currentImg)">
+                                Move Right ▶
+                            </button>
+                        </div>
+
+                        <!-- Dots -->
+                        <div class="d-flex align-items-center gap-1 bg-black bg-opacity-50 px-3 py-1 rounded-pill">
+                            @for (int i = 0; i < activeImagesModal.Count; i++)
+                            {
+                                var dotIndex = i;
+                                <button type="button" class="btn p-0 border-0 @(dotIndex == currentSlideIndex ? "bg-light" : "bg-secondary") rounded-pill"
+                                        style="width: @(dotIndex == currentSlideIndex ? "18px" : "8px"); height: 8px; transition: all 0.3s ease;"
+                                        @onclick="() => GoToSlide(dotIndex)">
+                                </button>
+                            }
+                        </div>
+
+                        <button type="button" class="btn btn-sm btn-danger d-flex align-items-center gap-1" @onclick="() => DeleteCurrentSlideFromModal(currentImg)">
+                            <Icon Name="IconName.Trash" /> Delete
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4 text-muted">No images to display</div>
+            }
+        </BodyTemplate>
+    </Modal>
 }
 @code {
     private Modal modal = default!;
+    private Modal imagePreviewModal = default!;
+    private int currentSlideIndex = 0;
     private List<ProductModel> products = new();
     private List<CategoryModel> categories = new();
     private List<CompanyModel> companies = new();
@@ -226,14 +449,24 @@ else
     private bool isEditMode = false;
     private EditContext editContext;
     private ValidationMessageStore messageStore;
+
+    private int maxImageSizeMB => Configuration.GetValue<int?>("ImageSettings:MaxImageSizeMB") ?? Configuration.GetValue<int>("MaxImageSizeMB", 3);
+    private long maxImageSizeBytes => maxImageSizeMB * 1024L * 1024L;
+    private Guid inputFileKey = Guid.NewGuid();
+
+    private string GetFileFieldCssClass<T>(System.Linq.Expressions.Expression<Func<T>> accessor)
+    {
+        if (editContext == null) return "";
+        var fieldIdentifier = FieldIdentifier.Create(accessor);
+        return editContext.GetValidationMessages(fieldIdentifier).Any() ? "invalid is-invalid" : "";
+    }
     private List<UnitModel> Units => CommonUtils.UnitList;
     private string Route = "/products";
     private bool isSaveBtnLoading = false;
     private bool isExporting = false;
     private string? alertMessage;
     private string alertType = "info";
-
-
+    private bool isUploadingImage = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -260,7 +493,7 @@ else
         categories = (await CategoryService.GetAllCategoriesAsync()).Where(x => x.IsActive).ToList();
         companies = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo)).Where(x => x.IsActive).ToList();
         Colours = (await ColourService.GetAllColourAsync()).Where(x => x.IsActive).ToList();
-        foreach(var product in products)
+        foreach (var product in products)
         {
             product.CategoryName = categories.FirstOrDefault(c => c.Id == product.CategoryId)?.Name ?? string.Empty;
         }
@@ -271,13 +504,16 @@ else
     {
         modalTitle = "Add Product";
         isEditMode = false;
+        currentSlideIndex = 0;
         productModel = new ProductModel
         {
             IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
             CreatedOn = DateTime.Now,
-            UnitId = (int)UnitType.PCS
+            UnitId = (int)UnitType.PCS,
+            Images = new List<ImageMapperModel>()
         };
+        inputFileKey = Guid.NewGuid();
         InitializeEditContext();
         modal.ShowAsync();
     }
@@ -286,12 +522,16 @@ else
     {
         modalTitle = "Edit Product";
         isEditMode = true;
+        currentSlideIndex = 0;
+
         productModel = new ProductModel
         {
             Id = editProduct.Id,
             SKU = editProduct.SKU,
             Name = editProduct.Name.Trim(),
             Description = editProduct.Description,
+            Price = editProduct.Price,
+            MRP = editProduct.MRP,
             CategoryId = editProduct.CategoryId,
             CategoryName = editProduct.CategoryName,
             Unit = editProduct.Unit,
@@ -303,16 +543,29 @@ else
             ColourId = editProduct.ColourId,
             ColourName = editProduct.ColourName,
             ColourSearchText = editProduct.ColourName,
+            Images = editProduct.Images != null
+                ? editProduct.Images.Select(img => new ImageMapperModel
+                {
+                    Id = img.Id,
+                    ItemId = img.ItemId,
+                    Type = img.Type,
+                    ImagePath = img.ImagePath,
+                    DisplayOrder = img.DisplayOrder,
+                    IsActive = img.IsActive,
+                    IsDeleted = img.IsDeleted
+                }).OrderBy(i => i.DisplayOrder).ToList()
+                : new List<ImageMapperModel>(),
             UpdatedBy = Convert.ToInt32(CurrentUserId),
             UpdatedOn = DateTime.Now
         };
+        inputFileKey = Guid.NewGuid();
         InitializeEditContext();
         modal.ShowAsync();
     }
 
     private async Task SaveProduct()
     {
-        if(isSaveBtnLoading) return;
+        if (isSaveBtnLoading) return;
         try
         {
             isSaveBtnLoading = true;
@@ -323,10 +576,28 @@ else
             await ValidateDuplicateNameAsync();
             if (editContext.GetValidationMessages().Any())
                 return;
+
             productModel.Unit = Units.FirstOrDefault(u => u.Id == productModel.UnitId)?.Name ?? string.Empty;
             productModel.MakeCompany = companies.FirstOrDefault(m => m.Id == productModel.MakeCompanyId)?.Name ?? string.Empty;
             productModel.CategoryName = categories.FirstOrDefault(c => c.Id == productModel.CategoryId)?.Name ?? string.Empty;
             productModel.ColourName = Colours.FirstOrDefault(c => c.Id == productModel.ColourId)?.Name ?? string.Empty;
+
+            // Save new physical files
+            foreach (var img in productModel.Images.Where(i => !i.IsMarkedForDeletion && i.CompressedBytes != null))
+            {
+                var savedPath = await SaveProductFileAsync(img.CompressedBytes);
+                if (savedPath != null)
+                {
+                    img.ImagePath = savedPath;
+                    img.CompressedBytes = null;
+                }
+            }
+
+            // Delete physical files of removed images
+            foreach (var img in productModel.Images.Where(i => i.IsMarkedForDeletion && !string.IsNullOrEmpty(i.ImagePath)))
+            {
+                DeletePhysicalImage(img.ImagePath);
+            }
 
             if (isEditMode)
             {
@@ -343,6 +614,7 @@ else
         }
         catch (Exception ex)
         {
+            ShowAlert("danger", $"Failed to save product: {ex.Message}");
         }
         finally
         {
@@ -358,12 +630,277 @@ else
             if (!confirmed) return;
 
             var userid = Convert.ToInt32(CurrentUserId);
+            var product = products.FirstOrDefault(p => p.Id == id);
+            if (product != null && product.Images != null && product.Images.Any())
+            {
+                foreach (var img in product.Images)
+                {
+                    if (!string.IsNullOrEmpty(img.ImagePath))
+                        DeletePhysicalImage(img.ImagePath);
+                }
+            }
+
             await ProductService.DeleteProductAsync(id, userid);
             await LoadData();
             await productGrid.RefreshDataAsync();
         }
         catch (Exception ex)
         {
+            ShowAlert("danger", $"Failed to delete product: {ex.Message}");
+        }
+    }
+
+    private async Task HandleFilesSelected(InputFileChangeEventArgs e)
+    {
+        messageStore.Clear(FieldIdentifier.Create(() => productModel.Images));
+        editContext.NotifyValidationStateChanged();
+
+        var currentActiveCount = productModel.Images?.Count(i => !i.IsMarkedForDeletion) ?? 0;
+        if (currentActiveCount >= 5)
+        {
+            inputFileKey = Guid.NewGuid();
+            await JS.InvokeVoidAsync("alert", "Maximum 5 images allowed per product.");
+            return;
+        }
+
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+        var files = e.GetMultipleFiles(10);
+        if (files != null && files.Count > 0)
+        {
+            var invalidExtensionFiles = new List<string>();
+            var oversizedFiles = new List<string>();
+            var maxLimitExceededFiles = new List<string>();
+
+            try
+            {
+                isUploadingImage = true;
+                StateHasChanged();
+
+                foreach (var file in files)
+                {
+                    var extension = Path.GetExtension(file.Name).ToLower();
+                    if (!allowedExtensions.Contains(extension))
+                    {
+                        invalidExtensionFiles.Add(file.Name);
+                        continue;
+                    }
+
+                    if (file.Size > maxImageSizeBytes)
+                    {
+                        oversizedFiles.Add(file.Name);
+                        continue;
+                    }
+
+                    var activeCount = productModel.Images.Count(i => !i.IsMarkedForDeletion);
+                    if (activeCount >= 5)
+                    {
+                        maxLimitExceededFiles.Add(file.Name);
+                        continue;
+                    }
+
+                    using var ms = new MemoryStream();
+                    await file.OpenReadStream(maxImageSizeBytes).CopyToAsync(ms);
+                    var bytes = ms.ToArray();
+
+                    var previewBase64 = $"data:{file.ContentType};base64,{Convert.ToBase64String(bytes)}";
+
+                    var imageItem = new ImageMapperModel
+                    {
+                        Id = 0,
+                        Type = "Product",
+                        PreviewBase64 = previewBase64,
+                        CompressedBytes = bytes,
+                        DisplayOrder = activeCount + 1,
+                        IsNew = true
+                    };
+                    productModel.Images.Add(imageItem);
+                }
+
+                ReassignDisplayOrders();
+
+                var activeImages = productModel.Images.Where(i => !i.IsMarkedForDeletion).ToList();
+                if (activeImages.Any())
+                {
+                    currentSlideIndex = activeImages.Count - 1;
+                }
+
+                if (invalidExtensionFiles.Any() || oversizedFiles.Any() || maxLimitExceededFiles.Any())
+                {
+                    inputFileKey = Guid.NewGuid();
+                    var errorMessages = new List<string>();
+                    if (invalidExtensionFiles.Any())
+                    {
+                        errorMessages.Add($"File(s) with invalid extension: {string.Join(", ", invalidExtensionFiles)}. Only JPG, JPEG, PNG, and WEBP are allowed.");
+                    }
+                    if (oversizedFiles.Any())
+                    {
+                        errorMessages.Add($"File(s) exceeding {maxImageSizeMB}MB limit: {string.Join(", ", oversizedFiles)}.");
+                    }
+                    if (maxLimitExceededFiles.Any())
+                    {
+                        errorMessages.Add($"Maximum 5 images allowed per product. Could not add: {string.Join(", ", maxLimitExceededFiles)}.");
+                    }
+
+                    await JS.InvokeVoidAsync("alert", string.Join("\n\n", errorMessages) + "\n\nPlease change or compress file(s) and upload again.");
+                }
+            }
+            catch (Exception ex)
+            {
+                inputFileKey = Guid.NewGuid();
+                await JS.InvokeVoidAsync("alert", $"Failed to process image(s): {ex.Message}");
+            }
+            finally
+            {
+                isUploadingImage = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void RemoveImageItem(ImageMapperModel img)
+    {
+        if (img.Id > 0)
+        {
+            img.IsMarkedForDeletion = true;
+        }
+        else
+        {
+            productModel.Images.Remove(img);
+        }
+        ReassignDisplayOrders();
+        var activeImages = productModel.Images.Where(i => !i.IsMarkedForDeletion).ToList();
+        if (currentSlideIndex >= activeImages.Count)
+        {
+            currentSlideIndex = Math.Max(0, activeImages.Count - 1);
+        }
+        StateHasChanged();
+    }
+
+    private void MoveImageUp(ImageMapperModel img)
+    {
+        var activeImages = productModel.Images.Where(i => !i.IsMarkedForDeletion).OrderBy(i => i.DisplayOrder).ToList();
+        int idx = activeImages.IndexOf(img);
+        if (idx > 0)
+        {
+            var prev = activeImages[idx - 1];
+            int temp = img.DisplayOrder;
+            img.DisplayOrder = prev.DisplayOrder;
+            prev.DisplayOrder = temp;
+            ReassignDisplayOrders();
+            currentSlideIndex = idx - 1;
+            StateHasChanged();
+        }
+    }
+
+    private void MoveImageDown(ImageMapperModel img)
+    {
+        var activeImages = productModel.Images.Where(i => !i.IsMarkedForDeletion).OrderBy(i => i.DisplayOrder).ToList();
+        int idx = activeImages.IndexOf(img);
+        if (idx >= 0 && idx < activeImages.Count - 1)
+        {
+            var next = activeImages[idx + 1];
+            int temp = img.DisplayOrder;
+            img.DisplayOrder = next.DisplayOrder;
+            next.DisplayOrder = temp;
+            ReassignDisplayOrders();
+            currentSlideIndex = idx + 1;
+            StateHasChanged();
+        }
+    }
+
+    private void GoToSlide(int index)
+    {
+        var activeImages = productModel.Images.Where(i => !i.IsMarkedForDeletion).ToList();
+        if (index >= 0 && index < activeImages.Count)
+        {
+            currentSlideIndex = index;
+            StateHasChanged();
+        }
+    }
+
+    private void PrevSlide()
+    {
+        if (currentSlideIndex > 0)
+        {
+            currentSlideIndex--;
+            StateHasChanged();
+        }
+    }
+
+    private void NextSlide()
+    {
+        var activeImages = productModel.Images.Where(i => !i.IsMarkedForDeletion).ToList();
+        if (currentSlideIndex < activeImages.Count - 1)
+        {
+            currentSlideIndex++;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenImagePreviewModal(int index)
+    {
+        currentSlideIndex = index;
+        if (imagePreviewModal != null)
+        {
+            await imagePreviewModal.ShowAsync();
+        }
+    }
+
+    private async Task DeleteCurrentSlideFromModal(ImageMapperModel img)
+    {
+        RemoveImageItem(img);
+        var activeImages = productModel.Images.Where(i => !i.IsMarkedForDeletion).ToList();
+        if (!activeImages.Any() && imagePreviewModal != null)
+        {
+            await imagePreviewModal.HideAsync();
+        }
+    }
+
+    private void ReassignDisplayOrders()
+    {
+        var activeImages = productModel.Images.Where(i => !i.IsMarkedForDeletion).OrderBy(i => i.DisplayOrder).ToList();
+        for (int i = 0; i < activeImages.Count; i++)
+        {
+            activeImages[i].DisplayOrder = i + 1;
+        }
+    }
+
+    private async Task<string?> SaveProductFileAsync(byte[] bytes)
+    {
+        try
+        {
+            var uploadsDir = Path.Combine(WebHostEnvironment.WebRootPath, "images", "products");
+            if (!Directory.Exists(uploadsDir))
+            {
+                Directory.CreateDirectory(uploadsDir);
+            }
+
+            var uniqueFileName = $"{DateTime.Now:ddMMyyyy_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}.jpg";
+            var filePath = Path.Combine(uploadsDir, uniqueFileName);
+
+            await File.WriteAllBytesAsync(filePath, bytes);
+            return $"/images/products/{uniqueFileName}";
+        }
+        catch (Exception ex)
+        {
+            ShowAlert("danger", $"Failed to save image file: {ex.Message}");
+            return null;
+        }
+    }
+
+    private void DeletePhysicalImage(string relativePath)
+    {
+        try
+        {
+            var absolutePath = Path.Combine(WebHostEnvironment.WebRootPath, relativePath.TrimStart('/'));
+            if (File.Exists(absolutePath))
+            {
+                File.Delete(absolutePath);
+            }
+        }
+        catch (Exception)
+        {
+            // Ignore deletion errors
         }
     }
 
@@ -371,6 +908,7 @@ else
     {
         await modal.HideAsync();
     }
+
     private async Task HandleAllFieldsAsync()
     {
         try
@@ -381,11 +919,11 @@ else
             await ValidateUnit();
             await ValidateColour();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-
         }
     }
+
     private async Task ValidateName()
     {
         messageStore.Clear(() => productModel.Name);
@@ -502,27 +1040,28 @@ else
         ValidateColour();
         StateHasChanged();
     }
+
     private void OnCategorySelected((int? Id, string Name) selected)
     {
         productModel.CategoryId = selected.Id ?? 0;
         productModel.CategoryName = selected.Name;
-
         ValidateCategory();
     }
+
     private void OnBrandSelected((int? Id, string Name) selected)
     {
         productModel.MakeCompanyId = selected.Id ?? 0;
         productModel.MakeCompany = selected.Name;
-
         ValidateMakeCompany();
     }
+
     private void OnUnitSelected((int? Id, string Name) selected)
     {
         productModel.UnitId = selected.Id ?? 0;
         productModel.Unit = selected.Name;
-
         ValidateUnit();
     }
+
     private async Task ExportCurrentReport()
     {
         isExporting = true;
@@ -540,7 +1079,6 @@ else
             var fullPath = Path.Combine(filePath, fileName);
             await File.WriteAllBytesAsync(fullPath, excelData);
 
-            // Browser downloads static file directly
             var downloadUrl = $"/exports/{fileName}";
             NavigationManager.NavigateTo(downloadUrl, forceLoad: true);
 
@@ -556,16 +1094,28 @@ else
             StateHasChanged();
         }
     }
+
     private void ShowAlert(string type, string message)
     {
         alertType = type;
         alertMessage = message;
         _ = AutoHideAlertAsync();
     }
+
     private async Task AutoHideAlertAsync()
     {
         await Task.Delay(3000);
         alertMessage = null;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private void ClearImageValidation()
+    {
+        if (editContext == null || messageStore == null)
+            return;
+
+        var imageField = FieldIdentifier.Create(() => productModel.Images);
+        messageStore.Clear(imageField);
+        editContext.NotifyValidationStateChanged();
     }
 }

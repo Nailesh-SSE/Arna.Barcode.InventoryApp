@@ -3,7 +3,10 @@
 @inherits AuthComponentBase
 @inject ICompanyService CompanyService
 @inject IJSRuntime JS
+@inject IWebHostEnvironment WebHostEnvironment
+@inject IConfiguration Configuration
 <PageTitle>Make Companies</PageTitle>
+
 @if (!CanView(Route))
 {
     <AccessDenied />
@@ -11,6 +14,14 @@
 else
 {
     <div class="container-fluid">
+        @if (!string.IsNullOrEmpty(alertMessage))
+        {
+            <div class="alert alert-@alertType alert-dismissible fade show mb-3" role="alert">
+                @alertMessage
+                <button type="button" class="btn-close" @onclick="() => alertMessage = null"></button>
+            </div>
+        }
+
         <div class="row mb-3">
             <div class="col">
                 <h3><Icon Name="IconName.Tags" /> Brands</h3>
@@ -46,6 +57,17 @@ else
                 <GridColumn TItem="CompanyModel" HeaderText="No" PropertyName="Id" Filterable=false>
                     @(companyList.IndexOf(context) + 1)
                 </GridColumn>
+
+               @*  <GridColumn TItem="CompanyModel" HeaderText="Image" Filterable=false>
+                    @if (!string.IsNullOrEmpty(context.ImagePath))
+                    {
+                        <img src="@context.ImagePath" alt="Brand Image" style="max-height: 45px; max-width: 45px; object-fit: cover; border-radius: 4px; border: 1px solid #dee2e6; cursor: pointer;" title="Click to view image" @onclick="() => OpenImagePreviewModalForUrl(context.ImagePath)" />
+                    }
+                    else
+                    {
+                        <span class="text-muted small">No Image</span>
+                    }
+                </GridColumn> *@
 
                 <GridColumn TItem="CompanyModel" HeaderText="Name" PropertyName="Name" SortString="Name" SortKeySelector="item => item.Name" FilterTextboxWidth="100">
                     @context.Name
@@ -102,6 +124,33 @@ else
                         <InputText class="form-control" @bind-Value="companyModel.Remark" />
                     </div>
                 </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Brand Image </label> <span class="text-muted fw-normal small">(Max size per image: @(maxImageSizeMB) MB)</span>
+                    <InputFile @key="inputFileKey" class="@($"form-control {GetFileFieldCssClass(() => companyModel.ImagePath)}")" OnChange="HandleFileSelected" @onclick="ClearImageValidation" accept=".jpg,.jpeg,.png,.webp" />
+                    @if (isUploadingImage)
+                    {
+                        <div class="mt-2 text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</div>
+                    }
+                    @if (!string.IsNullOrEmpty(previewImageBase64) || !string.IsNullOrEmpty(companyModel.ImagePath))
+                    {
+                        var previewSrc = !string.IsNullOrEmpty(previewImageBase64) ? previewImageBase64 : companyModel.ImagePath;
+                        <div class="card overflow-hidden shadow-sm position-relative border-0 rounded-3 bg-dark text-white mt-2" style="min-height: 180px;">
+                            <div class="d-flex justify-content-center align-items-center position-relative p-2" style="height: 170px; background-color: #1e1e1e; cursor: pointer;" @onclick="OpenImagePreviewModal" title="Click to view full image">
+                                <img src="@previewSrc" alt="Brand Image" style="max-height: 155px; max-width: 100%; object-fit: contain; transition: transform 0.2s ease;" />
+                                <span class="badge bg-dark bg-opacity-75 position-absolute top-0 end-0 m-2" style="font-size: 10px;">
+                                    <Icon Name="IconName.ArrowsAngleExpand" /> Click to enlarge
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-end align-items-center px-3 py-1 bg-dark border-top border-secondary">
+                                <button type="button" class="btn btn-sm btn-danger d-flex align-items-center gap-1" @onclick="RemoveImage" @onclick:stopPropagation="true">
+                                    <Icon Name="IconName.Trash" /> Remove Image
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+
                 @if (companyModel.Id > 0)
                 {
                     <div class="mb-3">
@@ -115,10 +164,30 @@ else
             </EditForm>
         </BodyTemplate>
     </Modal>
+
+    <Modal @ref="imagePreviewModal" Title="Brand Image Viewer" Size="ModalSize.Large">
+        <BodyTemplate>
+            @{
+                var brandImgSrc = !string.IsNullOrEmpty(previewModalImageUrl) ? previewModalImageUrl : (!string.IsNullOrEmpty(previewImageBase64) ? previewImageBase64 : companyModel.ImagePath);
+            }
+            @if (!string.IsNullOrEmpty(brandImgSrc))
+            {
+                <div class="text-center position-relative bg-dark p-3 rounded-3" style="min-height: 380px;">
+                    <img src="@brandImgSrc" alt="Brand Image Full" style="max-height: 480px; max-width: 100%; object-fit: contain;" />
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4 text-muted">No image to display</div>
+            }
+        </BodyTemplate>
+    </Modal>
 }
 
 @code {
     private Modal modal = default!;
+    private Modal imagePreviewModal = default!;
+    private string? previewModalImageUrl;
     private bool isLoading = true;
     private string modalTitle = "Add Brand";
     private bool isEditMode = false;
@@ -130,6 +199,18 @@ else
     private ValidationMessageStore validationMessage;
     private string Route = "/companies/make-to";
     private bool isSaveBtnLoading = false;
+
+    private bool isUploadingImage = false;
+    private string? previewImageBase64;
+    private byte[]? compressedImageBytes;
+    private string? imageToDeletePath;
+    private string? originalImagePath;
+    private Guid inputFileKey = Guid.NewGuid();
+    private string? alertMessage;
+    private string alertType = "success";
+
+    private int maxImageSizeMB => Configuration.GetValue<int?>("ImageSettings:MaxImageSizeMB") ?? Configuration.GetValue<int>("MaxImageSizeMB", 3);
+    private long maxImageSizeBytes => maxImageSizeMB * 1024L * 1024L;
 
     protected override async Task OnInitializedAsync()
     {
@@ -149,8 +230,8 @@ else
     {
         editContext = new EditContext(companyModel);
         validationMessage = new ValidationMessageStore(editContext);
-
     }
+
     private async Task LoadCompanies()
     {
         companyList = (await CompanyService.GetCompaniesByTypeAsync(CompanyType.MakeTo)).ToList();
@@ -166,6 +247,11 @@ else
             IsActive = true,
             CreatedBy = Convert.ToInt32(CurrentUserId),
         };
+        previewImageBase64 = null;
+        compressedImageBytes = null;
+        imageToDeletePath = null;
+        originalImagePath = null;
+        inputFileKey = Guid.NewGuid();
         InitializeEditContextAsync();
         modal.ShowAsync();
     }
@@ -180,10 +266,16 @@ else
             Code = editCompany.Code,
             Name = editCompany.Name,
             CompanyType = CompanyType.MakeTo,
+            ImagePath = editCompany.ImagePath,
             IsActive = editCompany.IsActive,
             Remark = editCompany.Remark,
             UpdatedBy = Convert.ToInt32(CurrentUserId),
         };
+        previewImageBase64 = null;
+        compressedImageBytes = null;
+        imageToDeletePath = null;
+        originalImagePath = editCompany.ImagePath;
+        inputFileKey = Guid.NewGuid();
         InitializeEditContextAsync();
         modal.ShowAsync();
     }
@@ -206,13 +298,39 @@ else
 
             if (isEditMode)
             {
-                await CompanyService.UpdateCompanyAsync(companyModel);
+                if (!string.IsNullOrEmpty(imageToDeletePath))
+                {
+                    DeletePhysicalImage(imageToDeletePath);
+                    imageToDeletePath = null;
+                }
 
+                if (compressedImageBytes != null)
+                {
+                    var savedPath = await SaveCompressedFileAsync(compressedImageBytes);
+                    if (savedPath != null)
+                    {
+                        if (!string.IsNullOrEmpty(companyModel.ImagePath))
+                        {
+                            DeletePhysicalImage(companyModel.ImagePath);
+                        }
+                        companyModel.ImagePath = savedPath;
+                    }
+                }
+
+                await CompanyService.UpdateCompanyAsync(companyModel);
             }
             else
             {
-                await CompanyService.CreateCompanyAsync(companyModel);
+                if (compressedImageBytes != null)
+                {
+                    var savedPath = await SaveCompressedFileAsync(compressedImageBytes);
+                    if (savedPath != null)
+                    {
+                        companyModel.ImagePath = savedPath;
+                    }
+                }
 
+                await CompanyService.CreateCompanyAsync(companyModel);
             }
             await HideModal();
             await LoadCompanies();
@@ -220,7 +338,7 @@ else
         }
         catch (Exception ex)
         {
-
+            ShowAlert("danger", $"Failed to save brand: {ex.Message}");
         }
         finally
         {
@@ -235,6 +353,12 @@ else
             bool isConfirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete?");
             if (isConfirm)
             {
+                var company = companyList.FirstOrDefault(c => c.Id == id);
+                if (company != null && !string.IsNullOrEmpty(company.ImagePath))
+                {
+                    DeletePhysicalImage(company.ImagePath);
+                }
+
                 var deletedBy = Convert.ToInt32(CurrentUserId);
                 await CompanyService.DeleteCompanyAsync(id, deletedBy);
                 await LoadCompanies();
@@ -243,17 +367,170 @@ else
         }
         catch (Exception ex)
         {
-
+            ShowAlert("danger", $"Failed to delete brand: {ex.Message}");
         }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            try
+            {
+                validationMessage.Clear(FieldIdentifier.Create(() => companyModel.ImagePath));
+                editContext.NotifyValidationStateChanged();
+
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                var extension = Path.GetExtension(file.Name).ToLower();
+                if (!allowedExtensions.Contains(extension))
+                {
+                    companyModel.ImagePath = originalImagePath;
+                    imageToDeletePath = null;
+                    previewImageBase64 = null;
+                    compressedImageBytes = null;
+                    inputFileKey = Guid.NewGuid();
+
+                    validationMessage.Clear(FieldIdentifier.Create(() => companyModel.ImagePath));
+                    editContext.NotifyValidationStateChanged();
+                    StateHasChanged();
+
+                    await JS.InvokeVoidAsync("alert", "Only JPG, JPEG, PNG, and WEBP files are allowed.");
+                    return;
+                }
+
+                if (file.Size > maxImageSizeBytes)
+                {
+                    companyModel.ImagePath = originalImagePath;
+                    imageToDeletePath = null;
+                    previewImageBase64 = null;
+                    compressedImageBytes = null;
+                    inputFileKey = Guid.NewGuid();
+
+                    validationMessage.Clear(FieldIdentifier.Create(() => companyModel.ImagePath));
+                    editContext.NotifyValidationStateChanged();
+                    StateHasChanged();
+
+                    await JS.InvokeVoidAsync("alert", $"Image size exceeds {maxImageSizeMB}MB. Please change image or compress it and upload again.");
+                    return;
+                }
+
+                isUploadingImage = true;
+                StateHasChanged();
+
+                // using (var stream = file.OpenReadStream(maxImageSizeBytes))
+                // using (var streamRef = new Microsoft.JSInterop.DotNetStreamReference(stream))
+                // {
+                //     var compressedBase64 = await JS.InvokeAsync<string>("compressImage", streamRef, file.ContentType, 1024, 1024, 0.75);
+                //     previewImageBase64 = compressedBase64;
+                //     var base64Data = compressedBase64.Substring(compressedBase64.IndexOf(",") + 1);
+                //     compressedImageBytes = Convert.FromBase64String(base64Data);
+                // }
+
+                using (var ms = new MemoryStream())
+                {
+                    await file.OpenReadStream(maxImageSizeBytes).CopyToAsync(ms);
+                    compressedImageBytes = ms.ToArray();
+                    previewImageBase64 = $"data:{file.ContentType};base64,{Convert.ToBase64String(compressedImageBytes)}";
+                }
+            }
+            catch (Exception ex)
+            {
+                companyModel.ImagePath = originalImagePath;
+                imageToDeletePath = null;
+                previewImageBase64 = null;
+                compressedImageBytes = null;
+                inputFileKey = Guid.NewGuid();
+
+                validationMessage.Clear(FieldIdentifier.Create(() => companyModel.ImagePath));
+                editContext.NotifyValidationStateChanged();
+                StateHasChanged();
+
+                await JS.InvokeVoidAsync("alert", $"Failed to process image: {ex.Message}");
+            }
+            finally
+            {
+                isUploadingImage = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void RemoveImage()
+    {
+        if (!string.IsNullOrEmpty(companyModel.ImagePath))
+        {
+            imageToDeletePath = companyModel.ImagePath;
+        }
+        previewImageBase64 = null;
+        compressedImageBytes = null;
+        companyModel.ImagePath = null;
+        inputFileKey = Guid.NewGuid();
+        validationMessage.Clear(FieldIdentifier.Create(() => companyModel.ImagePath));
+        editContext?.NotifyValidationStateChanged();
+        StateHasChanged();
+    }
+
+    private async Task<string?> SaveCompressedFileAsync(byte[] bytes)
+    {
+        try
+        {
+            var uploadsDir = Path.Combine(WebHostEnvironment.WebRootPath, "images", "companies");
+            if (!Directory.Exists(uploadsDir))
+            {
+                Directory.CreateDirectory(uploadsDir);
+            }
+
+            var uniqueFileName = $"{DateTime.Now:ddMMyyyy_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}.jpg";
+            var filePath = Path.Combine(uploadsDir, uniqueFileName);
+
+            await File.WriteAllBytesAsync(filePath, bytes);
+            return $"/images/companies/{uniqueFileName}";
+        }
+        catch (Exception ex)
+        {
+            ShowAlert("danger", $"Failed to save image file: {ex.Message}");
+            return null;
+        }
+    }
+
+    private void DeletePhysicalImage(string relativePath)
+    {
+        try
+        {
+            var absolutePath = Path.Combine(WebHostEnvironment.WebRootPath, relativePath.TrimStart('/'));
+            if (File.Exists(absolutePath))
+            {
+                File.Delete(absolutePath);
+            }
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    private void ShowAlert(string type, string message)
+    {
+        alertType = type;
+        alertMessage = message;
+        _ = AutoHideAlertAsync();
+    }
+
+    private async Task AutoHideAlertAsync()
+    {
+        await Task.Delay(3000);
+        alertMessage = null;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HideModal()
     {
         await modal.HideAsync();
     }
+
     private async Task ValidateDuplicateNameAsync()
     {
-        validationMessage.Clear();
+        validationMessage.Clear(FieldIdentifier.Create(() => companyModel.Name));
         if (!string.IsNullOrEmpty(companyModel.Name))
         {
             bool isCompanyNameUnique = await CompanyService.IsCompanyNameUniqueAsync(companyModel.Name, companyModel.CompanyType = CompanyType.MakeTo, companyModel.Id);
@@ -265,9 +542,10 @@ else
             editContext.NotifyValidationStateChanged();
         }
     }
+
     private async Task ValidateNameAsync()
     {
-        validationMessage.Clear();
+        validationMessage.Clear(FieldIdentifier.Create(() => companyModel.Name));
         if (string.IsNullOrWhiteSpace(companyModel.Name))
         {
             validationMessage.Add(() => companyModel.Name, "Brand name is required");
@@ -284,7 +562,47 @@ else
         }
         catch (Exception ex)
         {
-
         }
+    }
+
+    private async Task OpenImagePreviewModal()
+    {
+        previewModalImageUrl = !string.IsNullOrEmpty(previewImageBase64) ? previewImageBase64 : companyModel.ImagePath;
+        StateHasChanged();
+        if (imagePreviewModal != null)
+        {
+            await imagePreviewModal.ShowAsync();
+        }
+    }
+
+    private async Task OpenImagePreviewModalForUrl(string? url)
+    {
+        if (!string.IsNullOrEmpty(url))
+        {
+            previewModalImageUrl = url;
+            StateHasChanged();
+            if (imagePreviewModal != null)
+            {
+                await imagePreviewModal.ShowAsync();
+            }
+        }
+    }
+
+    private string GetFileFieldCssClass<T>(System.Linq.Expressions.Expression<Func<T>> accessor)
+    {
+        if (editContext == null) return "";
+        var fieldIdentifier = FieldIdentifier.Create(accessor);
+        return editContext.GetValidationMessages(fieldIdentifier).Any() ? "invalid is-invalid" : "";
+    }
+
+    private void ClearImageValidation()
+    {
+        if (editContext == null || validationMessage == null)
+            return;
+
+        var imageField = FieldIdentifier.Create(() => companyModel.ImagePath);
+
+        validationMessage.Clear(imageField);
+        editContext.NotifyValidationStateChanged();
     }
 }

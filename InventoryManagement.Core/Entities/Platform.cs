@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 namespace InventoryManagement.Core.Entities;
 
 public class Platform : Common
